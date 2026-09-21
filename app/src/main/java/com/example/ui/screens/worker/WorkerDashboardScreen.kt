@@ -354,8 +354,9 @@ fun WorkerDashboardScreen(
 
                             val nextStatus = when (booking.status) {
                                 JobStatus.REQUESTED -> JobStatus.ACCEPTED
-                                JobStatus.ACCEPTED -> JobStatus.EN_ROUTE
-                                JobStatus.EN_ROUTE -> JobStatus.IN_PROGRESS
+                                JobStatus.ACCEPTED, JobStatus.SCHEDULED -> JobStatus.ON_THE_WAY
+                                JobStatus.ON_THE_WAY -> JobStatus.ARRIVED
+                                JobStatus.ARRIVED -> JobStatus.IN_PROGRESS
                                 JobStatus.IN_PROGRESS -> JobStatus.COMPLETION_REQUESTED
                                 else -> null
                             }
@@ -364,12 +365,16 @@ fun WorkerDashboardScreen(
                                 Button(
                                     onClick = { onAdvanceJobStatus(booking.id, nextStatus) },
                                     shape = RoundedCornerShape(8.dp),
-                                    colors = ButtonDefaults.buttonColors(containerColor = FixoBlue600)
+                                    colors = ButtonDefaults.buttonColors(
+                                        containerColor = if (nextStatus == JobStatus.ON_THE_WAY) FixoGold500 else FixoBlue600,
+                                        contentColor = if (nextStatus == JobStatus.ON_THE_WAY) FixoNavy900 else FixoWhite
+                                    )
                                 ) {
                                     Text(
                                         text = when (nextStatus) {
                                             JobStatus.ACCEPTED -> "Accept Job"
-                                            JobStatus.EN_ROUTE -> "Tap 'On My Way'"
+                                            JobStatus.ON_THE_WAY -> "Start Trip"
+                                            JobStatus.ARRIVED -> "Arrived at Site"
                                             JobStatus.IN_PROGRESS -> "Start Work"
                                             JobStatus.COMPLETION_REQUESTED -> "Request Inspection"
                                             else -> "Update"

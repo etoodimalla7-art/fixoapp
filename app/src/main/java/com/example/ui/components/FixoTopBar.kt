@@ -87,6 +87,8 @@ fun FixoTopBar(
     onToggleEnvironment: () -> Unit = {},
     unreadNotificationCount: Int = 0,
     onNotificationsClick: () -> Unit = {},
+    unreadMessageCount: Int = 0,
+    onMessagesClick: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     var roleMenuExpanded by remember { mutableStateOf(false) }
@@ -350,6 +352,37 @@ fun FixoTopBar(
                                         .align(Alignment.TopEnd)
                                         .clip(CircleShape)
                                         .background(FixoRed500)
+                                )
+                            }
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.width(6.dp))
+
+                    // Messages Chat Icon
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(8.dp))
+                            .background(MaterialTheme.colorScheme.surfaceVariant)
+                            .clickable { onMessagesClick() }
+                            .padding(horizontal = 7.dp, vertical = 6.dp)
+                            .testTag("messages_topbar_button"),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Box {
+                            Icon(
+                                imageVector = Icons.Default.Email,
+                                contentDescription = "Messages",
+                                modifier = Modifier.size(16.dp),
+                                tint = MaterialTheme.colorScheme.onSurface
+                            )
+                            if (unreadMessageCount > 0) {
+                                Box(
+                                    modifier = Modifier
+                                        .size(7.dp)
+                                        .align(Alignment.TopEnd)
+                                        .clip(CircleShape)
+                                        .background(FixoEmerald500)
                                 )
                             }
                         }

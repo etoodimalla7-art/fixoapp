@@ -1219,16 +1219,7 @@ fun CategoryCard(
     isSelected: Boolean,
     onClick: () -> Unit
 ) {
-    val icon = when (category) {
-        ServiceCategory.PLUMBING -> Icons.Default.Plumbing
-        ServiceCategory.ELECTRICAL -> Icons.Default.ElectricBolt
-        ServiceCategory.HVAC -> Icons.Default.Build
-        ServiceCategory.CARPENTRY -> Icons.Default.Handyman
-        ServiceCategory.MASONRY -> Icons.Default.HomeRepairService
-        ServiceCategory.APPLIANCES -> Icons.Default.Build
-        ServiceCategory.AUTO_TECH -> Icons.Default.Build
-        ServiceCategory.IT_NETWORKING -> Icons.Default.Security
-    }
+    val icon = com.example.ui.components.getCategoryVectorIcon(category)
 
     Surface(
         shape = RoundedCornerShape(14.dp),

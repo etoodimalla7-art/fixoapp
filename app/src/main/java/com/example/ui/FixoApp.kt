@@ -46,6 +46,8 @@ import com.example.ui.components.StartTripConfirmationDialog
 import com.example.ui.components.UploadReelDialog
 import com.example.ui.components.WithdrawDialog
 import com.example.ui.screens.admin.AdminPortalScreen
+import com.example.ui.screens.chat.ChatDetailScreen
+import com.example.ui.screens.chat.ConversationsScreen
 import com.example.ui.screens.customer.CustomerActivityScreen
 import com.example.ui.screens.customer.CustomerHomeScreen
 import com.example.ui.screens.customer.CustomerServicesScreen
@@ -71,6 +73,8 @@ fun FixoApp(
     var selectedTab by remember { mutableIntStateOf(0) }
     var viewingJobId by remember { mutableStateOf<String?>(null) }
     var isViewingWallet by remember { mutableStateOf(false) }
+    var isViewingConversations by remember { mutableStateOf(false) }
+    var activeChatBookingId by remember { mutableStateOf<String?>(null) }
     var showSplashScreen by remember { mutableStateOf(true) }
 
     // When role changes, reset tab to 0
@@ -78,6 +82,8 @@ fun FixoApp(
         selectedTab = 0
         viewingJobId = null
         isViewingWallet = false
+        isViewingConversations = false
+        activeChatBookingId = null
     }
 
     // Show toast message when triggered
@@ -147,6 +153,12 @@ fun FixoApp(
                     unreadNotificationCount = uiState.unreadNotificationCount,
                     onNotificationsClick = {
                         viewModel.openNotificationsDialog()
+                    },
+                    unreadMessageCount = uiState.unreadMessageCount,
+                    onMessagesClick = {
+                        isViewingConversations = true
+                        isViewingWallet = false
+                        activeChatBookingId = null
                     }
                 )
             },
@@ -157,6 +169,8 @@ fun FixoApp(
                 onTabSelected = { tabIndex ->
                     selectedTab = tabIndex
                     isViewingWallet = false
+                    isViewingConversations = false
+                    activeChatBookingId = null
                     // If switching tabs, clear selected worker view
                     if (uiState.selectedWorker != null) {
                         viewModel.clearSelectedWorker()
@@ -172,19 +186,69 @@ fun FixoApp(
                 .fillMaxSize()
                 .padding(innerPadding)
         ) {
-            if (isViewingWallet) {
-                WalletRewardsScreen(
-                    user = uiState.currentUser,
-                    transactions = uiState.transactions,
-                    rewards = uiState.rewards,
-                    userRole = uiState.currentRole,
-                    onOpenDeposit = { viewModel.openDepositDialog() },
-                    onOpenWithdraw = { viewModel.openWithdrawDialog() },
-                    onRedeemReward = { viewModel.redeemReward(it) },
-                    onBack = { isViewingWallet = false }
-                )
-            } else {
-                when (uiState.currentRole) {
+            when {
+                activeChatBookingId != null -> {
+                    val chatBooking = uiState.allBookings.find { it.id == activeChatBookingId }
+                        ?: uiState.customerBookings.find { it.id == activeChatBookingId }
+                        ?: uiState.workerBookings.find { it.id == activeChatBookingId }
+                        ?: uiState.selectedBooking
+                    if (chatBooking != null) {
+                        ChatDetailScreen(
+                            booking = chatBooking,
+                            messages = uiState.chatMessages.ifEmpty { uiState.allMessages.filter { it.bookingId == chatBooking.id } },
+                            currentUserId = uiState.currentUser?.id ?: "usr_cust_1",
+                            currentUserRole = uiState.currentRole,
+                            onSendMessage = { text, attachmentUrl, attachmentType ->
+                                viewModel.sendChatMessageWithAttachment(chatBooking.id, text, attachmentUrl, attachmentType)
+                            },
+                            onBackClicked = {
+                                activeChatBookingId = null
+                            },
+                            onViewJobClicked = {
+                                activeChatBookingId = null
+                                isViewingConversations = false
+                                viewModel.selectBooking(chatBooking)
+                                viewingJobId = chatBooking.id
+                            }
+                        )
+                    } else {
+                        activeChatBookingId = null
+                    }
+                }
+                isViewingConversations -> {
+                    ConversationsScreen(
+                        currentUserId = uiState.currentUser?.id ?: "usr_cust_1",
+                        currentUserRole = uiState.currentRole,
+                        bookings = if (uiState.currentRole == UserRole.WORKER) uiState.workerBookings else uiState.customerBookings,
+                        messages = uiState.allMessages,
+                        onConversationSelected = { bookingId ->
+                            val b = uiState.allBookings.find { it.id == bookingId }
+                                ?: uiState.customerBookings.find { it.id == bookingId }
+                                ?: uiState.workerBookings.find { it.id == bookingId }
+                            if (b != null) {
+                                viewModel.selectBooking(b)
+                            }
+                            activeChatBookingId = bookingId
+                        },
+                        onBackClicked = {
+                            isViewingConversations = false
+                        }
+                    )
+                }
+                isViewingWallet -> {
+                    WalletRewardsScreen(
+                        user = uiState.currentUser,
+                        transactions = uiState.transactions,
+                        rewards = uiState.rewards,
+                        userRole = uiState.currentRole,
+                        onOpenDeposit = { viewModel.openDepositDialog() },
+                        onOpenWithdraw = { viewModel.openWithdrawDialog() },
+                        onRedeemReward = { viewModel.redeemReward(it) },
+                        onBack = { isViewingWallet = false }
+                    )
+                }
+                else -> {
+                    when (uiState.currentRole) {
                     UserRole.CUSTOMER -> {
                         // Check if viewing worker profile or job detail
                         val selectedWorker = uiState.selectedWorker
@@ -260,6 +324,9 @@ fun FixoApp(
                                 },
                                 onCancelBooking = {
                                     viewModel.cancelBooking(activeBooking.id)
+                                },
+                                onOpenFullChat = {
+                                    activeChatBookingId = activeBooking.id
                                 }
                             )
                         }
@@ -446,7 +513,8 @@ fun FixoApp(
                                     onOpenReview = { viewModel.openReviewDialog(activeJob) },
                                     onSendMessage = { msg -> viewModel.sendChatMessage(msg) },
                                     onOpenDispute = { viewModel.openDisputeDialog() },
-                                    onCancelBooking = { viewModel.cancelBooking(activeJob.id) }
+                                    onCancelBooking = { viewModel.cancelBooking(activeJob.id) },
+                                    onOpenFullChat = { activeChatBookingId = activeJob.id }
                                 )
                             } else {
                                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
@@ -493,6 +561,7 @@ fun FixoApp(
             }
         }
     }
+}
 }
 
     // Interactive Dialogs
@@ -560,13 +629,26 @@ fun FixoApp(
             onDismiss = { viewModel.closeNotificationsDialog() },
             onNotificationClick = { notif ->
                 viewModel.markNotificationRead(notif.id)
-                if (notif.bookingId != null) {
-                    val b = uiState.customerBookings.find { it.id == notif.bookingId }
-                        ?: uiState.workerBookings.find { it.id == notif.bookingId }
-                    if (b != null) {
-                        viewModel.selectBooking(b)
-                        viewingJobId = b.id
-                        viewModel.closeNotificationsDialog()
+                viewModel.closeNotificationsDialog()
+                when {
+                    notif.type == "MESSAGE_RECEIVED" && notif.bookingId != null -> {
+                        activeChatBookingId = notif.bookingId
+                        isViewingConversations = false
+                        isViewingWallet = false
+                    }
+                    notif.type == "PAYMENT" -> {
+                        isViewingWallet = true
+                        isViewingConversations = false
+                        activeChatBookingId = null
+                    }
+                    notif.bookingId != null -> {
+                        val b = uiState.allBookings.find { it.id == notif.bookingId }
+                            ?: uiState.customerBookings.find { it.id == notif.bookingId }
+                            ?: uiState.workerBookings.find { it.id == notif.bookingId }
+                        if (b != null) {
+                            viewModel.selectBooking(b)
+                            viewingJobId = b.id
+                        }
                     }
                 }
             },

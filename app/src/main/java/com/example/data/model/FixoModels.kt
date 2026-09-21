@@ -18,14 +18,32 @@ enum class VerificationStatus {
 }
 
 enum class ServiceCategory(val displayName: String, val iconKey: String) {
-    PLUMBING("Plumbing & Pipefitting", "plumbing"),
-    ELECTRICAL("Electrical & Solar", "electrical"),
-    HVAC("HVAC & Air Conditioning", "hvac"),
-    CARPENTRY("Cabinetry & Carpentry", "carpentry"),
-    MASONRY("Masonry & Tiling", "masonry"),
-    APPLIANCES("Appliance Diagnostics", "appliances"),
-    AUTO_TECH("Mobile Auto Mechanic", "auto_tech"),
-    IT_NETWORKING("CCTV & Smart Systems", "it_networking")
+    CLEANING("Cleaning", "cleaning"),
+    PLUMBING("Plumbing", "plumbing"),
+    ELECTRICAL("Electrical", "electrical"),
+    BEAUTY("Beauty", "beauty"),
+    HAIR_BRAIDING("Hair & Braiding", "hair"),
+    AC_COOLING("AC & Cooling", "ac"),
+    APPLIANCE_REPAIR("Appliance Repair", "appliances"),
+    PAINTING("Painting", "painting"),
+    MOVING("Moving", "moving"),
+    CAR_SERVICES("Car Services", "car"),
+    TUTORING("Tutoring", "tutoring"),
+    PHOTOGRAPHY("Photography", "photography"),
+    EVENTS("Events", "events"),
+    TECH_SUPPORT("Tech Support", "tech"),
+    CONSTRUCTION("Construction", "construction"),
+    OTHER("Other Trade", "other");
+
+    companion object {
+        // Compatibility aliases for existing seed references
+        val HVAC = AC_COOLING
+        val CARPENTRY = CONSTRUCTION
+        val MASONRY = CONSTRUCTION
+        val APPLIANCES = APPLIANCE_REPAIR
+        val AUTO_TECH = CAR_SERVICES
+        val IT_NETWORKING = TECH_SUPPORT
+    }
 }
 
 enum class JobStatus(val displayName: String) {
@@ -163,6 +181,7 @@ data class Booking(
     val customerReviewText: String = "",
     val pointsEarned: Int = 0,
     val workerPhone: String = "+237 671 234 567",
+    val customerPhone: String = "+237 677 889 900",
     val customerLat: Double = 4.0511,
     val customerLng: Double = 9.7679,
     val workerLat: Double = 4.0483,
@@ -224,7 +243,23 @@ data class ChatMessage(
     val senderRole: UserRole,
     val message: String,
     val timestamp: Long = System.currentTimeMillis(),
-    val isRead: Boolean = true
+    val isRead: Boolean = true,
+    val attachmentUrl: String? = null,
+    val attachmentType: String? = null, // IMAGE, DOCUMENT
+    val deliveryState: String = "DELIVERED" // SENDING, SENT, DELIVERED, READ, FAILED
+)
+
+data class ConversationItem(
+    val bookingId: String,
+    val otherParticipantId: String,
+    val otherParticipantName: String,
+    val otherParticipantAvatar: String,
+    val otherParticipantRole: UserRole,
+    val serviceTitle: String,
+    val lastMessage: String,
+    val lastMessageTimestamp: Long,
+    val unreadCount: Int = 0,
+    val jobStatus: JobStatus
 )
 
 @Entity(tableName = "wallet_transactions")

@@ -57,6 +57,8 @@ data class FixoUiState(
     val allBookings: List<Booking> = emptyList(),
     val selectedBooking: Booking? = null,
     val chatMessages: List<ChatMessage> = emptyList(),
+    val allMessages: List<ChatMessage> = emptyList(),
+    val unreadMessageCount: Int = 0,
     val transactions: List<WalletTransaction> = emptyList(),
     val rewards: List<RewardItem> = emptyList(),
     val enterpriseProjects: List<EnterpriseProject> = emptyList(),
@@ -228,6 +230,18 @@ class FixoViewModel(application: Application) : AndroidViewModel(application) {
         viewModelScope.launch {
             repository.getUnreadNotificationCount("usr_cust_1").collect { count ->
                 _uiState.value = _uiState.value.copy(unreadNotificationCount = count)
+            }
+        }
+
+        // Observe all messages
+        viewModelScope.launch {
+            repository.getAllMessages().collect { msgs ->
+                val currentUserId = _uiState.value.currentUser?.id ?: "usr_cust_1"
+                val unreadCount = msgs.count { !it.isRead && it.senderId != currentUserId }
+                _uiState.value = _uiState.value.copy(
+                    allMessages = msgs,
+                    unreadMessageCount = unreadCount
+                )
             }
         }
     }
@@ -478,16 +492,27 @@ class FixoViewModel(application: Application) : AndroidViewModel(application) {
 
     fun sendChatMessage(message: String) {
         val booking = _uiState.value.selectedBooking ?: return
+        sendChatMessageWithAttachment(booking.id, message, null, null)
+    }
+
+    fun sendChatMessageWithAttachment(
+        bookingId: String,
+        message: String,
+        attachmentUrl: String? = null,
+        attachmentType: String? = null
+    ) {
         val user = _uiState.value.currentUser ?: return
-        if (message.isBlank()) return
+        if (message.isBlank() && attachmentUrl.isNullOrBlank()) return
 
         viewModelScope.launch {
-            repository.sendMessage(
-                bookingId = booking.id,
+            repository.sendMessageWithAttachment(
+                bookingId = bookingId,
                 senderId = user.id,
                 senderName = user.name,
                 senderRole = _uiState.value.currentRole,
-                message = message
+                message = message,
+                attachmentUrl = attachmentUrl,
+                attachmentType = attachmentType
             )
         }
     }

@@ -747,14 +747,33 @@ class FixoRepository(context: Context) {
     fun getMessagesForBooking(bookingId: String): Flow<List<ChatMessage>> =
         dao.getMessagesForBooking(bookingId)
 
+    fun getAllMessages(): Flow<List<ChatMessage>> = dao.getAllMessages()
+
     suspend fun sendMessage(bookingId: String, senderId: String, senderName: String, senderRole: UserRole, message: String) {
+        sendMessageWithAttachment(bookingId, senderId, senderName, senderRole, message, null, null)
+    }
+
+    suspend fun sendMessageWithAttachment(
+        bookingId: String,
+        senderId: String,
+        senderName: String,
+        senderRole: UserRole,
+        message: String,
+        attachmentUrl: String? = null,
+        attachmentType: String? = null
+    ) {
         val msg = ChatMessage(
             id = "msg_" + UUID.randomUUID().toString().take(8),
             bookingId = bookingId,
             senderId = senderId,
             senderName = senderName,
             senderRole = senderRole,
-            message = message
+            message = message,
+            timestamp = System.currentTimeMillis(),
+            isRead = false,
+            attachmentUrl = attachmentUrl,
+            attachmentType = attachmentType,
+            deliveryState = "DELIVERED"
         )
         dao.insertChatMessage(msg)
     }

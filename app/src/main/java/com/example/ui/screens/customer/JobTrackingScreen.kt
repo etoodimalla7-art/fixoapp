@@ -129,6 +129,7 @@ fun JobTrackingScreen(
     onSendMessage: (String) -> Unit,
     onOpenDispute: () -> Unit,
     onCancelBooking: () -> Unit,
+    onOpenFullChat: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
@@ -846,14 +847,22 @@ fun JobTrackingScreen(
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text(
-                        text = "Direct Messages (${booking.workerName})",
-                        style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold)
-                    )
-                    Text(
-                        text = "${chatMessages.size} messages",
-                        style = MaterialTheme.typography.bodySmall.copy(color = FixoSlate500)
-                    )
+                    Column {
+                        Text(
+                            text = "Direct Messages (${booking.workerName})",
+                            style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold)
+                        )
+                        Text(
+                            text = "${chatMessages.size} messages • Encrypted & Job-Scoped",
+                            style = MaterialTheme.typography.bodySmall.copy(color = FixoSlate500, fontSize = 11.sp)
+                        )
+                    }
+                    TextButton(
+                        onClick = onOpenFullChat,
+                        modifier = Modifier.testTag("open_full_chat_button")
+                    ) {
+                        Text("Open Full Chat", color = FixoBlue600, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                    }
                 }
                 Spacer(modifier = Modifier.height(4.dp))
             }

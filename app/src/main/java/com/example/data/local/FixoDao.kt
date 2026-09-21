@@ -112,6 +112,9 @@ interface FixoDao {
     @Query("SELECT * FROM chat_messages WHERE bookingId = :bookingId ORDER BY timestamp ASC")
     fun getMessagesForBooking(bookingId: String): Flow<List<ChatMessage>>
 
+    @Query("SELECT * FROM chat_messages ORDER BY timestamp DESC")
+    fun getAllMessages(): Flow<List<ChatMessage>>
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertChatMessage(message: ChatMessage)
 

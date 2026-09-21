@@ -97,7 +97,7 @@ class FixoTypeConverters {
         com.example.data.model.FixoNotification::class,
         com.example.data.model.WorkerReview::class
     ],
-    version = 2,
+    version = 3,
     exportSchema = false
 )
 @TypeConverters(FixoTypeConverters::class)
