@@ -1,0 +1,30 @@
+version: '3.8'
+
+services:
+  mongodb:
+    image: mongo:7.0
+    container_name: fixo_mongodb
+    restart: always
+    ports:
+      - "27017:27017"
+    environment:
+      MONGO_INITDB_DATABASE: fixo_production
+    volumes:
+      - mongo_data:/data/db
+
+  backend:
+    build: .
+    container_name: fixo_backend
+    restart: always
+    ports:
+      - "8000:8000"
+    environment:
+      - MONGODB_URL=mongodb://mongodb:27017
+      - DATABASE_NAME=fixo_production
+      - JWT_SECRET_KEY=fixo_super_secret_production_key_change_in_prod_991823
+      - PUBLIC_BASE_URL=https://fixo.cm
+    depends_on:
+      - mongodb
+
+volumes:
+  mongo_data:

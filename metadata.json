@@ -1,0 +1,7 @@
+{
+  "name": "FIXO",
+  "description": "On-demand skilled trades, worker reels, booking, escrow wallet and real-time job platform",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
+
