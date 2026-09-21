@@ -5,25 +5,24 @@ import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Assignment
+import androidx.compose.material.icons.automirrored.filled.Assignment
+import androidx.compose.material.icons.automirrored.outlined.Assignment
+import androidx.compose.material.icons.filled.Build
 import androidx.compose.material.icons.filled.Business
 import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.PlayCircle
-import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Security
 import androidx.compose.material.icons.filled.VerifiedUser
 import androidx.compose.material.icons.filled.VideoLibrary
 import androidx.compose.material.icons.filled.Work
-import androidx.compose.material.icons.outlined.AccountBalanceWallet
-import androidx.compose.material.icons.outlined.Assignment
+import androidx.compose.material.icons.outlined.Build
 import androidx.compose.material.icons.outlined.Business
 import androidx.compose.material.icons.outlined.DateRange
 import androidx.compose.material.icons.outlined.Home
 import androidx.compose.material.icons.outlined.Person
 import androidx.compose.material.icons.outlined.PlayCircle
-import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material.icons.outlined.Security
 import androidx.compose.material.icons.outlined.VerifiedUser
 import androidx.compose.material.icons.outlined.VideoLibrary
@@ -38,12 +37,15 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.data.model.UserRole
-import com.example.ui.theme.FixoGold100
-import com.example.ui.theme.FixoGold700
+import com.example.ui.theme.FixoGold500
+import com.example.ui.theme.FixoGold600
 import com.example.ui.theme.FixoNavy900
+import com.example.ui.theme.FixoNavy950
+import com.example.ui.theme.FixoNeutral400
 import com.example.ui.theme.FixoNeutral500
 
 data class NavItem(
@@ -63,10 +65,10 @@ fun FixoBottomNav(
     val items = when (currentRole) {
         UserRole.CUSTOMER -> listOf(
             NavItem("Home", Icons.Outlined.Home, Icons.Filled.Home, "nav_customer_home"),
-            NavItem("Explore", Icons.Outlined.Search, Icons.Filled.Search, "nav_customer_explore"),
+            NavItem("Services", Icons.Outlined.Build, Icons.Filled.Build, "nav_customer_services"),
+            NavItem("Activity", Icons.AutoMirrored.Outlined.Assignment, Icons.AutoMirrored.Filled.Assignment, "nav_customer_activity"),
             NavItem("Reels", Icons.Outlined.PlayCircle, Icons.Filled.PlayCircle, "nav_customer_reels"),
-            NavItem("Jobs", Icons.Outlined.Work, Icons.Filled.Work, "nav_customer_jobs"),
-            NavItem("Profile", Icons.Outlined.Person, Icons.Filled.Person, "nav_customer_profile")
+            NavItem("Account", Icons.Outlined.Person, Icons.Filled.Person, "nav_customer_account")
         )
         UserRole.WORKER -> listOf(
             NavItem("Dashboard", Icons.Outlined.Home, Icons.Filled.Home, "nav_worker_dash"),
@@ -77,12 +79,12 @@ fun FixoBottomNav(
         )
         UserRole.ENTERPRISE -> listOf(
             NavItem("Workforce", Icons.Outlined.Business, Icons.Filled.Business, "nav_enterprise_projects"),
-            NavItem("Invoicing", Icons.Outlined.Assignment, Icons.Filled.Assignment, "nav_enterprise_invoices")
+            NavItem("Invoicing", Icons.AutoMirrored.Outlined.Assignment, Icons.AutoMirrored.Filled.Assignment, "nav_enterprise_invoices")
         )
         UserRole.ADMIN -> listOf(
             NavItem("Overview", Icons.Outlined.Security, Icons.Filled.Security, "nav_admin_overview"),
             NavItem("Verification", Icons.Outlined.VerifiedUser, Icons.Filled.VerifiedUser, "nav_admin_verify"),
-            NavItem("Disputes", Icons.Outlined.Assignment, Icons.Filled.Assignment, "nav_admin_disputes")
+            NavItem("Disputes", Icons.AutoMirrored.Outlined.Assignment, Icons.AutoMirrored.Filled.Assignment, "nav_admin_disputes")
         )
     }
 
@@ -107,15 +109,16 @@ fun FixoBottomNav(
                     Text(
                         text = item.label,
                         fontSize = 11.sp,
+                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
                         maxLines = 1
                     )
                 },
                 colors = NavigationBarItemDefaults.colors(
-                    selectedIconColor = FixoNavy900,
-                    selectedTextColor = FixoGold700,
-                    indicatorColor = FixoGold100,
-                    unselectedIconColor = FixoNeutral500,
-                    unselectedTextColor = FixoNeutral500
+                    selectedIconColor = MaterialTheme.colorScheme.primary,
+                    selectedTextColor = MaterialTheme.colorScheme.primary,
+                    indicatorColor = MaterialTheme.colorScheme.secondaryContainer,
+                    unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+                    unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
                 ),
                 modifier = Modifier.testTag(item.testTag)
             )

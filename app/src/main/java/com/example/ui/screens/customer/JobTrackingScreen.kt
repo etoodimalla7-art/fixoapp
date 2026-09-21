@@ -36,6 +36,7 @@ import androidx.compose.material3.Divider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Surface
@@ -158,7 +159,10 @@ fun JobTrackingScreen(
 
                     Spacer(modifier = Modifier.height(14.dp))
 
-                    Row(verticalAlignment = Alignment.CenterVertically) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
                         AsyncImage(
                             model = booking.workerAvatar,
                             contentDescription = booking.workerName,
@@ -177,6 +181,23 @@ fun JobTrackingScreen(
                                 text = "${booking.category.displayName} • ${booking.workerPhone}",
                                 style = MaterialTheme.typography.bodySmall.copy(color = FixoSlate500)
                             )
+                        }
+                        Surface(
+                            shape = CircleShape,
+                            color = FixoEmerald50,
+                            modifier = Modifier
+                                .size(38.dp)
+                                .clip(CircleShape)
+                                .clickable { }
+                        ) {
+                            Box(contentAlignment = Alignment.Center) {
+                                Icon(
+                                    imageVector = Icons.Default.Phone,
+                                    contentDescription = "Call Artisan",
+                                    tint = FixoEmerald600,
+                                    modifier = Modifier.size(18.dp)
+                                )
+                            }
                         }
                     }
 
@@ -198,6 +219,15 @@ fun JobTrackingScreen(
                             Text(text = "Location", style = MaterialTheme.typography.labelSmall.copy(color = FixoSlate500))
                             Text(text = booking.address, style = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.Bold))
                         }
+                    }
+
+                    if (booking.notes.isNotBlank()) {
+                        Spacer(modifier = Modifier.height(10.dp))
+                        Divider(color = FixoSlate100)
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text(text = "Job Description & Notes", style = MaterialTheme.typography.labelSmall.copy(color = FixoSlate500))
+                        Spacer(modifier = Modifier.height(2.dp))
+                        Text(text = booking.notes, style = MaterialTheme.typography.bodySmall)
                     }
                 }
             }
@@ -314,6 +344,18 @@ fun JobTrackingScreen(
                             }
                         }
                     }
+
+                    if (booking.status == JobStatus.REQUESTED || booking.status == JobStatus.ACCEPTED) {
+                        Spacer(modifier = Modifier.height(10.dp))
+                        OutlinedButton(
+                            onClick = { onAdvanceStatus(JobStatus.CANCELLED) },
+                            shape = RoundedCornerShape(8.dp),
+                            colors = ButtonDefaults.outlinedButtonColors(contentColor = FixoRed500),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Text("Cancel Booking & Refund Escrow", fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+                        }
+                    }
                 }
             }
         }
@@ -333,7 +375,7 @@ fun JobTrackingScreen(
                         Icon(Icons.Default.Lock, contentDescription = "Escrow", tint = FixoEmerald600, modifier = Modifier.size(20.dp))
                         Spacer(modifier = Modifier.width(8.dp))
                         Text(
-                            text = "Escrow Protection: $${booking.priceAmount} Secured",
+                            text = "Escrow Protection: ${com.example.data.model.formatFixoCurrency(booking.priceAmount)} Secured",
                             style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold, color = FixoEmerald600)
                         )
                     }

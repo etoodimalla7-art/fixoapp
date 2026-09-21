@@ -31,6 +31,7 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Divider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -240,17 +241,89 @@ fun BookingDialog(
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(8.dp)
                 )
+                Spacer(modifier = Modifier.height(4.dp))
+                Row(
+                    modifier = Modifier
+                        .clickable { address = "Avenue De Gaulle, Bonanjo, Douala" }
+                        .padding(vertical = 2.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = "📍 Use GPS: Avenue De Gaulle, Bonanjo, Douala",
+                        fontSize = 11.sp,
+                        color = FixoBlue600,
+                        fontWeight = FontWeight.Medium
+                    )
+                }
 
                 Spacer(modifier = Modifier.height(10.dp))
 
-                // Notes Field
+                // Notes & Photo Field
                 OutlinedTextField(
                     value = notes,
                     onValueChange = { notes = it },
-                    label = { Text("Problem Description & Scope") },
+                    label = { Text("Problem Description & Notes") },
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(8.dp)
                 )
+                Spacer(modifier = Modifier.height(4.dp))
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Surface(
+                        shape = RoundedCornerShape(6.dp),
+                        color = MaterialTheme.colorScheme.surfaceVariant,
+                        modifier = Modifier.clickable { }
+                    ) {
+                        Row(modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+                            Icon(Icons.Default.Star, contentDescription = null, tint = FixoAmber500, modifier = Modifier.size(12.dp))
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text("Attach Site Photo (Optional)", fontSize = 10.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(14.dp))
+
+                // 6. Itemized Pricing Breakdown
+                val servicePrice = service.price
+                val transportFee = 1500.0
+                val platformFee = 500.0
+                val totalEscrow = servicePrice + transportFee + platformFee
+
+                Card(
+                    shape = RoundedCornerShape(10.dp),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Column(modifier = Modifier.padding(12.dp)) {
+                        Text("Itemized Pricing Breakdown", fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                        Spacer(modifier = Modifier.height(6.dp))
+                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                            Text("Service Rate", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            Text(com.example.data.model.formatFixoCurrency(servicePrice), fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
+                        }
+                        Spacer(modifier = Modifier.height(3.dp))
+                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                            Text("Artisan Transport & Dispatch", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            Text(com.example.data.model.formatFixoCurrency(transportFee), fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
+                        }
+                        Spacer(modifier = Modifier.height(3.dp))
+                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                            Text("Platform & Escrow Insurance", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            Text(com.example.data.model.formatFixoCurrency(platformFee), fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
+                        }
+                        Spacer(modifier = Modifier.height(6.dp))
+                        Divider()
+                        Spacer(modifier = Modifier.height(6.dp))
+                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                            Text("Total Escrow Deposit", fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                            Text(com.example.data.model.formatFixoCurrency(totalEscrow), fontWeight = FontWeight.Bold, fontSize = 13.sp, color = FixoNavy900)
+                        }
+                    }
+                }
 
                 Spacer(modifier = Modifier.height(14.dp))
 
@@ -319,7 +392,7 @@ fun BookingDialog(
                         Icon(Icons.Default.Shield, contentDescription = "Guarantee", tint = FixoEmerald600, modifier = Modifier.size(18.dp))
                         Spacer(modifier = Modifier.width(8.dp))
                         Text(
-                            text = "Escrow Protection: $${service.price} is locked securely until you inspect and approve the completed repair.",
+                            text = "Escrow Protection: ${com.example.data.model.formatFixoCurrency(totalEscrow)} is locked securely until you inspect and approve the completed repair.",
                             style = MaterialTheme.typography.bodySmall.copy(fontSize = 11.sp, color = FixoEmerald600, fontWeight = FontWeight.Medium)
                         )
                     }
@@ -343,7 +416,7 @@ fun BookingDialog(
                     )
                 ) {
                     Text(
-                        text = "Confirm & Hold in Escrow ($${service.price})",
+                        text = "Confirm & Hold in Escrow (${com.example.data.model.formatFixoCurrency(totalEscrow)})",
                         fontWeight = FontWeight.Bold,
                         fontSize = 15.sp,
                         color = FixoNavy950

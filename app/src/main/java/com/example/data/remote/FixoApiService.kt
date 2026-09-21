@@ -117,6 +117,13 @@ interface FixoApiService {
         @Query("new_status") newStatus: String
     ): Response<Map<String, String>>
 
+    @POST("api/v1/bookings/{id}/release")
+    suspend fun releaseEscrow(
+        @Path("id") bookingId: String,
+        @Query("rating") rating: Float,
+        @Query("review") review: String
+    ): Response<Map<String, Any>>
+
     @GET("api/v1/reels")
     suspend fun getReels(@Query("category") category: String? = null): Response<List<Reel>>
 

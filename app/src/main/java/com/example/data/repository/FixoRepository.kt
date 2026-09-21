@@ -275,6 +275,23 @@ class FixoRepository(context: Context) {
         )
         dao.insertChatMessage(welcomeMsg)
 
+        // Remote backend sync (FastAPI/MongoDB) with offline-first fallback
+        try {
+            api.createBooking(
+                com.example.data.remote.CreateBookingDto(
+                    worker_id = worker.id,
+                    service_id = service.id,
+                    date = date,
+                    time_slot = timeSlot,
+                    address = address,
+                    notes = notes,
+                    payment_method = paymentMethod.name
+                )
+            )
+        } catch (e: Exception) {
+            // Room database maintains authoritative offline-first state
+        }
+
         return booking
     }
 
@@ -282,6 +299,41 @@ class FixoRepository(context: Context) {
         val booking = dao.getBookingByIdDirect(bookingId) ?: return
         val updated = booking.copy(status = newStatus)
         dao.updateBooking(updated)
+
+        // If cancelled, automatically refund holding escrow back to customer balance
+        if (newStatus == JobStatus.CANCELLED && booking.escrowStatus == EscrowStatus.HOLDING) {
+            val refundedBooking = updated.copy(escrowStatus = EscrowStatus.REFUNDED)
+            dao.updateBooking(refundedBooking)
+
+            val customer = dao.getUserById(booking.customerId).first()
+            if (customer != null) {
+                dao.updateUser(
+                    customer.copy(
+                        balance = customer.balance + booking.priceAmount,
+                        escrowLocked = (customer.escrowLocked - booking.priceAmount).coerceAtLeast(0.0)
+                    )
+                )
+                val tx = WalletTransaction(
+                    id = "tx_" + UUID.randomUUID().toString().take(8),
+                    userId = customer.id,
+                    type = "ESCROW_REFUND",
+                    amount = booking.priceAmount,
+                    currency = "XAF",
+                    description = "Escrow refund for cancelled job ${booking.id}",
+                    status = "COMPLETED",
+                    paymentProvider = "FIXO_ESCROW",
+                    referenceCode = "RFD-${booking.id.uppercase()}"
+                )
+                dao.insertTransaction(tx)
+            }
+        }
+
+        // Remote backend sync
+        try {
+            api.updateJobStatus(bookingId, newStatus.name)
+        } catch (e: Exception) {
+            // Room database maintains authoritative offline-first state
+        }
 
         // Add automated status message
         val statusText = when (newStatus) {
@@ -363,6 +415,13 @@ class FixoRepository(context: Context) {
             referenceCode = "REL-${booking.id.uppercase()}"
         )
         dao.insertTransaction(tx)
+
+        // Remote backend sync
+        try {
+            api.releaseEscrow(bookingId, rating, reviewText)
+        } catch (e: Exception) {
+            // Room DB provides local offline-first source of truth
+        }
     }
 
     // CHAT

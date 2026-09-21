@@ -20,6 +20,7 @@ import com.example.data.model.WalletTransaction
 import com.example.data.model.WorkerProfile
 import com.example.data.repository.FixoRepository
 import com.example.data.repository.SessionManager
+import com.example.data.repository.ThemeMode
 import com.example.localization.AppLanguage
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -35,6 +36,11 @@ data class FixoUiState(
     val authError: String? = null,
     val currentRole: UserRole = UserRole.CUSTOMER,
     val currentLanguage: AppLanguage = AppLanguage.EN,
+    val themeMode: ThemeMode = ThemeMode.SYSTEM,
+    val notifJobs: Boolean = true,
+    val notifMessages: Boolean = true,
+    val notifPayments: Boolean = true,
+    val shareLocation: Boolean = true,
     val currentUser: User? = null,
     val allWorkers: List<WorkerProfile> = emptyList(),
     val filteredWorkers: List<WorkerProfile> = emptyList(),
@@ -96,6 +102,37 @@ class FixoViewModel(application: Application) : AndroidViewModel(application) {
         viewModelScope.launch {
             repository.currentLanguage.collect { lang ->
                 _uiState.value = _uiState.value.copy(currentLanguage = lang)
+            }
+        }
+
+        // Observe theme mode and preferences
+        viewModelScope.launch {
+            sessionManager.themeMode.collect { mode ->
+                _uiState.value = _uiState.value.copy(themeMode = mode)
+            }
+        }
+
+        viewModelScope.launch {
+            sessionManager.notifJobs.collect { jobs ->
+                _uiState.value = _uiState.value.copy(notifJobs = jobs)
+            }
+        }
+
+        viewModelScope.launch {
+            sessionManager.notifMessages.collect { msgs ->
+                _uiState.value = _uiState.value.copy(notifMessages = msgs)
+            }
+        }
+
+        viewModelScope.launch {
+            sessionManager.notifPayments.collect { payments ->
+                _uiState.value = _uiState.value.copy(notifPayments = payments)
+            }
+        }
+
+        viewModelScope.launch {
+            sessionManager.shareLocation.collect { loc ->
+                _uiState.value = _uiState.value.copy(shareLocation = loc)
             }
         }
 
@@ -651,6 +688,21 @@ class FixoViewModel(application: Application) : AndroidViewModel(application) {
             showToast("Artisan saved to favorites.")
         }
         _uiState.value = _uiState.value.copy(savedWorkerIds = current)
+    }
+
+    fun setThemeMode(mode: ThemeMode) {
+        sessionManager.setThemeMode(mode)
+        showToast("Theme changed to ${mode.name.lowercase().replaceFirstChar { it.uppercase() }}")
+    }
+
+    fun setNotificationPref(jobs: Boolean, messages: Boolean, payments: Boolean) {
+        sessionManager.setNotificationPref(jobs, messages, payments)
+        showToast("Notification preferences updated")
+    }
+
+    fun setShareLocation(enabled: Boolean) {
+        sessionManager.setShareLocation(enabled)
+        showToast(if (enabled) "Live location sharing enabled for active jobs" else "Location sharing paused")
     }
 
     fun deleteAccount() {

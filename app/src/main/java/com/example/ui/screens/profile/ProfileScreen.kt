@@ -61,6 +61,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
@@ -82,6 +83,8 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.material.icons.filled.BrightnessAuto
+import androidx.compose.material.icons.filled.LightMode
 import androidx.compose.ui.window.Dialog
 import coil.compose.AsyncImage
 import com.example.R
@@ -89,6 +92,7 @@ import com.example.data.model.Booking
 import com.example.data.model.JobStatus
 import com.example.data.model.User
 import com.example.data.model.WorkerProfile
+import com.example.data.repository.ThemeMode
 import com.example.localization.AppLanguage
 import com.example.ui.theme.FixoEmerald500
 import com.example.ui.theme.FixoGold100
@@ -121,6 +125,14 @@ fun ProfileScreen(
     onOpenDispute: () -> Unit,
     onLogout: () -> Unit,
     onDeleteAccount: () -> Unit,
+    themeMode: ThemeMode = ThemeMode.SYSTEM,
+    onThemeModeChanged: (ThemeMode) -> Unit = {},
+    notifJobs: Boolean = true,
+    notifMessages: Boolean = true,
+    notifPayments: Boolean = true,
+    shareLocation: Boolean = true,
+    onNotificationPrefChanged: (Boolean, Boolean, Boolean) -> Unit = { _, _, _ -> },
+    onShareLocationChanged: (Boolean) -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     var showEditProfileDialog by remember { mutableStateOf(false) }
@@ -600,7 +612,9 @@ fun ProfileScreen(
         // 6. PREFERENCES & SETTINGS
         item {
             Card(
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .testTag("settings_preferences_card"),
                 shape = RoundedCornerShape(16.dp),
                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
                 elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
@@ -613,7 +627,57 @@ fun ProfileScreen(
                         color = MaterialTheme.colorScheme.onSurface
                     )
 
-                    Spacer(modifier = Modifier.height(12.dp))
+                    Spacer(modifier = Modifier.height(14.dp))
+
+                    // THEME / APPEARANCE SEGMENTED SELECTOR (Light / Dark / System)
+                    Text(
+                        text = if (language == AppLanguage.FR) "Apparence (Thème)" else "Appearance & Theme",
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                    Text(
+                        text = if (language == AppLanguage.FR) "Personnalisez le mode clair ou sombre" else "Switch between System, Light, or Dark mode",
+                        fontSize = 11.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(12.dp))
+                            .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
+                            .padding(4.dp),
+                        horizontalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        ThemeOptionButton(
+                            label = "System",
+                            icon = Icons.Default.BrightnessAuto,
+                            isSelected = themeMode == ThemeMode.SYSTEM,
+                            onClick = { onThemeModeChanged(ThemeMode.SYSTEM) },
+                            modifier = Modifier.weight(1f)
+                        )
+                        ThemeOptionButton(
+                            label = "Light",
+                            icon = Icons.Default.LightMode,
+                            isSelected = themeMode == ThemeMode.LIGHT,
+                            onClick = { onThemeModeChanged(ThemeMode.LIGHT) },
+                            modifier = Modifier.weight(1f)
+                        )
+                        ThemeOptionButton(
+                            label = "Dark",
+                            icon = Icons.Default.DarkMode,
+                            isSelected = themeMode == ThemeMode.DARK,
+                            onClick = { onThemeModeChanged(ThemeMode.DARK) },
+                            modifier = Modifier.weight(1f)
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.height(14.dp))
+                    HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.15f))
+                    Spacer(modifier = Modifier.height(10.dp))
 
                     // Language Switcher
                     SettingsRow(
@@ -625,8 +689,8 @@ fun ProfileScreen(
                                 onClick = onToggleLanguage,
                                 shape = RoundedCornerShape(8.dp),
                                 colors = ButtonDefaults.buttonColors(
-                                    containerColor = FixoNavy900,
-                                    contentColor = FixoWhite
+                                    containerColor = MaterialTheme.colorScheme.primary,
+                                    contentColor = MaterialTheme.colorScheme.onPrimary
                                 ),
                                 contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp)
                             ) {
@@ -639,39 +703,77 @@ fun ProfileScreen(
                         }
                     )
 
-                    HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp), color = FixoNeutral200)
+                    HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp), color = MaterialTheme.colorScheme.outline.copy(alpha = 0.15f))
 
-                    // Push Notifications
+                    // Push Notifications (Job Updates)
                     SettingsRow(
                         icon = Icons.Default.Notifications,
-                        title = if (language == AppLanguage.FR) "Notifications instantanées" else "Push Notifications",
-                        subtitle = if (language == AppLanguage.FR) "Statut du travail et alertes d'artisan" else "Job updates, messages & arrival alerts",
+                        title = if (language == AppLanguage.FR) "Alertes des Interventions" else "Job Status & Dispatch Alerts",
+                        subtitle = if (language == AppLanguage.FR) "Statut du travail et alertes d'arrivée" else "Real-time updates when artisan accepts or arrives",
                         trailing = {
                             Switch(
-                                checked = pushNotificationsEnabled,
-                                onCheckedChange = { pushNotificationsEnabled = it },
+                                checked = notifJobs,
+                                onCheckedChange = { onNotificationPrefChanged(it, notifMessages, notifPayments) },
                                 colors = SwitchDefaults.colors(
-                                    checkedThumbColor = FixoWhite,
-                                    checkedTrackColor = FixoNavy900
+                                    checkedThumbColor = MaterialTheme.colorScheme.onPrimary,
+                                    checkedTrackColor = MaterialTheme.colorScheme.primary
                                 )
                             )
                         }
                     )
 
-                    HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp), color = FixoNeutral200)
+                    HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp), color = MaterialTheme.colorScheme.outline.copy(alpha = 0.15f))
 
-                    // SMS Updates (Cameroon specific)
+                    // Chat & Messaging Alerts
                     SettingsRow(
-                        icon = Icons.Default.Phone,
-                        title = "SMS Offline Alerts",
-                        subtitle = "Receive booking confirmation via MTN/Orange SMS",
+                        icon = Icons.Default.Email,
+                        title = if (language == AppLanguage.FR) "Messages & Devis" else "Chat & Estimate Alerts",
+                        subtitle = "Instant notifications when your artisan sends a quote or message",
                         trailing = {
                             Switch(
-                                checked = smsUpdatesEnabled,
-                                onCheckedChange = { smsUpdatesEnabled = it },
+                                checked = notifMessages,
+                                onCheckedChange = { onNotificationPrefChanged(notifJobs, it, notifPayments) },
                                 colors = SwitchDefaults.colors(
-                                    checkedThumbColor = FixoWhite,
-                                    checkedTrackColor = FixoNavy900
+                                    checkedThumbColor = MaterialTheme.colorScheme.onPrimary,
+                                    checkedTrackColor = MaterialTheme.colorScheme.primary
+                                )
+                            )
+                        }
+                    )
+
+                    HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp), color = MaterialTheme.colorScheme.outline.copy(alpha = 0.15f))
+
+                    // Escrow & Payment Alerts
+                    SettingsRow(
+                        icon = Icons.Default.Lock,
+                        title = "Escrow & Payment Receipts",
+                        subtitle = "Notifications when funds are held, released, or refunded",
+                        trailing = {
+                            Switch(
+                                checked = notifPayments,
+                                onCheckedChange = { onNotificationPrefChanged(notifJobs, notifMessages, it) },
+                                colors = SwitchDefaults.colors(
+                                    checkedThumbColor = MaterialTheme.colorScheme.onPrimary,
+                                    checkedTrackColor = MaterialTheme.colorScheme.primary
+                                )
+                            )
+                        }
+                    )
+
+                    HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp), color = MaterialTheme.colorScheme.outline.copy(alpha = 0.15f))
+
+                    // Safety Location Sharing
+                    SettingsRow(
+                        icon = Icons.Default.LocationOn,
+                        title = "Live Location Sharing",
+                        subtitle = "Share GPS coordinates with artisan during active en-route navigation",
+                        trailing = {
+                            Switch(
+                                checked = shareLocation,
+                                onCheckedChange = onShareLocationChanged,
+                                colors = SwitchDefaults.colors(
+                                    checkedThumbColor = MaterialTheme.colorScheme.onPrimary,
+                                    checkedTrackColor = MaterialTheme.colorScheme.primary
                                 )
                             )
                         }
@@ -1534,6 +1636,44 @@ private fun FaqItem(
                     lineHeight = 16.sp
                 )
             }
+        }
+    }
+}
+
+@Composable
+private fun ThemeOptionButton(
+    label: String,
+    icon: ImageVector,
+    isSelected: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Surface(
+        shape = RoundedCornerShape(9.dp),
+        color = if (isSelected) MaterialTheme.colorScheme.primary else Color.Transparent,
+        tonalElevation = if (isSelected) 2.dp else 0.dp,
+        modifier = modifier
+            .clickable(onClick = onClick)
+            .testTag("theme_btn_${label.lowercase()}")
+    ) {
+        Row(
+            modifier = Modifier.padding(vertical = 8.dp),
+            horizontalArrangement = Arrangement.Center,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Icon(
+                imageVector = icon,
+                contentDescription = label,
+                tint = if (isSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.size(15.dp)
+            )
+            Spacer(modifier = Modifier.width(4.dp))
+            Text(
+                text = label,
+                fontSize = 12.sp,
+                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                color = if (isSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant
+            )
         }
     }
 }

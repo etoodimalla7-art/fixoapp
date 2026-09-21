@@ -34,6 +34,7 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.data.model.UserRole
 import com.example.data.model.WorkerProfile
+import com.example.data.repository.ThemeMode
 import com.example.ui.components.BookingDialog
 import com.example.ui.components.DepositDialog
 import com.example.ui.components.DisputeDialog
@@ -43,7 +44,9 @@ import com.example.ui.components.ReviewAndReleaseDialog
 import com.example.ui.components.UploadReelDialog
 import com.example.ui.components.WithdrawDialog
 import com.example.ui.screens.admin.AdminPortalScreen
+import com.example.ui.screens.customer.CustomerActivityScreen
 import com.example.ui.screens.customer.CustomerHomeScreen
+import com.example.ui.screens.customer.CustomerServicesScreen
 import com.example.ui.screens.customer.JobTrackingScreen
 import com.example.ui.screens.customer.WorkerProfileScreen
 import com.example.ui.screens.enterprise.EnterpriseScreen
@@ -261,33 +264,37 @@ fun FixoApp(
                                         viewModel.selectBooking(booking)
                                         viewingJobId = booking.id
                                     },
-                                    onWatchReelsClicked = { selectedTab = 2 }
+                                    onWatchReelsClicked = { selectedTab = 3 },
+                                    onNavigateToServices = { selectedTab = 1 }
                                 )
 
-                                1 -> CustomerHomeScreen(
-                                    workers = uiState.filteredWorkers.ifEmpty { uiState.allWorkers },
-                                    reels = uiState.reels,
-                                    activeBookings = uiState.customerBookings,
-                                    searchQuery = uiState.searchQuery,
-                                    selectedCategory = uiState.selectedCategory,
-                                    filterVerifiedOnly = uiState.filterVerifiedOnly,
-                                    filterEmergencyOnly = uiState.filterEmergencyOnly,
+                                1 -> CustomerServicesScreen(
+                                    allWorkers = uiState.allWorkers,
                                     language = uiState.currentLanguage,
-                                    onSearchChanged = { viewModel.onSearchQueryChanged(it) },
-                                    onCategorySelected = { viewModel.onCategorySelected(it) },
-                                    onToggleVerified = { viewModel.toggleFilterVerifiedOnly() },
-                                    onToggleEmergency = { viewModel.toggleFilterEmergencyOnly() },
+                                    onBookService = { service, worker ->
+                                        viewModel.openBookingDialog(service, worker)
+                                    },
                                     onWorkerClicked = { worker ->
                                         viewModel.selectWorker(worker)
-                                    },
-                                    onBookingClicked = { booking ->
+                                    }
+                                )
+
+                                2 -> CustomerActivityScreen(
+                                    bookings = uiState.customerBookings,
+                                    language = uiState.currentLanguage,
+                                    onSelectBooking = { booking ->
                                         viewModel.selectBooking(booking)
                                         viewingJobId = booking.id
                                     },
-                                    onWatchReelsClicked = { selectedTab = 2 }
+                                    onOpenReview = { booking ->
+                                        viewModel.openReviewDialog(booking)
+                                    },
+                                    onOpenDispute = {
+                                        viewModel.openDisputeDialog()
+                                    }
                                 )
 
-                                2 -> ReelsFeedScreen(
+                                3 -> ReelsFeedScreen(
                                     reels = uiState.reels,
                                     allWorkers = uiState.allWorkers,
                                     onLikeReel = { viewModel.likeReel(it) },
@@ -311,34 +318,6 @@ fun FixoApp(
                                     }
                                 )
 
-                                3 -> {
-                                    // Jobs list / tracker
-                                    val currentBooking = uiState.customerBookings.firstOrNull()
-                                    if (currentBooking != null) {
-                                        JobTrackingScreen(
-                                            booking = uiState.selectedBooking ?: currentBooking,
-                                            chatMessages = uiState.chatMessages,
-                                            onBack = { selectedTab = 0 },
-                                            onAdvanceStatus = { status ->
-                                                viewModel.advanceJobStatus((uiState.selectedBooking ?: currentBooking).id, status)
-                                            },
-                                            onOpenReview = {
-                                                viewModel.openReviewDialog(uiState.selectedBooking ?: currentBooking)
-                                            },
-                                            onSendMessage = { msg ->
-                                                viewModel.sendChatMessage(msg)
-                                            },
-                                            onOpenDispute = {
-                                                viewModel.openDisputeDialog()
-                                            }
-                                        )
-                                    } else {
-                                        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                                            Text("No bookings yet. Explore top artisans to book.")
-                                        }
-                                    }
-                                }
-
                                 4 -> ProfileScreen(
                                     user = uiState.currentUser,
                                     customerBookings = uiState.customerBookings,
@@ -348,12 +327,20 @@ fun FixoApp(
                                         viewModel.updateUserProfile(name, email, phone, city, avatarUrl)
                                     },
                                     onToggleLanguage = { viewModel.toggleLanguage() },
-                                    onNavigateToJobs = { selectedTab = 3 },
+                                    onNavigateToJobs = { selectedTab = 2 },
                                     onNavigateToWallet = { isViewingWallet = true },
                                     onWorkerClicked = { worker -> viewModel.selectWorker(worker) },
                                     onOpenDispute = { viewModel.openDisputeDialog() },
                                     onLogout = { viewModel.logout() },
-                                    onDeleteAccount = { viewModel.deleteAccount() }
+                                    onDeleteAccount = { viewModel.deleteAccount() },
+                                    themeMode = uiState.themeMode,
+                                    onThemeModeChanged = { viewModel.setThemeMode(it) },
+                                    notifJobs = uiState.notifJobs,
+                                    notifMessages = uiState.notifMessages,
+                                    notifPayments = uiState.notifPayments,
+                                    shareLocation = uiState.shareLocation,
+                                    onNotificationPrefChanged = { j, m, p -> viewModel.setNotificationPref(j, m, p) },
+                                    onShareLocationChanged = { viewModel.setShareLocation(it) }
                                 )
                             }
                         }
