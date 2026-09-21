@@ -10,25 +10,26 @@ import androidx.compose.ui.graphics.Color
 // - Crisp White & Restrained Neutrals
 // =========================================================================
 
-// --- FIXO Navy (Primary Brand Foundation) ---
-val FixoNavy950 = Color(0xFF070E1B) // Ultra midnight base for dark mode canvas
-val FixoNavy900 = Color(0xFF0C1628) // Authoritative FIXO Navy (logo background & primary dark)
-val FixoNavy850 = Color(0xFF101D36)
-val FixoNavy800 = Color(0xFF152544) // Dark mode card / elevated surface
-val FixoNavy700 = Color(0xFF1E3258) // Dark mode container & subtle border
-val FixoNavy600 = Color(0xFF2B4474) // Medium navy accent
-val FixoNavy500 = Color(0xFF3C5E9E) // Muted navy
-val FixoNavy200 = Color(0xFFBDD0EB)
-val FixoNavy100 = Color(0xFFDCE6F5) // Soft navy badge container
-val FixoNavy50  = Color(0xFFF0F4FA) // Light navy tint for selected containers
+// --- FIXO Navy (Primary Brand Foundation - Logo F-Stem & Midnight Base) ---
+val FixoNavy950 = Color(0xFF0B132B) // Ultra midnight obsidian base for dark canvas & splash
+val FixoNavy900 = Color(0xFF0F172A) // Authoritative FIXO Navy (logo "F" stem & primary dark)
+val FixoNavy850 = Color(0xFF141E33)
+val FixoNavy800 = Color(0xFF1E293B) // Dark mode card / elevated surface
+val FixoNavy700 = Color(0xFF283853) // Dark mode container & subtle border
+val FixoNavy600 = Color(0xFF334A6E) // Medium navy accent
+val FixoNavy500 = Color(0xFF47608A) // Muted navy
+val FixoNavy200 = Color(0xFFCBD5E1)
+val FixoNavy100 = Color(0xFFE2E8F0) // Soft navy badge container
+val FixoNavy50  = Color(0xFFF1F5F9) // Light navy tint for selected containers
 
-// --- FIXO Gold (Authoritative Brand Accent) ---
-val FixoGold500 = Color(0xFFF5A623) // Radiant golden-amber accent from logo wing & dot
-val FixoGold600 = Color(0xFFE29110) // Pressed/darker gold for high-contrast on light
-val FixoGold700 = Color(0xFFC07604)
+// --- FIXO Gold (Authoritative Brand Accent - Logo Wing & Circular Dot) ---
+val FixoGold400 = Color(0xFFFBBF24) // Bright gold highlight on upper wing
+val FixoGold500 = Color(0xFFF59E0B) // Radiant golden-amber accent from logo wing & dot
+val FixoGold600 = Color(0xFFD97706) // Deep amber shadow & high-contrast button
+val FixoGold700 = Color(0xFFB45309) // Warm gold text on light surface
 val FixoGold200 = Color(0xFFFDE68A)
-val FixoGold100 = Color(0xFFFEF3D6) // Soft gold container / pending badge background
-val FixoGold50  = Color(0xFFFFF9ED) // Warm light tint
+val FixoGold100 = Color(0xFFFEF3C7) // Soft gold container / pending badge background
+val FixoGold50  = Color(0xFFFFFBEB) // Warm light tint
 
 // --- Restrained Neutral Hierarchy (No Purple, No Pink, No Random Blue Gradients) ---
 val FixoNeutral900 = Color(0xFF111827) // High contrast text on light

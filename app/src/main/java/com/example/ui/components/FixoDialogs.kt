@@ -66,7 +66,11 @@ import com.example.ui.theme.FixoBlue700
 import com.example.ui.theme.FixoEmerald100
 import com.example.ui.theme.FixoEmerald50
 import com.example.ui.theme.FixoEmerald600
+import com.example.ui.theme.FixoGold100
+import com.example.ui.theme.FixoGold500
+import com.example.ui.theme.FixoGold600
 import com.example.ui.theme.FixoNavy900
+import com.example.ui.theme.FixoNavy950
 import com.example.ui.theme.FixoRed500
 import com.example.ui.theme.FixoSlate100
 import com.example.ui.theme.FixoSlate200
@@ -333,12 +337,16 @@ fun BookingDialog(
                         .height(50.dp)
                         .testTag("confirm_booking_button"),
                     shape = RoundedCornerShape(10.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = FixoBlue600)
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = FixoGold500,
+                        contentColor = FixoNavy950
+                    )
                 ) {
                     Text(
                         text = "Confirm & Hold in Escrow ($${service.price})",
                         fontWeight = FontWeight.Bold,
-                        fontSize = 15.sp
+                        fontSize = 15.sp,
+                        color = FixoNavy950
                     )
                 }
             }
@@ -565,9 +573,16 @@ fun DepositDialog(
                         .height(50.dp)
                         .testTag("submit_deposit_button"),
                     shape = RoundedCornerShape(10.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = FixoBlue600)
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = FixoGold500,
+                        contentColor = FixoNavy950
+                    )
                 ) {
-                    Text("Authorize Top-Up ($amount FCFA)", fontWeight = FontWeight.Bold)
+                    Text(
+                        text = "Authorize Top-Up ($amount FCFA)",
+                        fontWeight = FontWeight.Bold,
+                        color = FixoNavy950
+                    )
                 }
             }
         }
@@ -803,9 +818,16 @@ fun UploadReelDialog(
                         .height(50.dp)
                         .testTag("publish_reel_button"),
                     shape = RoundedCornerShape(10.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = FixoBlue600)
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = FixoGold500,
+                        contentColor = FixoNavy950
+                    )
                 ) {
-                    Text("Publish to Public Discovery Feed", fontWeight = FontWeight.Bold)
+                    Text(
+                        text = "Publish to Public Discovery Feed",
+                        fontWeight = FontWeight.Bold,
+                        color = FixoNavy950
+                    )
                 }
             }
         }

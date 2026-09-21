@@ -9,6 +9,7 @@ import androidx.compose.material.icons.filled.Assignment
 import androidx.compose.material.icons.filled.Business
 import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.PlayCircle
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Security
@@ -20,6 +21,7 @@ import androidx.compose.material.icons.outlined.Assignment
 import androidx.compose.material.icons.outlined.Business
 import androidx.compose.material.icons.outlined.DateRange
 import androidx.compose.material.icons.outlined.Home
+import androidx.compose.material.icons.outlined.Person
 import androidx.compose.material.icons.outlined.PlayCircle
 import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material.icons.outlined.Security
@@ -39,9 +41,10 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.data.model.UserRole
-import com.example.ui.theme.FixoBlue50
-import com.example.ui.theme.FixoBlue600
-import com.example.ui.theme.FixoSlate500
+import com.example.ui.theme.FixoGold100
+import com.example.ui.theme.FixoGold700
+import com.example.ui.theme.FixoNavy900
+import com.example.ui.theme.FixoNeutral500
 
 data class NavItem(
     val label: String,
@@ -63,14 +66,14 @@ fun FixoBottomNav(
             NavItem("Explore", Icons.Outlined.Search, Icons.Filled.Search, "nav_customer_explore"),
             NavItem("Reels", Icons.Outlined.PlayCircle, Icons.Filled.PlayCircle, "nav_customer_reels"),
             NavItem("Jobs", Icons.Outlined.Work, Icons.Filled.Work, "nav_customer_jobs"),
-            NavItem("Wallet", Icons.Outlined.AccountBalanceWallet, Icons.Outlined.AccountBalanceWallet, "nav_customer_wallet")
+            NavItem("Profile", Icons.Outlined.Person, Icons.Filled.Person, "nav_customer_profile")
         )
         UserRole.WORKER -> listOf(
             NavItem("Dashboard", Icons.Outlined.Home, Icons.Filled.Home, "nav_worker_dash"),
             NavItem("Schedule", Icons.Outlined.DateRange, Icons.Filled.DateRange, "nav_worker_schedule"),
             NavItem("Reels Studio", Icons.Outlined.VideoLibrary, Icons.Filled.VideoLibrary, "nav_worker_reels"),
             NavItem("Active Jobs", Icons.Outlined.Work, Icons.Filled.Work, "nav_worker_jobs"),
-            NavItem("Earnings", Icons.Outlined.AccountBalanceWallet, Icons.Outlined.AccountBalanceWallet, "nav_worker_earnings")
+            NavItem("Profile", Icons.Outlined.Person, Icons.Filled.Person, "nav_worker_profile")
         )
         UserRole.ENTERPRISE -> listOf(
             NavItem("Workforce", Icons.Outlined.Business, Icons.Filled.Business, "nav_enterprise_projects"),
@@ -108,11 +111,11 @@ fun FixoBottomNav(
                     )
                 },
                 colors = NavigationBarItemDefaults.colors(
-                    selectedIconColor = FixoBlue600,
-                    selectedTextColor = FixoBlue600,
-                    indicatorColor = FixoBlue50,
-                    unselectedIconColor = FixoSlate500,
-                    unselectedTextColor = FixoSlate500
+                    selectedIconColor = FixoNavy900,
+                    selectedTextColor = FixoGold700,
+                    indicatorColor = FixoGold100,
+                    unselectedIconColor = FixoNeutral500,
+                    unselectedTextColor = FixoNeutral500
                 ),
                 modifier = Modifier.testTag(item.testTag)
             )

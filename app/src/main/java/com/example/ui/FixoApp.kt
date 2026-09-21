@@ -47,7 +47,9 @@ import com.example.ui.screens.customer.CustomerHomeScreen
 import com.example.ui.screens.customer.JobTrackingScreen
 import com.example.ui.screens.customer.WorkerProfileScreen
 import com.example.ui.screens.enterprise.EnterpriseScreen
+import com.example.ui.screens.profile.ProfileScreen
 import com.example.ui.screens.reels.ReelsFeedScreen
+import com.example.ui.screens.splash.FixoSplashScreen
 import com.example.ui.screens.wallet.WalletRewardsScreen
 import com.example.ui.screens.worker.WorkerDashboardScreen
 import com.example.ui.theme.FixoNavy900
@@ -63,11 +65,14 @@ fun FixoApp(
 
     var selectedTab by remember { mutableIntStateOf(0) }
     var viewingJobId by remember { mutableStateOf<String?>(null) }
+    var isViewingWallet by remember { mutableStateOf(false) }
+    var showSplashScreen by remember { mutableStateOf(true) }
 
     // When role changes, reset tab to 0
     LaunchedEffect(uiState.currentRole) {
         selectedTab = 0
         viewingJobId = null
+        isViewingWallet = false
     }
 
     // Show toast message when triggered
@@ -78,7 +83,21 @@ fun FixoApp(
         }
     }
 
-    if (!uiState.isAuthenticated) {
+    // Splash Screen with official brand logo
+    AnimatedVisibility(
+        visible = showSplashScreen,
+        enter = fadeIn(),
+        exit = fadeOut()
+    ) {
+        FixoSplashScreen(
+            language = uiState.currentLanguage,
+            onSplashComplete = { showSplashScreen = false },
+            modifier = modifier
+        )
+    }
+
+    if (!showSplashScreen) {
+        if (!uiState.isAuthenticated) {
         com.example.ui.screens.AuthScreen(
             currentLanguage = uiState.currentLanguage,
             onLogin = { email, role ->
@@ -111,11 +130,7 @@ fun FixoApp(
                         viewModel.toggleLanguage()
                     },
                     onWalletClick = {
-                        selectedTab = when (uiState.currentRole) {
-                            UserRole.CUSTOMER -> 4
-                            UserRole.WORKER -> 4
-                            else -> 0
-                        }
+                        isViewingWallet = true
                     },
                     onLogout = {
                         viewModel.logout()
@@ -132,9 +147,10 @@ fun FixoApp(
                 selectedTabIndex = selectedTab,
                 onTabSelected = { tabIndex ->
                     selectedTab = tabIndex
+                    isViewingWallet = false
                     // If switching tabs, clear selected worker view
                     if (uiState.selectedWorker != null) {
-                        viewModel.selectWorker(uiState.selectedWorker!!) // retain or clear
+                        viewModel.clearSelectedWorker()
                     }
                     viewingJobId = null
                 }
@@ -147,47 +163,59 @@ fun FixoApp(
                 .fillMaxSize()
                 .padding(innerPadding)
         ) {
-            when (uiState.currentRole) {
-                UserRole.CUSTOMER -> {
-                    // Check if viewing worker profile or job detail
-                    val selectedWorker = uiState.selectedWorker
-                    val activeBooking = uiState.selectedBooking
+            if (isViewingWallet) {
+                WalletRewardsScreen(
+                    user = uiState.currentUser,
+                    transactions = uiState.transactions,
+                    rewards = uiState.rewards,
+                    userRole = uiState.currentRole,
+                    onOpenDeposit = { viewModel.openDepositDialog() },
+                    onOpenWithdraw = { viewModel.openWithdrawDialog() },
+                    onRedeemReward = { viewModel.redeemReward(it) },
+                    onBack = { isViewingWallet = false }
+                )
+            } else {
+                when (uiState.currentRole) {
+                    UserRole.CUSTOMER -> {
+                        // Check if viewing worker profile or job detail
+                        val selectedWorker = uiState.selectedWorker
+                        val activeBooking = uiState.selectedBooking
 
-                    when {
-                        // Sub-screen: Worker profile
-                        selectedWorker != null && viewingJobId == null -> {
-                            WorkerProfileScreen(
-                                worker = selectedWorker,
-                                services = uiState.workerServices.ifEmpty {
-                                    // Default fallback services if worker just clicked
-                                    listOf(
-                                        com.example.data.model.ServiceItem(
-                                            id = "srv_std_${selectedWorker.id}",
-                                            workerId = selectedWorker.id,
-                                            name = "Standard Diagnostic & On-Site Repair",
-                                            category = selectedWorker.category,
-                                            description = "On-site assessment, diagnostic equipment inspection, and standard repair with warranty.",
-                                            price = selectedWorker.hourlyRate * 1.5,
-                                            durationEstimateMinutes = 60
+                        when {
+                            // Sub-screen: Worker profile
+                            selectedWorker != null && viewingJobId == null -> {
+                                WorkerProfileScreen(
+                                    worker = selectedWorker,
+                                    services = uiState.workerServices.ifEmpty {
+                                        // Default fallback services if worker just clicked
+                                        listOf(
+                                            com.example.data.model.ServiceItem(
+                                                id = "srv_std_${selectedWorker.id}",
+                                                workerId = selectedWorker.id,
+                                                name = "Standard Diagnostic & On-Site Repair",
+                                                category = selectedWorker.category,
+                                                description = "On-site assessment, diagnostic equipment inspection, and standard repair with warranty.",
+                                                price = selectedWorker.hourlyRate * 1.5,
+                                                durationEstimateMinutes = 60
+                                            )
                                         )
-                                    )
-                                },
-                                reels = uiState.reels,
-                                onBack = {
-                                    // Deselect worker
-                                    viewModel.selectWorker(selectedWorker) // toggle
-                                    // In viewModel we can just clear it:
-                                    // Since we don't have clearWorker, set to null via internal flow or state:
-                                    // Let's handle by switching back
-                                },
-                                onBookService = { service ->
-                                    viewModel.openBookingDialog(service, selectedWorker)
-                                },
-                                onWatchReel = {
-                                    selectedTab = 2
-                                }
-                            )
-                        }
+                                    },
+                                    reels = uiState.reels,
+                                    isSaved = uiState.savedWorkerIds.contains(selectedWorker.id),
+                                    onToggleSave = {
+                                        viewModel.toggleSaveWorker(selectedWorker.id)
+                                    },
+                                    onBack = {
+                                        viewModel.clearSelectedWorker()
+                                    },
+                                    onBookService = { service ->
+                                        viewModel.openBookingDialog(service, selectedWorker)
+                                    },
+                                    onWatchReel = {
+                                        selectedTab = 2
+                                    }
+                                )
+                            }
 
                         // Sub-screen: Job tracking
                         viewingJobId != null && activeBooking != null -> {
@@ -311,14 +339,21 @@ fun FixoApp(
                                     }
                                 }
 
-                                4 -> WalletRewardsScreen(
+                                4 -> ProfileScreen(
                                     user = uiState.currentUser,
-                                    transactions = uiState.transactions,
-                                    rewards = uiState.rewards,
-                                    userRole = uiState.currentRole,
-                                    onOpenDeposit = { viewModel.openDepositDialog() },
-                                    onOpenWithdraw = { viewModel.openWithdrawDialog() },
-                                    onRedeemReward = { viewModel.redeemReward(it) }
+                                    customerBookings = uiState.customerBookings,
+                                    savedWorkers = uiState.allWorkers.filter { uiState.savedWorkerIds.contains(it.id) },
+                                    language = uiState.currentLanguage,
+                                    onUpdateProfile = { name, email, phone, city, avatarUrl ->
+                                        viewModel.updateUserProfile(name, email, phone, city, avatarUrl)
+                                    },
+                                    onToggleLanguage = { viewModel.toggleLanguage() },
+                                    onNavigateToJobs = { selectedTab = 3 },
+                                    onNavigateToWallet = { isViewingWallet = true },
+                                    onWorkerClicked = { worker -> viewModel.selectWorker(worker) },
+                                    onOpenDispute = { viewModel.openDisputeDialog() },
+                                    onLogout = { viewModel.logout() },
+                                    onDeleteAccount = { viewModel.deleteAccount() }
                                 )
                             }
                         }
@@ -395,14 +430,21 @@ fun FixoApp(
                             }
                         }
 
-                        4 -> WalletRewardsScreen(
+                        4 -> ProfileScreen(
                             user = uiState.currentUser,
-                            transactions = uiState.transactions,
-                            rewards = uiState.rewards,
-                            userRole = uiState.currentRole,
-                            onOpenDeposit = { viewModel.openDepositDialog() },
-                            onOpenWithdraw = { viewModel.openWithdrawDialog() },
-                            onRedeemReward = { viewModel.redeemReward(it) }
+                            customerBookings = uiState.workerBookings,
+                            savedWorkers = emptyList(),
+                            language = uiState.currentLanguage,
+                            onUpdateProfile = { name, email, phone, city, avatarUrl ->
+                                viewModel.updateUserProfile(name, email, phone, city, avatarUrl)
+                            },
+                            onToggleLanguage = { viewModel.toggleLanguage() },
+                            onNavigateToJobs = { selectedTab = 3 },
+                            onNavigateToWallet = { isViewingWallet = true },
+                            onWorkerClicked = {},
+                            onOpenDispute = { viewModel.openDisputeDialog() },
+                            onLogout = { viewModel.logout() },
+                            onDeleteAccount = { viewModel.deleteAccount() }
                         )
                     }
                 }
@@ -426,6 +468,7 @@ fun FixoApp(
             }
         }
     }
+}
 
     // Interactive Dialogs
     if (uiState.isBookingDialogVisible && uiState.selectedServiceForBooking != null && uiState.selectedWorker != null) {
@@ -486,4 +529,5 @@ fun FixoApp(
         )
     }
     }
+}
 }

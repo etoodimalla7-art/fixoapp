@@ -55,6 +55,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.testTag
@@ -72,12 +73,14 @@ import com.example.data.model.User
 import com.example.data.model.UserRole
 import com.example.localization.AppLanguage
 import com.example.localization.FixoStrings
+import com.example.ui.components.FixoGoldButton
 import com.example.ui.components.FixoPrimaryButton
 import com.example.ui.components.FixoSecondaryButton
 import com.example.ui.theme.FixoEmerald500
 import com.example.ui.theme.FixoEmerald600
 import com.example.ui.theme.FixoGold100
 import com.example.ui.theme.FixoGold500
+import com.example.ui.theme.FixoWhite
 import com.example.ui.theme.FixoGold600
 import com.example.ui.theme.FixoGold700
 import com.example.ui.theme.FixoNavy50
@@ -127,26 +130,53 @@ fun AuthScreen(
         ) {
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Official FIXO Brand Logo Asset
-            Image(
-                painter = painterResource(id = R.drawable.fixo_logo),
-                contentDescription = "FIXO Brand Identity",
+            // Official FIXO Brand Logo Asset — Elevated Squircle Card from Logo Identity
+            Surface(
                 modifier = Modifier
-                    .size(68.dp)
-                    .clip(RoundedCornerShape(14.dp)),
-                contentScale = ContentScale.Fit
-            )
+                    .size(80.dp)
+                    .shadow(
+                        elevation = 8.dp,
+                        shape = RoundedCornerShape(20.dp),
+                        ambientColor = FixoGold500.copy(alpha = 0.2f),
+                        spotColor = FixoGold500.copy(alpha = 0.35f)
+                    )
+                    .clip(RoundedCornerShape(20.dp)),
+                color = FixoWhite
+            ) {
+                Box(
+                    contentAlignment = Alignment.Center,
+                    modifier = Modifier.fillMaxSize()
+                ) {
+                    Image(
+                        painter = painterResource(id = R.drawable.fixo_logo),
+                        contentDescription = "FIXO Brand Identity",
+                        modifier = Modifier
+                            .size(74.dp)
+                            .padding(2.dp),
+                        contentScale = ContentScale.Fit
+                    )
+                }
+            }
 
-            Spacer(modifier = Modifier.height(12.dp))
+            Spacer(modifier = Modifier.height(14.dp))
 
-            Text(
-                text = "FIXO",
-                style = MaterialTheme.typography.headlineMedium.copy(
-                    fontWeight = FontWeight.Black,
-                    letterSpacing = 2.sp
-                ),
-                color = MaterialTheme.colorScheme.onBackground
-            )
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    text = "FIXO",
+                    style = MaterialTheme.typography.headlineMedium.copy(
+                        fontWeight = FontWeight.Black,
+                        letterSpacing = 2.sp
+                    ),
+                    color = MaterialTheme.colorScheme.onBackground
+                )
+                Spacer(modifier = Modifier.width(6.dp))
+                // Golden accent dot echoing the logo's signature gold circle
+                Box(
+                    modifier = Modifier
+                        .size(8.dp)
+                        .background(FixoGold500, shape = CircleShape)
+                )
+            }
 
             Text(
                 text = "Skilled Trades & Master Craftsmanship",
@@ -286,7 +316,7 @@ fun AuthScreen(
                 Spacer(modifier = Modifier.height(10.dp))
 
                 if (!isOtpSent) {
-                    FixoPrimaryButton(
+                    FixoGoldButton(
                         text = "Send 6-Digit OTP Code",
                         onClick = { isOtpSent = true },
                         modifier = Modifier.fillMaxWidth()
@@ -328,7 +358,7 @@ fun AuthScreen(
 
                     Spacer(modifier = Modifier.height(10.dp))
 
-                    FixoPrimaryButton(
+                    FixoGoldButton(
                         text = "Verify Code & Sign In",
                         onClick = {
                             val simulatedEmail = "${phone.replace("+", "").replace(" ", "")}@fixo.cm"
@@ -372,7 +402,7 @@ fun AuthScreen(
 
                 Spacer(modifier = Modifier.height(14.dp))
 
-                FixoPrimaryButton(
+                FixoGoldButton(
                     text = "Sign In to FIXO",
                     onClick = { onLogin(email, selectedRole) },
                     modifier = Modifier.fillMaxWidth()
@@ -418,7 +448,7 @@ fun AuthScreen(
 
                 Spacer(modifier = Modifier.height(14.dp))
 
-                FixoPrimaryButton(
+                FixoGoldButton(
                     text = "Create ${selectedRole.name.lowercase().replaceFirstChar { it.uppercase() }} Account",
                     onClick = { onLogin(email, selectedRole) },
                     modifier = Modifier.fillMaxWidth()

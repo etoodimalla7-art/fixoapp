@@ -66,7 +66,8 @@ data class FixoUiState(
     val isSubscriptionDialogVisible: Boolean = false,
     val isEnterpriseCreateDialogVisible: Boolean = false,
     val isDisputeDialogVisible: Boolean = false,
-    val isDevEnvironment: Boolean = false
+    val isDevEnvironment: Boolean = false,
+    val savedWorkerIds: Set<String> = emptySet()
 )
 
 class FixoViewModel(application: Application) : AndroidViewModel(application) {
@@ -623,6 +624,44 @@ class FixoViewModel(application: Application) : AndroidViewModel(application) {
             isAuthenticated = false
         )
         showToast("Logged out successfully.")
+    }
+
+    fun updateUserProfile(name: String, email: String, phone: String, city: String, avatarUrl: String) {
+        val user = _uiState.value.currentUser ?: return
+        viewModelScope.launch {
+            val updated = user.copy(
+                name = name.ifBlank { user.name },
+                email = email.ifBlank { user.email },
+                phone = phone.ifBlank { user.phone },
+                avatarUrl = avatarUrl.ifBlank { user.avatarUrl }
+            )
+            repository.updateCurrentUser(updated)
+            _uiState.value = _uiState.value.copy(currentUser = updated)
+            showToast("Profile updated successfully.")
+        }
+    }
+
+    fun toggleSaveWorker(workerId: String) {
+        val current = _uiState.value.savedWorkerIds.toMutableSet()
+        if (current.contains(workerId)) {
+            current.remove(workerId)
+            showToast("Artisan removed from saved.")
+        } else {
+            current.add(workerId)
+            showToast("Artisan saved to favorites.")
+        }
+        _uiState.value = _uiState.value.copy(savedWorkerIds = current)
+    }
+
+    fun deleteAccount() {
+        viewModelScope.launch {
+            logout()
+            showToast("Account deleted.")
+        }
+    }
+
+    fun clearSelectedWorker() {
+        _uiState.value = _uiState.value.copy(selectedWorker = null)
     }
 
     fun showToast(message: String) {

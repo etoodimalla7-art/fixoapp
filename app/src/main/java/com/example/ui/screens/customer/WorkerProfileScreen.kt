@@ -24,6 +24,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.AccessTime
 import androidx.compose.material.icons.filled.Badge
+import androidx.compose.material.icons.filled.Bookmark
 import androidx.compose.material.icons.filled.CalendarToday
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.FlashOn
@@ -33,6 +34,7 @@ import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Security
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.Verified
+import androidx.compose.material.icons.outlined.BookmarkBorder
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -83,6 +85,8 @@ fun WorkerProfileScreen(
     onBack: () -> Unit,
     onBookService: (ServiceItem) -> Unit,
     onWatchReel: (Reel) -> Unit,
+    isSaved: Boolean = false,
+    onToggleSave: (() -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
     LazyColumn(
@@ -102,16 +106,28 @@ fun WorkerProfileScreen(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(horizontal = 12.dp, vertical = 8.dp),
-                    verticalAlignment = Alignment.CenterVertically
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
                 ) {
-                    IconButton(onClick = onBack, modifier = Modifier.testTag("worker_profile_back")) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        IconButton(onClick = onBack, modifier = Modifier.testTag("worker_profile_back")) {
+                            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                        }
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text(
+                            text = "Artisan Profile",
+                            style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold)
+                        )
                     }
-                    Spacer(modifier = Modifier.width(6.dp))
-                    Text(
-                        text = "Artisan Profile",
-                        style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold)
-                    )
+                    if (onToggleSave != null) {
+                        IconButton(onClick = onToggleSave, modifier = Modifier.testTag("worker_profile_save")) {
+                            Icon(
+                                imageVector = if (isSaved) Icons.Filled.Bookmark else Icons.Outlined.BookmarkBorder,
+                                contentDescription = if (isSaved) "Saved" else "Save Artisan",
+                                tint = if (isSaved) FixoAmber600 else MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
                 }
             }
         }

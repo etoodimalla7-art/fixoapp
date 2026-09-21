@@ -20,6 +20,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowDownward
 import androidx.compose.material.icons.filled.ArrowUpward
@@ -34,6 +35,7 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
@@ -59,8 +61,12 @@ import com.example.ui.theme.FixoBlue600
 import com.example.ui.theme.FixoBlue700
 import com.example.ui.theme.FixoEmerald50
 import com.example.ui.theme.FixoEmerald600
+import com.example.ui.theme.FixoGold100
+import com.example.ui.theme.FixoGold500
+import com.example.ui.theme.FixoGold700
 import com.example.ui.theme.FixoNavy800
 import com.example.ui.theme.FixoNavy900
+import com.example.ui.theme.FixoNavy950
 import com.example.ui.theme.FixoRed500
 import com.example.ui.theme.FixoSlate100
 import com.example.ui.theme.FixoSlate200
@@ -76,6 +82,7 @@ fun WalletRewardsScreen(
     onOpenDeposit: () -> Unit,
     onOpenWithdraw: () -> Unit,
     onRedeemReward: (RewardItem) -> Unit,
+    onBack: (() -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
     LazyColumn(
@@ -84,6 +91,30 @@ fun WalletRewardsScreen(
             .background(MaterialTheme.colorScheme.background),
         contentPadding = PaddingValues(bottom = 90.dp)
     ) {
+        if (onBack != null) {
+            item {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    IconButton(onClick = onBack) {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = "Back",
+                            tint = MaterialTheme.colorScheme.onSurface
+                        )
+                    }
+                    Text(
+                        text = "Wallet & Payments",
+                        fontSize = 18.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                }
+            }
+        }
         // Balances Header Card
         item {
             Card(
@@ -155,15 +186,27 @@ fun WalletRewardsScreen(
                         Button(
                             onClick = onOpenDeposit,
                             shape = RoundedCornerShape(10.dp),
-                            colors = ButtonDefaults.buttonColors(containerColor = FixoBlue600),
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = FixoGold500,
+                                contentColor = FixoNavy950
+                            ),
                             modifier = Modifier
                                 .weight(1f)
                                 .height(44.dp)
                                 .testTag("wallet_deposit_button")
                         ) {
-                            Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(16.dp))
+                            Icon(
+                                Icons.Default.Add,
+                                contentDescription = null,
+                                modifier = Modifier.size(16.dp),
+                                tint = FixoNavy950
+                            )
                             Spacer(modifier = Modifier.width(4.dp))
-                            Text("Deposit Funds", fontWeight = FontWeight.Bold)
+                            Text(
+                                "Deposit Funds",
+                                fontWeight = FontWeight.Bold,
+                                color = FixoNavy950
+                            )
                         }
 
                         if (userRole == UserRole.WORKER || (user?.balance ?: 0.0) > 0) {
@@ -290,17 +333,20 @@ fun WalletRewardsScreen(
                         Spacer(modifier = Modifier.height(4.dp))
                         Text(
                             text = "${reward.pointsRequired} Points Required",
-                            style = MaterialTheme.typography.labelSmall.copy(color = FixoBlue600, fontWeight = FontWeight.Bold)
+                            style = MaterialTheme.typography.labelSmall.copy(color = FixoGold700, fontWeight = FontWeight.Bold)
                         )
                     }
 
                     Button(
                         onClick = { onRedeemReward(reward) },
                         shape = RoundedCornerShape(8.dp),
-                        colors = ButtonDefaults.buttonColors(containerColor = FixoBlue600),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = FixoGold500,
+                            contentColor = FixoNavy950
+                        ),
                         modifier = Modifier.testTag("redeem_reward_${reward.id}")
                     ) {
-                        Text("Redeem", fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                        Text("Redeem", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = FixoNavy950)
                     }
                 }
             }

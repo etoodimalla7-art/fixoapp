@@ -75,8 +75,67 @@ import com.example.ui.theme.FixoNeutral600
 import com.example.ui.theme.FixoWhite
 
 // =========================================================================
-// FIXO Brand Button System
+// FIXO Brand Button System (Derived directly from Logo Golden Wing & Obsidian Stem)
 // =========================================================================
+
+@Composable
+fun FixoGoldButton(
+    text: String,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    enabled: Boolean = true,
+    leadingIcon: (@Composable () -> Unit)? = null,
+    trailingIcon: (@Composable () -> Unit)? = null,
+    isLoading: Boolean = false
+) {
+    Button(
+        onClick = onClick,
+        modifier = modifier
+            .height(48.dp)
+            .testTag("fixo_gold_button"),
+        enabled = enabled && !isLoading,
+        shape = RoundedCornerShape(12.dp),
+        colors = ButtonDefaults.buttonColors(
+            containerColor = FixoGold500,
+            contentColor = FixoNavy950,
+            disabledContainerColor = FixoNeutral300,
+            disabledContentColor = FixoNeutral500
+        ),
+        elevation = ButtonDefaults.buttonElevation(
+            defaultElevation = 2.dp,
+            pressedElevation = 4.dp
+        ),
+        contentPadding = PaddingValues(horizontal = 20.dp, vertical = 12.dp)
+    ) {
+        if (isLoading) {
+            CircularProgressIndicator(
+                modifier = Modifier.size(20.dp),
+                color = FixoNavy950,
+                strokeWidth = 2.dp
+            )
+        } else {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.Center
+            ) {
+                if (leadingIcon != null) {
+                    leadingIcon()
+                    Spacer(Modifier.width(8.dp))
+                }
+                Text(
+                    text = text,
+                    style = MaterialTheme.typography.labelLarge,
+                    fontWeight = FontWeight.Bold,
+                    letterSpacing = 0.3.sp
+                )
+                if (trailingIcon != null) {
+                    Spacer(Modifier.width(8.dp))
+                    trailingIcon()
+                }
+            }
+        }
+    }
+}
 
 @Composable
 fun FixoPrimaryButton(
