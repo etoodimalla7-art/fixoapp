@@ -1,13 +1,18 @@
 package com.example.ui.screens.reels
 
+import android.content.ClipData
+import android.content.ClipboardManager
+import android.content.Context
 import android.content.Intent
+import android.widget.Toast
+import androidx.annotation.OptIn
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -22,22 +27,25 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Bookmark
 import androidx.compose.material.icons.filled.CalendarToday
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.filled.Flag
-import androidx.compose.material.icons.filled.MusicNote
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.Verified
+import androidx.compose.material.icons.filled.VolumeOff
+import androidx.compose.material.icons.filled.VolumeUp
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -53,15 +61,28 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.viewinterop.AndroidView
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
+import androidx.media3.common.MediaItem
+import androidx.media3.common.Player
+import androidx.media3.common.util.UnstableApi
+import androidx.media3.exoplayer.ExoPlayer
+import androidx.media3.ui.AspectRatioFrameLayout
+import androidx.media3.ui.PlayerView
 import coil.compose.AsyncImage
 import com.example.data.model.Reel
 import com.example.data.model.ServiceCategory
 import com.example.data.model.WorkerProfile
-import com.example.ui.theme.FixoAmber500
-import com.example.ui.theme.FixoBlue600
+import com.example.ui.theme.FixoGold500
+import com.example.ui.theme.FixoGold600
+import com.example.ui.theme.FixoNavy900
+import com.example.ui.theme.FixoNavy950
+import com.example.ui.theme.FixoNeutral400
+import com.example.ui.theme.FixoNeutral500
 import com.example.ui.theme.FixoRed500
-import com.example.ui.theme.FixoSlate200
-import com.example.ui.theme.FixoSlate500
+import com.example.ui.theme.FixoWhite
 
 @Composable
 fun ReelsFeedScreen(
@@ -75,6 +96,7 @@ fun ReelsFeedScreen(
 ) {
     val context = LocalContext.current
     var selectedCategory by remember { mutableStateOf<ServiceCategory?>(null) }
+    var globalMuted by remember { mutableStateOf(false) }
 
     val filteredReels = if (selectedCategory == null) reels else reels.filter { it.category == selectedCategory }
 
@@ -94,39 +116,44 @@ fun ReelsFeedScreen(
                     Icon(
                         imageVector = Icons.Default.PlayArrow,
                         contentDescription = null,
-                        tint = FixoSlate500,
+                        tint = FixoNeutral500,
                         modifier = Modifier.size(56.dp)
                     )
                     Spacer(modifier = Modifier.height(16.dp))
                     Text(
-                        text = "No craftsmanship reels published yet in this category.",
-                        color = Color.White,
-                        style = MaterialTheme.typography.bodyLarge,
-                        textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                        text = "No Craftsmanship Reels Found",
+                        style = MaterialTheme.typography.titleMedium,
+                        color = Color.White
+                    )
+                    Spacer(modifier = Modifier.height(6.dp))
+                    Text(
+                        text = "Try switching categories to view trade videos",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = FixoNeutral400
                     )
                 }
             }
         } else {
             LazyColumn(
-                modifier = Modifier.fillMaxSize(),
-                contentPadding = PaddingValues(bottom = 80.dp)
+                modifier = Modifier
+                    .fillMaxSize()
+                    .testTag("reels_feed_list")
             ) {
-                items(filteredReels) { reel ->
+                items(filteredReels, key = { it.id }) { reel ->
                     val worker = allWorkers.find { it.id == reel.workerId }
-                        ?: allWorkers.firstOrNull()
                         ?: WorkerProfile(
                             id = reel.workerId,
-                            userId = reel.workerId,
+                            userId = "usr_fallback",
                             name = reel.workerName,
                             category = reel.category,
-                            hourlyRate = 7500.0,
+                            hourlyRate = 15000.0,
                             emergencyCalloutAvailable = true,
-                            bio = reel.description,
+                            bio = "Verified FIXO Artisan",
                             skills = reel.tags,
-                            certifications = "Guild Verified Craftsman",
-                            completedJobs = 0,
-                            rating = 5.0,
-                            reviewCount = 0,
+                            certifications = "FIXO Verified",
+                            completedJobs = 45,
+                            rating = 4.9,
+                            reviewCount = 28,
                             avatarUrl = reel.workerAvatar,
                             locationCity = "Douala",
                             locationDistanceKm = 1.0,
@@ -134,6 +161,7 @@ fun ReelsFeedScreen(
                             phone = "+237 670 000 000"
                         )
                     var isLiked by remember { mutableStateOf(false) }
+                    var isPlaying by remember { mutableStateOf(true) }
 
                     Box(
                         modifier = Modifier
@@ -141,12 +169,14 @@ fun ReelsFeedScreen(
                             .fillMaxWidth()
                             .testTag("reel_viewport_${reel.id}")
                     ) {
-                        // Background Video Snapshot
-                        AsyncImage(
-                            model = reel.thumbnailUrl,
-                            contentDescription = reel.title,
-                            modifier = Modifier.fillMaxSize(),
-                            contentScale = ContentScale.Crop
+                        // Native Media3 Video Player
+                        ReelVideoPlayer(
+                            videoUrl = reel.videoUrl,
+                            thumbnailUrl = reel.thumbnailUrl,
+                            isPlaying = isPlaying,
+                            isMuted = globalMuted,
+                            onTogglePlay = { isPlaying = !isPlaying },
+                            modifier = Modifier.fillMaxSize()
                         )
 
                         // Dark Gradient for legibility
@@ -156,9 +186,9 @@ fun ReelsFeedScreen(
                                 .background(
                                     Brush.verticalGradient(
                                         listOf(
-                                            Color.Black.copy(alpha = 0.4f),
+                                            Color.Black.copy(alpha = 0.45f),
                                             Color.Transparent,
-                                            Color.Black.copy(alpha = 0.85f)
+                                            Color.Black.copy(alpha = 0.88f)
                                         )
                                     )
                                 )
@@ -176,11 +206,16 @@ fun ReelsFeedScreen(
                                 Box(
                                     modifier = Modifier
                                         .clip(RoundedCornerShape(20.dp))
-                                        .background(if (selectedCategory == null) FixoBlue600 else Color.Black.copy(alpha = 0.5f))
+                                        .background(if (selectedCategory == null) FixoGold500 else Color.Black.copy(alpha = 0.5f))
                                         .clickable { selectedCategory = null }
-                                        .padding(horizontal = 12.dp, vertical = 6.dp)
+                                        .padding(horizontal = 14.dp, vertical = 6.dp)
                                 ) {
-                                    Text("All Trades", color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                                    Text(
+                                        text = "All Trades",
+                                        color = if (selectedCategory == null) FixoNavy950 else Color.White,
+                                        fontSize = 12.sp,
+                                        fontWeight = FontWeight.Bold
+                                    )
                                 }
                             }
                             items(ServiceCategory.values()) { cat ->
@@ -188,13 +223,13 @@ fun ReelsFeedScreen(
                                 Box(
                                     modifier = Modifier
                                         .clip(RoundedCornerShape(20.dp))
-                                        .background(if (isSel) FixoBlue600 else Color.Black.copy(alpha = 0.5f))
+                                        .background(if (isSel) FixoGold500 else Color.Black.copy(alpha = 0.5f))
                                         .clickable { selectedCategory = cat }
-                                        .padding(horizontal = 12.dp, vertical = 6.dp)
+                                        .padding(horizontal = 14.dp, vertical = 6.dp)
                                 ) {
                                     Text(
-                                        cat.displayName.split(" & ").first(),
-                                        color = Color.White,
+                                        text = cat.displayName.split(" & ").first(),
+                                        color = if (isSel) FixoNavy950 else Color.White,
                                         fontSize = 12.sp,
                                         fontWeight = FontWeight.Bold
                                     )
@@ -215,6 +250,7 @@ fun ReelsFeedScreen(
                                 modifier = Modifier
                                     .size(46.dp)
                                     .clip(CircleShape)
+                                    .border(2.dp, FixoGold500, CircleShape)
                                     .clickable { onOpenWorkerProfile(worker) }
                             ) {
                                 AsyncImage(
@@ -235,7 +271,7 @@ fun ReelsFeedScreen(
                                     modifier = Modifier
                                         .size(42.dp)
                                         .clip(CircleShape)
-                                        .background(Color.Black.copy(alpha = 0.4f))
+                                        .background(Color.Black.copy(alpha = 0.5f))
                                         .testTag("reel_like_${reel.id}")
                                 ) {
                                     Icon(
@@ -253,16 +289,33 @@ fun ReelsFeedScreen(
                                 )
                             }
 
-                            // Share Button (Native Android Share Intent + Clipboard)
+                            // Mute/Unmute Audio Control
+                            IconButton(
+                                onClick = { globalMuted = !globalMuted },
+                                modifier = Modifier
+                                    .size(42.dp)
+                                    .clip(CircleShape)
+                                    .background(Color.Black.copy(alpha = 0.5f))
+                                    .testTag("reel_mute_${reel.id}")
+                            ) {
+                                Icon(
+                                    imageVector = if (globalMuted) Icons.Default.VolumeOff else Icons.Default.VolumeUp,
+                                    contentDescription = "Audio toggle",
+                                    tint = Color.White,
+                                    modifier = Modifier.size(20.dp)
+                                )
+                            }
+
+                            // Share Button
                             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                                 IconButton(
                                     onClick = {
                                         val canonicalUrl = "https://fixo.cm/reels/${reel.id}"
                                         try {
-                                            val clipboard = context.getSystemService(android.content.Context.CLIPBOARD_SERVICE) as? android.content.ClipboardManager
-                                            val clip = android.content.ClipData.newPlainText("FIXO Reel Link", canonicalUrl)
+                                            val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as? ClipboardManager
+                                            val clip = ClipData.newPlainText("FIXO Reel Link", canonicalUrl)
                                             clipboard?.setPrimaryClip(clip)
-                                            android.widget.Toast.makeText(context, "Canonical Reel Link copied: $canonicalUrl", android.widget.Toast.LENGTH_SHORT).show()
+                                            Toast.makeText(context, "Reel link copied: $canonicalUrl", Toast.LENGTH_SHORT).show()
                                         } catch (_: Exception) {}
 
                                         val shareIntent = Intent(Intent.ACTION_SEND).apply {
@@ -281,7 +334,7 @@ fun ReelsFeedScreen(
                                     modifier = Modifier
                                         .size(42.dp)
                                         .clip(CircleShape)
-                                        .background(Color.Black.copy(alpha = 0.4f))
+                                        .background(Color.Black.copy(alpha = 0.5f))
                                         .testTag("reel_share_${reel.id}")
                                 ) {
                                     Icon(
@@ -300,7 +353,7 @@ fun ReelsFeedScreen(
                                 modifier = Modifier
                                     .size(36.dp)
                                     .clip(CircleShape)
-                                    .background(Color.Black.copy(alpha = 0.4f))
+                                    .background(Color.Black.copy(alpha = 0.5f))
                             ) {
                                 Icon(
                                     imageVector = Icons.Default.Flag,
@@ -332,7 +385,7 @@ fun ReelsFeedScreen(
                                 Icon(
                                     imageVector = Icons.Default.Verified,
                                     contentDescription = "Verified",
-                                    tint = FixoAmber500,
+                                    tint = FixoGold500,
                                     modifier = Modifier.size(16.dp)
                                 )
                             }
@@ -385,7 +438,10 @@ fun ReelsFeedScreen(
                             Button(
                                 onClick = { onBookFromReel(reel, worker) },
                                 shape = RoundedCornerShape(10.dp),
-                                colors = ButtonDefaults.buttonColors(containerColor = FixoBlue600),
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = FixoGold500,
+                                    contentColor = FixoNavy950
+                                ),
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .height(44.dp)
@@ -402,6 +458,130 @@ fun ReelsFeedScreen(
                         }
                     }
                 }
+            }
+        }
+    }
+}
+
+// =========================================================================
+// Real ExoPlayer Media3 Video Surface
+// =========================================================================
+
+@OptIn(UnstableApi::class)
+@Composable
+private fun ReelVideoPlayer(
+    videoUrl: String,
+    thumbnailUrl: String,
+    isPlaying: Boolean,
+    isMuted: Boolean,
+    onTogglePlay: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val context = LocalContext.current
+    val lifecycleOwner = LocalLifecycleOwner.current
+    var isBuffering by remember { mutableStateOf(true) }
+    var hasError by remember { mutableStateOf(false) }
+
+    val exoPlayer = remember(context, videoUrl) {
+        ExoPlayer.Builder(context).build().apply {
+            repeatMode = Player.REPEAT_MODE_ONE
+            val mediaItem = MediaItem.fromUri(videoUrl)
+            setMediaItem(mediaItem)
+            prepare()
+        }
+    }
+
+    LaunchedEffect(isPlaying) {
+        exoPlayer.playWhenReady = isPlaying
+    }
+
+    LaunchedEffect(isMuted) {
+        exoPlayer.volume = if (isMuted) 0f else 1f
+    }
+
+    DisposableEffect(lifecycleOwner, exoPlayer) {
+        val listener = object : Player.Listener {
+            override fun onPlaybackStateChanged(playbackState: Int) {
+                isBuffering = (playbackState == Player.STATE_BUFFERING)
+                if (playbackState == Player.STATE_READY) {
+                    hasError = false
+                }
+            }
+
+            override fun onPlayerError(error: androidx.media3.common.PlaybackException) {
+                hasError = true
+                isBuffering = false
+            }
+        }
+        exoPlayer.addListener(listener)
+
+        val observer = LifecycleEventObserver { _, event ->
+            when (event) {
+                Lifecycle.Event.ON_PAUSE -> exoPlayer.pause()
+                Lifecycle.Event.ON_RESUME -> if (isPlaying) exoPlayer.play()
+                else -> Unit
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+
+        onDispose {
+            exoPlayer.removeListener(listener)
+            lifecycleOwner.lifecycle.removeObserver(observer)
+            exoPlayer.release()
+        }
+    }
+
+    Box(
+        modifier = modifier
+            .fillMaxSize()
+            .clickable(onClick = onTogglePlay)
+    ) {
+        if (!hasError) {
+            AndroidView(
+                factory = { ctx ->
+                    PlayerView(ctx).apply {
+                        player = exoPlayer
+                        useController = false
+                        resizeMode = AspectRatioFrameLayout.RESIZE_MODE_ZOOM
+                    }
+                },
+                modifier = Modifier.fillMaxSize()
+            )
+        } else {
+            // High-fidelity fallback to thumbnail
+            AsyncImage(
+                model = thumbnailUrl,
+                contentDescription = null,
+                modifier = Modifier.fillMaxSize(),
+                contentScale = ContentScale.Crop
+            )
+        }
+
+        if (isBuffering && !hasError) {
+            CircularProgressIndicator(
+                modifier = Modifier
+                    .size(44.dp)
+                    .align(Alignment.Center),
+                color = FixoGold500,
+                strokeWidth = 3.dp
+            )
+        }
+
+        if (!isPlaying && !isBuffering) {
+            Box(
+                modifier = Modifier
+                    .size(64.dp)
+                    .clip(CircleShape)
+                    .background(Color.Black.copy(alpha = 0.5f))
+                    .align(Alignment.Center),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = Icons.Default.PlayArrow,
+                    contentDescription = "Play",
+                    tint = Color.White,
+                    modifier = Modifier.size(36.dp)
+                )
             }
         }
     }

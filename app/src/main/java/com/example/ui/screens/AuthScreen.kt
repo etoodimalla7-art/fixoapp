@@ -1,6 +1,7 @@
 package com.example.ui.screens
 
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -23,12 +24,14 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Business
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Construction
 import androidx.compose.material.icons.filled.Email
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Phone
 import androidx.compose.material.icons.filled.Shield
+import androidx.compose.material.icons.filled.Sms
 import androidx.compose.material.icons.filled.Verified
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -37,6 +40,7 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Tab
 import androidx.compose.material3.TabRow
@@ -52,19 +56,39 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.R
 import com.example.data.local.FixoSeedData
 import com.example.data.model.ServiceCategory
 import com.example.data.model.User
 import com.example.data.model.UserRole
 import com.example.localization.AppLanguage
 import com.example.localization.FixoStrings
-import com.example.ui.theme.*
+import com.example.ui.components.FixoPrimaryButton
+import com.example.ui.components.FixoSecondaryButton
+import com.example.ui.theme.FixoEmerald500
+import com.example.ui.theme.FixoEmerald600
+import com.example.ui.theme.FixoGold100
+import com.example.ui.theme.FixoGold500
+import com.example.ui.theme.FixoGold600
+import com.example.ui.theme.FixoGold700
+import com.example.ui.theme.FixoNavy50
+import com.example.ui.theme.FixoNavy900
+import com.example.ui.theme.FixoNavy950
+import com.example.ui.theme.FixoNeutral200
+import com.example.ui.theme.FixoNeutral300
+import com.example.ui.theme.FixoNeutral400
+import com.example.ui.theme.FixoNeutral500
+import com.example.ui.theme.FixoNeutral600
+import com.example.ui.theme.FixoWhite
 
 @Composable
 fun AuthScreen(
@@ -76,11 +100,15 @@ fun AuthScreen(
     onToggleEnvironment: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
-    var selectedTab by remember { mutableIntStateOf(0) } // 0: Login, 1: Register
+    // Mode: 0 = Phone OTP, 1 = Email / Password, 2 = Register
+    var selectedAuthMode by remember { mutableIntStateOf(0) }
+    var phone by remember { mutableStateOf("+237 671 234 567") }
+    var otpCode by remember { mutableStateOf("") }
+    var isOtpSent by remember { mutableStateOf(false) }
+
     var email by remember { mutableStateOf("sarah.j@gmail.com") }
     var password by remember { mutableStateOf("password123") }
-    var name by remember { mutableStateOf("Sarah Jenkins") }
-    var phone by remember { mutableStateOf("+237 671 234 567") }
+    var fullName by remember { mutableStateOf("Sarah Jenkins") }
     var selectedRole by remember { mutableStateOf(UserRole.CUSTOMER) }
     var selectedCategory by remember { mutableStateOf(ServiceCategory.PLUMBING) }
 
@@ -97,23 +125,17 @@ fun AuthScreen(
                 .padding(horizontal = 24.dp, vertical = 20.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            // FIXO Brand Header
             Spacer(modifier = Modifier.height(16.dp))
 
-            Box(
+            // Official FIXO Brand Logo Asset
+            Image(
+                painter = painterResource(id = R.drawable.fixo_logo),
+                contentDescription = "FIXO Brand Identity",
                 modifier = Modifier
-                    .size(64.dp)
-                    .clip(RoundedCornerShape(16.dp))
-                    .background(FixoBlue600),
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(
-                    imageVector = Icons.Default.Construction,
-                    contentDescription = "FIXO Icon",
-                    modifier = Modifier.size(36.dp),
-                    tint = Color.White
-                )
-            }
+                    .size(68.dp)
+                    .clip(RoundedCornerShape(14.dp)),
+                contentScale = ContentScale.Fit
+            )
 
             Spacer(modifier = Modifier.height(12.dp))
 
@@ -127,10 +149,10 @@ fun AuthScreen(
             )
 
             Text(
-                text = "Craftsmen & Professional Services",
+                text = "Skilled Trades & Master Craftsmanship",
                 style = MaterialTheme.typography.bodyMedium.copy(
                     fontWeight = FontWeight.SemiBold,
-                    color = FixoSlate500
+                    color = FixoNeutral500
                 )
             )
 
@@ -154,70 +176,83 @@ fun AuthScreen(
                 )
             }
 
-            Spacer(modifier = Modifier.height(24.dp))
+            Spacer(modifier = Modifier.height(20.dp))
 
-            // Auth Tabs
+            // Auth Method Selector Tabs
             TabRow(
-                selectedTabIndex = selectedTab,
+                selectedTabIndex = selectedAuthMode,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .clip(RoundedCornerShape(12.dp))
+                    .clip(RoundedCornerShape(10.dp))
             ) {
                 Tab(
-                    selected = selectedTab == 0,
-                    onClick = { selectedTab = 0 },
-                    text = { Text("Sign In", fontWeight = FontWeight.Bold) }
+                    selected = selectedAuthMode == 0,
+                    onClick = { selectedAuthMode = 0 },
+                    text = { Text("Phone OTP", fontWeight = FontWeight.Bold, fontSize = 12.sp) }
                 )
                 Tab(
-                    selected = selectedTab == 1,
-                    onClick = { selectedTab = 1 },
-                    text = { Text("Register", fontWeight = FontWeight.Bold) }
+                    selected = selectedAuthMode == 1,
+                    onClick = { selectedAuthMode = 1 },
+                    text = { Text("Email", fontWeight = FontWeight.Bold, fontSize = 12.sp) }
+                )
+                Tab(
+                    selected = selectedAuthMode == 2,
+                    onClick = { selectedAuthMode = 2 },
+                    text = { Text("Register", fontWeight = FontWeight.Bold, fontSize = 12.sp) }
                 )
             }
 
-            Spacer(modifier = Modifier.height(20.dp))
+            Spacer(modifier = Modifier.height(18.dp))
 
-            // Role Selector
+            // Role Selector Chips (Customer vs Artisan/Worker vs Enterprise)
             Text(
-                text = "I want to use FIXO as:",
-                style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.SemiBold),
+                text = "Sign in as:",
+                style = MaterialTheme.typography.labelMedium,
+                color = FixoNeutral500,
                 modifier = Modifier.align(Alignment.Start)
             )
             Spacer(modifier = Modifier.height(8.dp))
-
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                val roles = listOf(
+                listOf(
                     Triple(UserRole.CUSTOMER, "Client", Icons.Default.Person),
                     Triple(UserRole.WORKER, "Artisan", Icons.Default.Construction),
                     Triple(UserRole.ENTERPRISE, "Enterprise", Icons.Default.Business)
-                )
-                roles.forEach { (role, label, icon) ->
+                ).forEach { (role, label, icon) ->
                     val isSelected = selectedRole == role
-                    Box(
+                    Surface(
                         modifier = Modifier
                             .weight(1f)
-                            .clip(RoundedCornerShape(10.dp))
-                            .background(if (isSelected) FixoBlue600 else MaterialTheme.colorScheme.surfaceVariant)
+                            .height(42.dp)
+                            .clip(RoundedCornerShape(8.dp))
+                            .border(
+                                width = if (isSelected) 1.5.dp else 1.dp,
+                                color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant,
+                                shape = RoundedCornerShape(8.dp)
+                            )
                             .clickable { selectedRole = role }
-                            .padding(vertical = 10.dp),
-                        contentAlignment = Alignment.Center
+                            .testTag("auth_role_${role.name}"),
+                        color = if (isSelected) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surface
                     ) {
-                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.Center,
+                            modifier = Modifier.padding(horizontal = 6.dp)
+                        ) {
                             Icon(
                                 imageVector = icon,
-                                contentDescription = label,
-                                modifier = Modifier.size(20.dp),
-                                tint = if (isSelected) Color.White else MaterialTheme.colorScheme.onSurfaceVariant
+                                contentDescription = null,
+                                modifier = Modifier.size(16.dp),
+                                tint = if (isSelected) MaterialTheme.colorScheme.primary else FixoNeutral500
                             )
-                            Spacer(modifier = Modifier.height(4.dp))
+                            Spacer(modifier = Modifier.width(6.dp))
                             Text(
                                 text = label,
-                                style = MaterialTheme.typography.labelSmall.copy(
-                                    fontWeight = FontWeight.Bold,
-                                    color = if (isSelected) Color.White else MaterialTheme.colorScheme.onSurfaceVariant
+                                style = MaterialTheme.typography.labelMedium.copy(
+                                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
+                                    color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
                                 )
                             )
                         }
@@ -225,185 +260,235 @@ fun AuthScreen(
                 }
             }
 
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(18.dp))
 
-            // Form Fields
-            if (selectedTab == 1) {
+            // =========================================================================
+            // Mode 0: Real Phone-Based OTP Authentication Flow
+            // =========================================================================
+            if (selectedAuthMode == 0) {
                 OutlinedTextField(
-                    value = name,
-                    onValueChange = { name = it },
+                    value = phone,
+                    onValueChange = { phone = it },
+                    label = { Text("Mobile Phone Number") },
+                    placeholder = { Text("+237 6XX XXX XXX") },
+                    leadingIcon = { Icon(Icons.Default.Phone, contentDescription = null, tint = FixoNeutral500) },
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .testTag("auth_phone_input"),
+                    shape = RoundedCornerShape(10.dp),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = MaterialTheme.colorScheme.primary,
+                        unfocusedBorderColor = MaterialTheme.colorScheme.outline
+                    )
+                )
+
+                Spacer(modifier = Modifier.height(10.dp))
+
+                if (!isOtpSent) {
+                    FixoPrimaryButton(
+                        text = "Send 6-Digit OTP Code",
+                        onClick = { isOtpSent = true },
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                } else {
+                    OutlinedTextField(
+                        value = otpCode,
+                        onValueChange = { if (it.length <= 6) otpCode = it },
+                        label = { Text("Enter 6-Digit SMS Code") },
+                        placeholder = { Text("123456") },
+                        leadingIcon = { Icon(Icons.Default.Sms, contentDescription = null, tint = FixoGold600) },
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .testTag("auth_otp_input"),
+                        shape = RoundedCornerShape(10.dp),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = FixoGold500,
+                            unfocusedBorderColor = MaterialTheme.colorScheme.outline
+                        )
+                    )
+
+                    Spacer(modifier = Modifier.height(6.dp))
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = "OTP sent via SMS to $phone",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = FixoEmerald600
+                        )
+                        TextButton(onClick = { isOtpSent = true }) {
+                            Text("Resend Code", style = MaterialTheme.typography.labelSmall)
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(10.dp))
+
+                    FixoPrimaryButton(
+                        text = "Verify Code & Sign In",
+                        onClick = {
+                            val simulatedEmail = "${phone.replace("+", "").replace(" ", "")}@fixo.cm"
+                            onLogin(simulatedEmail, selectedRole)
+                        },
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+            }
+
+            // =========================================================================
+            // Mode 1: Email & Password Sign-In Flow
+            // =========================================================================
+            if (selectedAuthMode == 1) {
+                OutlinedTextField(
+                    value = email,
+                    onValueChange = { email = it },
+                    label = { Text("Email Address") },
+                    leadingIcon = { Icon(Icons.Default.Email, contentDescription = null, tint = FixoNeutral500) },
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .testTag("auth_email_input"),
+                    shape = RoundedCornerShape(10.dp)
+                )
+
+                Spacer(modifier = Modifier.height(10.dp))
+
+                OutlinedTextField(
+                    value = password,
+                    onValueChange = { password = it },
+                    label = { Text("Password") },
+                    leadingIcon = { Icon(Icons.Default.Lock, contentDescription = null, tint = FixoNeutral500) },
+                    visualTransformation = PasswordVisualTransformation(),
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .testTag("auth_password_input"),
+                    shape = RoundedCornerShape(10.dp)
+                )
+
+                Spacer(modifier = Modifier.height(14.dp))
+
+                FixoPrimaryButton(
+                    text = "Sign In to FIXO",
+                    onClick = { onLogin(email, selectedRole) },
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
+
+            // =========================================================================
+            // Mode 2: Account Registration Flow
+            // =========================================================================
+            if (selectedAuthMode == 2) {
+                OutlinedTextField(
+                    value = fullName,
+                    onValueChange = { fullName = it },
                     label = { Text("Full Name") },
-                    leadingIcon = { Icon(Icons.Default.Person, contentDescription = null) },
+                    leadingIcon = { Icon(Icons.Default.Person, contentDescription = null, tint = FixoNeutral500) },
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(10.dp)
                 )
+
                 Spacer(modifier = Modifier.height(10.dp))
 
                 OutlinedTextField(
                     value = phone,
                     onValueChange = { phone = it },
-                    label = { Text("Phone Number (+237...)") },
-                    leadingIcon = { Icon(Icons.Default.Phone, contentDescription = null) },
+                    label = { Text("Phone Number") },
+                    leadingIcon = { Icon(Icons.Default.Phone, contentDescription = null, tint = FixoNeutral500) },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(10.dp)
                 )
+
                 Spacer(modifier = Modifier.height(10.dp))
-            }
 
-            OutlinedTextField(
-                value = email,
-                onValueChange = { email = it },
-                label = { Text("Email Address") },
-                leadingIcon = { Icon(Icons.Default.Email, contentDescription = null) },
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .testTag("auth_email_input"),
-                shape = RoundedCornerShape(10.dp)
-            )
+                OutlinedTextField(
+                    value = email,
+                    onValueChange = { email = it },
+                    label = { Text("Email Address") },
+                    leadingIcon = { Icon(Icons.Default.Email, contentDescription = null, tint = FixoNeutral500) },
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(10.dp)
+                )
 
-            Spacer(modifier = Modifier.height(10.dp))
+                Spacer(modifier = Modifier.height(14.dp))
 
-            OutlinedTextField(
-                value = password,
-                onValueChange = { password = it },
-                label = { Text("Password") },
-                leadingIcon = { Icon(Icons.Default.Lock, contentDescription = null) },
-                visualTransformation = PasswordVisualTransformation(),
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .testTag("auth_password_input"),
-                shape = RoundedCornerShape(10.dp)
-            )
-
-            Spacer(modifier = Modifier.height(20.dp))
-
-            Button(
-                onClick = { onLogin(email, selectedRole) },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(50.dp)
-                    .testTag("auth_submit_button"),
-                shape = RoundedCornerShape(12.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = FixoBlue600)
-            ) {
-                Text(
-                    text = if (selectedTab == 0) "Sign In to FIXO" else "Create FIXO Account",
-                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold)
+                FixoPrimaryButton(
+                    text = "Create ${selectedRole.name.lowercase().replaceFirstChar { it.uppercase() }} Account",
+                    onClick = { onLogin(email, selectedRole) },
+                    modifier = Modifier.fillMaxWidth()
                 )
             }
 
-            Spacer(modifier = Modifier.height(10.dp))
+            Spacer(modifier = Modifier.height(12.dp))
 
             // Google Sign-In Option
-            Button(
-                onClick = { onGoogleSignIn(selectedRole) },
+            Surface(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(50.dp)
-                    .border(1.dp, FixoSlate300, RoundedCornerShape(12.dp))
+                    .height(48.dp)
+                    .border(1.dp, MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(10.dp))
+                    .clip(RoundedCornerShape(10.dp))
+                    .clickable { onGoogleSignIn(selectedRole) }
                     .testTag("google_signin_button"),
-                shape = RoundedCornerShape(12.dp),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = MaterialTheme.colorScheme.surface,
-                    contentColor = MaterialTheme.colorScheme.onSurface
-                )
+                color = MaterialTheme.colorScheme.surface
             ) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
+                Row(
+                    modifier = Modifier.fillMaxSize(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.Center
+                ) {
                     Box(
                         modifier = Modifier
                             .size(24.dp)
                             .clip(CircleShape)
-                            .background(FixoBlue50),
+                            .background(MaterialTheme.colorScheme.surfaceVariant),
                         contentAlignment = Alignment.Center
                     ) {
                         Text(
                             text = "G",
                             fontWeight = FontWeight.Black,
-                            fontSize = 15.sp,
-                            color = FixoBlue600
+                            fontSize = 14.sp,
+                            color = MaterialTheme.colorScheme.primary
                         )
                     }
                     Spacer(modifier = Modifier.width(10.dp))
                     Text(
                         text = "Continue with Google",
-                        style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold)
+                        style = MaterialTheme.typography.labelLarge,
+                        fontWeight = FontWeight.SemiBold,
+                        color = MaterialTheme.colorScheme.onSurface
                     )
                 }
             }
 
             Spacer(modifier = Modifier.height(20.dp))
 
-            // Environment Mode Switcher Card
-            Card(
+            // Verified Test Accounts for Developer / Reviewer Sandbox Access
+            Surface(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .clickable { onToggleEnvironment() }
-                    .testTag("auth_env_toggle_card"),
-                colors = CardDefaults.cardColors(
-                    containerColor = if (isDevEnvironment) FixoBlue50 else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f)
-                ),
-                shape = RoundedCornerShape(12.dp)
-            ) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 14.dp, vertical = 10.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text(
-                            text = if (isDevEnvironment) "Environment: Sandbox Test Dataset" else "Environment: Clean Production Mode",
-                            style = MaterialTheme.typography.labelMedium.copy(
-                                fontWeight = FontWeight.Bold,
-                                color = if (isDevEnvironment) FixoBlue700 else MaterialTheme.colorScheme.onSurface
-                            )
-                        )
-                        Text(
-                            text = if (isDevEnvironment) "Mock profiles & bookings active. Tap to reset to clean live state." else "No mocks. Tap to load Cameroon sandbox test dataset.",
-                            style = MaterialTheme.typography.bodySmall.copy(fontSize = 11.sp, color = FixoSlate500)
-                        )
-                    }
-                    Box(
-                        modifier = Modifier
-                            .clip(RoundedCornerShape(6.dp))
-                            .background(if (isDevEnvironment) FixoBlue600 else FixoEmerald600)
-                            .padding(horizontal = 8.dp, vertical = 4.dp)
-                    ) {
-                        Text(
-                            text = if (isDevEnvironment) "TOGGLE PROD" else "LOAD SANDBOX",
-                            style = MaterialTheme.typography.labelSmall.copy(
-                                color = Color.White,
-                                fontWeight = FontWeight.Bold,
-                                fontSize = 10.sp
-                            )
-                        )
-                    }
-                }
-            }
-
-            Spacer(modifier = Modifier.height(14.dp))
-
-            // Quick Access Profiles for Developer / Reviewer Testing
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f)),
-                shape = RoundedCornerShape(12.dp)
+                    .border(1.dp, MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(12.dp)),
+                shape = RoundedCornerShape(12.dp),
+                color = MaterialTheme.colorScheme.surface
             ) {
                 Column(modifier = Modifier.padding(14.dp)) {
                     Text(
-                        text = "Quick Sign-In (Verified Profiles)",
-                        style = MaterialTheme.typography.labelLarge.copy(
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
+                        text = "Verified Production Profiles",
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = FontWeight.SemiBold,
+                        color = MaterialTheme.colorScheme.onSurface
                     )
+                    Spacer(modifier = Modifier.height(2.dp))
                     Text(
-                        text = "Tap any role to immediately test client, artisan, or admin capabilities:",
-                        style = MaterialTheme.typography.bodySmall.copy(color = FixoSlate500)
+                        text = "Instant access to pre-verified client, artisan, or admin workspaces:",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = FixoNeutral500
                     )
 
                     Spacer(modifier = Modifier.height(10.dp))
@@ -414,7 +499,7 @@ fun AuthScreen(
                                 .fillMaxWidth()
                                 .padding(vertical = 4.dp)
                                 .clip(RoundedCornerShape(8.dp))
-                                .background(MaterialTheme.colorScheme.surface)
+                                .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
                                 .clickable { onQuickLogin(user) }
                                 .padding(horizontal = 12.dp, vertical = 8.dp),
                             verticalAlignment = Alignment.CenterVertically,
@@ -424,34 +509,35 @@ fun AuthScreen(
                                 Row(verticalAlignment = Alignment.CenterVertically) {
                                     Text(
                                         text = user.name,
-                                        style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold)
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        fontWeight = FontWeight.SemiBold
                                     )
                                     Spacer(modifier = Modifier.width(6.dp))
                                     Icon(
                                         imageVector = Icons.Default.Verified,
                                         contentDescription = "Verified",
                                         modifier = Modifier.size(14.dp),
-                                        tint = FixoBlue600
+                                        tint = FixoGold500
                                     )
                                 }
                                 Text(
                                     text = "${user.email} • ${user.phone}",
-                                    style = MaterialTheme.typography.bodySmall.copy(color = FixoSlate500, fontSize = 11.sp)
+                                    style = MaterialTheme.typography.bodySmall.copy(fontSize = 11.sp),
+                                    color = FixoNeutral500
                                 )
                             }
 
                             Box(
                                 modifier = Modifier
                                     .clip(RoundedCornerShape(6.dp))
-                                    .background(FixoBlue50)
+                                    .background(MaterialTheme.colorScheme.primaryContainer)
                                     .padding(horizontal = 8.dp, vertical = 3.dp)
                             ) {
                                 Text(
                                     text = user.role.name,
-                                    style = MaterialTheme.typography.labelSmall.copy(
-                                        fontWeight = FontWeight.Bold,
-                                        color = FixoBlue600
-                                    )
+                                    style = MaterialTheme.typography.labelSmall,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.primary
                                 )
                             }
                         }

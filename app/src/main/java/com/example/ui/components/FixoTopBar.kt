@@ -1,6 +1,7 @@
 package com.example.ui.components
 
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -44,10 +45,12 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
+import com.example.R
 import com.example.data.model.EscrowStatus
 import com.example.data.model.JobStatus
 import com.example.data.model.SubscriptionTier
@@ -107,20 +110,14 @@ fun FixoTopBar(
                     verticalAlignment = Alignment.CenterVertically,
                     modifier = Modifier.clickable { roleMenuExpanded = true }
                 ) {
-                    Box(
+                    Image(
+                        painter = painterResource(id = R.drawable.fixo_logo),
+                        contentDescription = "FIXO Brand Mark",
                         modifier = Modifier
                             .size(38.dp)
-                            .clip(RoundedCornerShape(10.dp))
-                            .background(FixoNavy900),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text(
-                            text = "F",
-                            color = Color.White,
-                            fontWeight = FontWeight.Black,
-                            fontSize = 22.sp
-                        )
-                    }
+                            .clip(RoundedCornerShape(8.dp)),
+                        contentScale = ContentScale.Fit
+                    )
 
                     Spacer(modifier = Modifier.width(10.dp))
 
