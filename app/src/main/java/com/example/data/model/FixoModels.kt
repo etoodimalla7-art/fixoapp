@@ -28,15 +28,21 @@ enum class ServiceCategory(val displayName: String, val iconKey: String) {
     IT_NETWORKING("CCTV & Smart Systems", "it_networking")
 }
 
-enum class JobStatus {
-    REQUESTED,
-    ACCEPTED,
-    EN_ROUTE,
-    IN_PROGRESS,
-    COMPLETION_REQUESTED,
-    COMPLETED,
-    CANCELLED,
-    DISPUTED
+enum class JobStatus(val displayName: String) {
+    REQUESTED("Requested"),
+    ACCEPTED("Accepted"),
+    SCHEDULED("Scheduled"),
+    ON_THE_WAY("On The Way"),
+    ARRIVED("Arrived"),
+    IN_PROGRESS("In Progress"),
+    COMPLETION_REQUESTED("Completion Requested"),
+    COMPLETED("Completed"),
+    CANCELLED("Cancelled"),
+    DISPUTED("Disputed");
+
+    companion object {
+        val EN_ROUTE = ON_THE_WAY
+    }
 }
 
 enum class EscrowStatus {
@@ -157,6 +163,55 @@ data class Booking(
     val customerReviewText: String = "",
     val pointsEarned: Int = 0,
     val workerPhone: String = "+237 671 234 567",
+    val customerLat: Double = 4.0511,
+    val customerLng: Double = 9.7679,
+    val workerLat: Double = 4.0483,
+    val workerLng: Double = 9.7043,
+    val trackingActive: Boolean = false,
+    val etaMinutes: Int = 12,
+    val distanceKm: Double = 3.4,
+    val workerSpeedKmh: Float = 25.0f,
+    val workerHeading: Float = 45.0f,
+    val lastLocationUpdate: Long = System.currentTimeMillis(),
+    val createdAt: Long = System.currentTimeMillis()
+)
+
+@Entity(tableName = "worker_locations")
+data class WorkerLocation(
+    @PrimaryKey val bookingId: String,
+    val workerId: String,
+    val latitude: Double,
+    val longitude: Double,
+    val speedKmh: Float = 0f,
+    val heading: Float = 0f,
+    val destinationLat: Double = 4.0511,
+    val destinationLng: Double = 9.7679,
+    val destinationAddress: String = "",
+    val isTrackingActive: Boolean = true,
+    val updatedAt: Long = System.currentTimeMillis()
+)
+
+@Entity(tableName = "notifications")
+data class FixoNotification(
+    @PrimaryKey val id: String,
+    val userId: String,
+    val title: String,
+    val message: String,
+    val type: String, // BOOKING_CREATED, WORKER_ACCEPTED, WORKER_STARTED_TRIP, WORKER_ARRIVED, MESSAGE_RECEIVED, PAYMENT, JOB_COMPLETED, REVIEW_REQUEST, VERIFICATION, DISPUTE
+    val bookingId: String? = null,
+    val timestamp: Long = System.currentTimeMillis(),
+    val isRead: Boolean = false
+)
+
+@Entity(tableName = "worker_reviews")
+data class WorkerReview(
+    @PrimaryKey val id: String,
+    val bookingId: String,
+    val workerId: String,
+    val customerId: String,
+    val customerName: String,
+    val rating: Float,
+    val comment: String,
     val createdAt: Long = System.currentTimeMillis()
 )
 

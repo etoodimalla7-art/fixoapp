@@ -40,7 +40,9 @@ import com.example.ui.components.DepositDialog
 import com.example.ui.components.DisputeDialog
 import com.example.ui.components.FixoBottomNav
 import com.example.ui.components.FixoTopBar
+import com.example.ui.components.NotificationsDialog
 import com.example.ui.components.ReviewAndReleaseDialog
+import com.example.ui.components.StartTripConfirmationDialog
 import com.example.ui.components.UploadReelDialog
 import com.example.ui.components.WithdrawDialog
 import com.example.ui.screens.admin.AdminPortalScreen
@@ -141,6 +143,10 @@ fun FixoApp(
                     isDevEnvironment = uiState.isDevEnvironment,
                     onToggleEnvironment = {
                         viewModel.toggleDevEnvironment()
+                    },
+                    unreadNotificationCount = uiState.unreadNotificationCount,
+                    onNotificationsClick = {
+                        viewModel.openNotificationsDialog()
                     }
                 )
             },
@@ -225,7 +231,21 @@ fun FixoApp(
                             JobTrackingScreen(
                                 booking = activeBooking,
                                 chatMessages = uiState.chatMessages,
+                                activeLocation = uiState.activeWorkerLocation,
+                                currentRole = uiState.currentRole,
                                 onBack = { viewingJobId = null },
+                                onStartTrip = {
+                                    viewModel.openStartTripConfirmation(activeBooking)
+                                },
+                                onMarkArrived = {
+                                    viewModel.markWorkerArrived(activeBooking.id)
+                                },
+                                onStartWork = {
+                                    viewModel.startWork(activeBooking.id)
+                                },
+                                onRequestCompletion = {
+                                    viewModel.requestJobCompletion(activeBooking.id)
+                                },
                                 onAdvanceStatus = { status ->
                                     viewModel.advanceJobStatus(activeBooking.id, status)
                                 },
@@ -237,6 +257,9 @@ fun FixoApp(
                                 },
                                 onOpenDispute = {
                                     viewModel.openDisputeDialog()
+                                },
+                                onCancelBooking = {
+                                    viewModel.cancelBooking(activeBooking.id)
                                 }
                             )
                         }
@@ -397,18 +420,33 @@ fun FixoApp(
                         )
 
                         3 -> {
-                            val activeJob = uiState.workerBookings.firstOrNull() ?: uiState.customerBookings.firstOrNull()
+                            val activeJob = uiState.selectedBooking ?: uiState.workerBookings.firstOrNull() ?: uiState.customerBookings.firstOrNull()
                             if (activeJob != null) {
                                 JobTrackingScreen(
-                                    booking = uiState.selectedBooking ?: activeJob,
+                                    booking = activeJob,
                                     chatMessages = uiState.chatMessages,
+                                    activeLocation = uiState.activeWorkerLocation,
+                                    currentRole = uiState.currentRole,
                                     onBack = { selectedTab = 0 },
-                                    onAdvanceStatus = { status ->
-                                        viewModel.advanceJobStatus((uiState.selectedBooking ?: activeJob).id, status)
+                                    onStartTrip = {
+                                        viewModel.openStartTripConfirmation(activeJob)
                                     },
-                                    onOpenReview = { viewModel.openReviewDialog(uiState.selectedBooking ?: activeJob) },
+                                    onMarkArrived = {
+                                        viewModel.markWorkerArrived(activeJob.id)
+                                    },
+                                    onStartWork = {
+                                        viewModel.startWork(activeJob.id)
+                                    },
+                                    onRequestCompletion = {
+                                        viewModel.requestJobCompletion(activeJob.id)
+                                    },
+                                    onAdvanceStatus = { status ->
+                                        viewModel.advanceJobStatus(activeJob.id, status)
+                                    },
+                                    onOpenReview = { viewModel.openReviewDialog(activeJob) },
                                     onSendMessage = { msg -> viewModel.sendChatMessage(msg) },
-                                    onOpenDispute = { viewModel.openDisputeDialog() }
+                                    onOpenDispute = { viewModel.openDisputeDialog() },
+                                    onCancelBooking = { viewModel.cancelBooking(activeJob.id) }
                                 )
                             } else {
                                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
@@ -513,6 +551,34 @@ fun FixoApp(
             onSubmit = { reason ->
                 viewModel.submitDispute(reason)
             }
+        )
+    }
+
+    if (uiState.isNotificationsDialogVisible) {
+        NotificationsDialog(
+            notifications = uiState.notifications,
+            onDismiss = { viewModel.closeNotificationsDialog() },
+            onNotificationClick = { notif ->
+                viewModel.markNotificationRead(notif.id)
+                if (notif.bookingId != null) {
+                    val b = uiState.customerBookings.find { it.id == notif.bookingId }
+                        ?: uiState.workerBookings.find { it.id == notif.bookingId }
+                    if (b != null) {
+                        viewModel.selectBooking(b)
+                        viewingJobId = b.id
+                        viewModel.closeNotificationsDialog()
+                    }
+                }
+            },
+            onMarkAllRead = { viewModel.markAllNotificationsRead() }
+        )
+    }
+
+    if (uiState.isStartTripConfirmationVisible && uiState.pendingStartTripBooking != null) {
+        StartTripConfirmationDialog(
+            booking = uiState.pendingStartTripBooking!!,
+            onDismiss = { viewModel.closeStartTripConfirmation() },
+            onConfirm = { viewModel.confirmStartTrip() }
         )
     }
     }

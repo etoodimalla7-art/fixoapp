@@ -234,10 +234,177 @@ object FixoSeedData {
         )
     )
 
-    // Initial production state: No fake bookings or fake transactions
-    val defaultBookings = emptyList<Booking>()
-    val defaultChat = emptyList<ChatMessage>()
-    val defaultTransactions = emptyList<WalletTransaction>()
+    // Sandbox Bookings for immediate testing and demonstration in Cameroon
+    val defaultBookings = listOf(
+        Booking(
+            id = "bk_douala_active",
+            customerId = "usr_cust_1",
+            customerName = "Sarah Jenkins",
+            workerId = "wrk_1",
+            workerName = "Marc Dubois",
+            workerAvatar = "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400",
+            serviceTitle = "Emergency Water Leak & Pipe Isolation",
+            category = ServiceCategory.PLUMBING,
+            date = "Today",
+            timeSlot = "Immediate (Emergency Callout)",
+            status = JobStatus.ON_THE_WAY,
+            address = "Rue Drouot, Akwa, Douala",
+            notes = "Main valve isolated; burst copper pipe under kitchen counter. Need immediate welding and pressure check.",
+            priceAmount = 15000.0,
+            escrowStatus = EscrowStatus.HOLDING,
+            paymentMethod = PaymentMethod.MTN_MOMO,
+            customerRating = 0f,
+            customerReviewText = "",
+            pointsEarned = 0,
+            workerPhone = "+237 699 876 543",
+            customerLat = 4.0511,
+            customerLng = 9.7085,
+            workerLat = 4.0380,
+            workerLng = 9.6990,
+            trackingActive = true,
+            etaMinutes = 8,
+            distanceKm = 2.1,
+            workerSpeedKmh = 26.5f,
+            workerHeading = 35.0f,
+            lastLocationUpdate = System.currentTimeMillis() - 45000L
+        ),
+        Booking(
+            id = "bk_douala_completed",
+            customerId = "usr_cust_1",
+            customerName = "Sarah Jenkins",
+            workerId = "wrk_2",
+            workerName = "Elena Rostova",
+            workerAvatar = "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=400",
+            serviceTitle = "Electrical Panel Modernization & Breakers",
+            category = ServiceCategory.ELECTRICAL,
+            date = "Yesterday",
+            timeSlot = "10:30 - 12:30",
+            status = JobStatus.COMPLETED,
+            address = "Avenue Charles de Gaulle, Bonanjo, Douala",
+            notes = "Upgraded vintage fuse board to modern Schneider RCBOs and added surge protection.",
+            priceAmount = 45000.0,
+            escrowStatus = EscrowStatus.RELEASED,
+            paymentMethod = PaymentMethod.FIXO_WALLET,
+            customerRating = 5.0f,
+            customerReviewText = "Elena was extremely professional, finished in under 2 hours, and explained every breaker circuit. Clean wiring!",
+            pointsEarned = 50,
+            workerPhone = "+237 670 445 566"
+        )
+    )
+
+    val defaultChat = listOf(
+        ChatMessage(
+            id = "msg_init_1",
+            bookingId = "bk_douala_active",
+            senderId = "wrk_1",
+            senderName = "Marc Dubois",
+            senderRole = UserRole.WORKER,
+            message = "Bonjour Sarah, I have accepted your emergency request. My truck is packed with copper couplings and a leak detector. Heading your way now!"
+        ),
+        ChatMessage(
+            id = "msg_init_2",
+            bookingId = "bk_douala_active",
+            senderId = "usr_cust_1",
+            senderName = "Sarah Jenkins",
+            senderRole = UserRole.CUSTOMER,
+            message = "Thank you Marc! The gate code is #402. Call me as soon as you reach Rue Drouot."
+        ),
+        ChatMessage(
+            id = "msg_init_3",
+            bookingId = "bk_douala_active",
+            senderId = "wrk_1",
+            senderName = "Marc Dubois",
+            senderRole = UserRole.WORKER,
+            message = "Understood. I am passing Boulevard de la Liberté right now, estimated arrival in 8 minutes."
+        )
+    )
+
+    val defaultLocations = listOf(
+        com.example.data.model.WorkerLocation(
+            bookingId = "bk_douala_active",
+            workerId = "wrk_1",
+            latitude = 4.0380,
+            longitude = 9.6990,
+            speedKmh = 26.5f,
+            heading = 35.0f,
+            destinationLat = 4.0511,
+            destinationLng = 9.7085,
+            destinationAddress = "Rue Drouot, Akwa, Douala",
+            isTrackingActive = true,
+            updatedAt = System.currentTimeMillis() - 45000L
+        )
+    )
+
+    val defaultNotifications = listOf(
+        com.example.data.model.FixoNotification(
+            id = "notif_1",
+            userId = "usr_cust_1",
+            title = "Artisan Started Trip",
+            message = "Marc Dubois (Plumber) is on the way to Rue Drouot. Estimated arrival in 8 mins.",
+            type = "WORKER_STARTED_TRIP",
+            bookingId = "bk_douala_active",
+            timestamp = System.currentTimeMillis() - 5 * 60000L,
+            isRead = false
+        ),
+        com.example.data.model.FixoNotification(
+            id = "notif_2",
+            userId = "usr_cust_1",
+            title = "Escrow Payment Held",
+            message = "15,000 FCFA successfully held in FIXO Escrow for job #bk_douala_active.",
+            type = "PAYMENT",
+            bookingId = "bk_douala_active",
+            timestamp = System.currentTimeMillis() - 10 * 60000L,
+            isRead = true
+        ),
+        com.example.data.model.FixoNotification(
+            id = "notif_3",
+            userId = "usr_cust_1",
+            title = "Job Completed & Escrow Released",
+            message = "Elena Rostova completed job #bk_douala_completed. +50 FIXO Points earned!",
+            type = "JOB_COMPLETED",
+            bookingId = "bk_douala_completed",
+            timestamp = System.currentTimeMillis() - 86400000L,
+            isRead = true
+        )
+    )
+
+    val defaultReviews = listOf(
+        com.example.data.model.WorkerReview(
+            id = "rev_1",
+            bookingId = "bk_douala_completed",
+            workerId = "wrk_2",
+            customerId = "usr_cust_1",
+            customerName = "Sarah Jenkins",
+            rating = 5.0f,
+            comment = "Elena was extremely professional, finished in under 2 hours, and explained every breaker circuit. Clean wiring!",
+            createdAt = System.currentTimeMillis() - 86400000L
+        ),
+        com.example.data.model.WorkerReview(
+            id = "rev_2",
+            bookingId = "bk_prev_1",
+            workerId = "wrk_1",
+            customerId = "usr_prev_2",
+            customerName = "Michel Eto'o",
+            rating = 5.0f,
+            comment = "Fixed our commercial booster pump during peak business hours without disrupting water to the restaurant.",
+            createdAt = System.currentTimeMillis() - 3 * 86400000L
+        )
+    )
+
+    val defaultTransactions = listOf(
+        WalletTransaction(
+            id = "tx_esc_1",
+            userId = "usr_cust_1",
+            type = "ESCROW_HOLD",
+            amount = -15000.0,
+            currency = "XAF",
+            description = "Escrow hold for Emergency Plumbing Callout (Marc Dubois)",
+            status = "COMPLETED",
+            paymentProvider = "MTN_MOMO",
+            referenceCode = "ESC-DOUALA-01",
+            timestamp = System.currentTimeMillis() - 10 * 60000L
+        )
+    )
 
     val defaultRewards = listOf(
         RewardItem("rew_1", "2,500 FCFA Off Emergency Callout", "Valid for any emergency plumbing or electrical dispatch", 250, 2500.0, "EMERGENCY25"),

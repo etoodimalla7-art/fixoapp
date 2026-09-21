@@ -92,9 +92,12 @@ class FixoTypeConverters {
         WalletTransaction::class,
         RewardItem::class,
         EnterpriseProject::class,
-        DisputeReport::class
+        DisputeReport::class,
+        com.example.data.model.WorkerLocation::class,
+        com.example.data.model.FixoNotification::class,
+        com.example.data.model.WorkerReview::class
     ],
-    version = 1,
+    version = 2,
     exportSchema = false
 )
 @TypeConverters(FixoTypeConverters::class)

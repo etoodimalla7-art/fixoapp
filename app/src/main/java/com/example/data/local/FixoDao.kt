@@ -158,6 +158,52 @@ interface FixoDao {
     @Update
     suspend fun updateDispute(dispute: DisputeReport)
 
+    // WORKER LOCATIONS (JOB-SCOPED REAL TRACKING)
+    @Query("SELECT * FROM worker_locations WHERE bookingId = :bookingId")
+    fun getWorkerLocation(bookingId: String): Flow<com.example.data.model.WorkerLocation?>
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertWorkerLocation(location: com.example.data.model.WorkerLocation)
+
+    @Query("DELETE FROM worker_locations WHERE bookingId = :bookingId")
+    suspend fun deleteWorkerLocation(bookingId: String)
+
+    // NOTIFICATIONS
+    @Query("SELECT * FROM notifications WHERE userId = :userId ORDER BY timestamp DESC")
+    fun getNotificationsForUser(userId: String): Flow<List<com.example.data.model.FixoNotification>>
+
+    @Query("SELECT COUNT(*) FROM notifications WHERE userId = :userId AND isRead = 0")
+    fun getUnreadNotificationCount(userId: String): Flow<Int>
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertNotification(notification: com.example.data.model.FixoNotification)
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertNotifications(notifications: List<com.example.data.model.FixoNotification>)
+
+    @Query("UPDATE notifications SET isRead = 1 WHERE id = :id")
+    suspend fun markNotificationRead(id: String)
+
+    @Query("UPDATE notifications SET isRead = 1 WHERE userId = :userId")
+    suspend fun markAllNotificationsRead(userId: String)
+
+    // WORKER REVIEWS
+    @Query("SELECT * FROM worker_reviews WHERE workerId = :workerId ORDER BY createdAt DESC")
+    fun getReviewsForWorker(workerId: String): Flow<List<com.example.data.model.WorkerReview>>
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertWorkerReview(review: com.example.data.model.WorkerReview)
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertWorkerReviews(reviews: List<com.example.data.model.WorkerReview>)
+
+    // SERVICE MANAGEMENT
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertService(service: ServiceItem)
+
+    @Query("DELETE FROM services WHERE id = :serviceId")
+    suspend fun deleteService(serviceId: String)
+
     // CLEAR DATABASE TABLES FOR CLEAN PRODUCTION MODE
     @Query("DELETE FROM users")
     suspend fun clearUsers()
@@ -185,4 +231,13 @@ interface FixoDao {
 
     @Query("DELETE FROM disputes")
     suspend fun clearDisputes()
+
+    @Query("DELETE FROM worker_locations")
+    suspend fun clearWorkerLocations()
+
+    @Query("DELETE FROM notifications")
+    suspend fun clearNotifications()
+
+    @Query("DELETE FROM worker_reviews")
+    suspend fun clearWorkerReviews()
 }

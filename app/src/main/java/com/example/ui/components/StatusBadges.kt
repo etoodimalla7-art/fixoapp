@@ -92,8 +92,10 @@ fun JobStatusBadge(
 ) {
     val (bg, fg, label) = when (status) {
         JobStatus.REQUESTED -> Triple(FixoBlue100, FixoBlue600, "Requested")
+        JobStatus.SCHEDULED -> Triple(FixoBlue100, FixoBlue600, "Scheduled")
         JobStatus.ACCEPTED -> Triple(FixoBlue100, FixoBlue600, "Accepted")
-        JobStatus.EN_ROUTE -> Triple(FixoAmber100, FixoAmber600, "Artisan En Route")
+        JobStatus.ON_THE_WAY, JobStatus.EN_ROUTE -> Triple(FixoAmber100, FixoAmber600, "Artisan En Route")
+        JobStatus.ARRIVED -> Triple(FixoEmerald100, FixoEmerald600, "Arrived on Site")
         JobStatus.IN_PROGRESS -> Triple(FixoAmber100, FixoAmber600, "Work In Progress")
         JobStatus.COMPLETION_REQUESTED -> Triple(FixoAmber100, FixoAmber600, "Inspection Requested")
         JobStatus.COMPLETED -> Triple(FixoEmerald100, FixoEmerald600, "Completed & Released")

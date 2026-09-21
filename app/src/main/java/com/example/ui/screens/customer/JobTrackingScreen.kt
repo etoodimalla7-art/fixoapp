@@ -1,5 +1,10 @@
 package com.example.ui.screens.customer
 
+import android.content.Intent
+import android.net.Uri
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -22,12 +27,25 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.Send
+import androidx.compose.material.icons.filled.AccessTime
+import androidx.compose.material.icons.filled.Build
+import androidx.compose.material.icons.filled.Call
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.GpsFixed
+import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.Lock
+import androidx.compose.material.icons.filled.Navigation
+import androidx.compose.material.icons.filled.NearMe
 import androidx.compose.material.icons.filled.Phone
+import androidx.compose.material.icons.filled.Security
 import androidx.compose.material.icons.filled.Shield
 import androidx.compose.material.icons.filled.Star
+import androidx.compose.material.icons.filled.ThumbUp
+import androidx.compose.material.icons.filled.Verified
 import androidx.compose.material.icons.filled.Warning
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -50,10 +68,13 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
@@ -62,8 +83,11 @@ import com.example.data.model.ChatMessage
 import com.example.data.model.EscrowStatus
 import com.example.data.model.JobStatus
 import com.example.data.model.UserRole
+import com.example.data.model.WorkerLocation
+import com.example.data.model.formatFixoCurrency
 import com.example.ui.components.EscrowBadge
 import com.example.ui.components.JobStatusBadge
+import com.example.ui.components.LiveTrackingMap
 import com.example.ui.theme.FixoAmber100
 import com.example.ui.theme.FixoAmber500
 import com.example.ui.theme.FixoAmber600
@@ -72,34 +96,62 @@ import com.example.ui.theme.FixoBlue600
 import com.example.ui.theme.FixoBlue700
 import com.example.ui.theme.FixoEmerald100
 import com.example.ui.theme.FixoEmerald50
+import com.example.ui.theme.FixoEmerald500
 import com.example.ui.theme.FixoEmerald600
+import com.example.ui.theme.FixoGold500
+import com.example.ui.theme.FixoNavy800
 import com.example.ui.theme.FixoNavy900
 import com.example.ui.theme.FixoRed500
+import com.example.ui.theme.FixoRed50
 import com.example.ui.theme.FixoSlate100
 import com.example.ui.theme.FixoSlate200
+import com.example.ui.theme.FixoSlate300
 import com.example.ui.theme.FixoSlate500
 import com.example.ui.theme.FixoSlate700
+import com.example.ui.theme.FixoSlate800
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
 @Composable
 fun JobTrackingScreen(
     booking: Booking,
     chatMessages: List<ChatMessage>,
+    activeLocation: WorkerLocation?,
+    currentRole: UserRole,
     onBack: () -> Unit,
+    onStartTrip: () -> Unit,
+    onMarkArrived: () -> Unit,
+    onStartWork: () -> Unit,
+    onRequestCompletion: () -> Unit,
     onAdvanceStatus: (JobStatus) -> Unit,
     onOpenReview: () -> Unit,
     onSendMessage: (String) -> Unit,
     onOpenDispute: () -> Unit,
+    onCancelBooking: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val context = LocalContext.current
     var messageInput by remember { mutableStateOf("") }
+    var showCancelDialog by remember { mutableStateOf(false) }
+
+    // Dynamic coordinates resolution
+    val workerLat = activeLocation?.latitude ?: (if (booking.workerLat != 0.0) booking.workerLat else 4.0380)
+    val workerLng = activeLocation?.longitude ?: (if (booking.workerLng != 0.0) booking.workerLng else 9.6990)
+    val customerLat = if (booking.customerLat != 0.0) booking.customerLat else 4.0511
+    val customerLng = if (booking.customerLng != 0.0) booking.customerLng else 9.7679
+    val isTrackingLive = booking.status == JobStatus.ON_THE_WAY && (booking.trackingActive || activeLocation?.isTrackingActive == true)
+
+    val etaMinutes = if (isTrackingLive) booking.etaMinutes.coerceAtLeast(1) else 0
+    val distanceKm = if (isTrackingLive) booking.distanceKm else 0.0
 
     LazyColumn(
         modifier = modifier
             .fillMaxSize()
             .background(MaterialTheme.colorScheme.background),
-        contentPadding = PaddingValues(bottom = 90.dp)
+        contentPadding = PaddingValues(bottom = 100.dp)
     ) {
-        // App Bar
+        // 1. TOP APP BAR
         item {
             Surface(
                 color = MaterialTheme.colorScheme.surface,
@@ -119,10 +171,21 @@ fun JobTrackingScreen(
                         }
                         Spacer(modifier = Modifier.width(6.dp))
                         Column {
-                            Text(
-                                text = "Job #${booking.id}",
-                                style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold)
-                            )
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Text(
+                                    text = "Job #${booking.id}",
+                                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold)
+                                )
+                                if (isTrackingLive) {
+                                    Spacer(modifier = Modifier.width(6.dp))
+                                    Box(
+                                        modifier = Modifier
+                                            .size(8.dp)
+                                            .clip(CircleShape)
+                                            .background(FixoEmerald500)
+                                    )
+                                }
+                            }
                             Text(
                                 text = booking.serviceTitle,
                                 style = MaterialTheme.typography.bodySmall.copy(color = FixoSlate500)
@@ -130,19 +193,253 @@ fun JobTrackingScreen(
                         }
                     }
 
-                    TextButton(onClick = onOpenDispute) {
-                        Text("Dispute", color = FixoRed500, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        TextButton(
+                            onClick = onOpenDispute,
+                            modifier = Modifier.testTag("job_dispute_button")
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Shield,
+                                contentDescription = null,
+                                tint = FixoRed500,
+                                modifier = Modifier.size(16.dp)
+                            )
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text("Dispute", color = FixoRed500, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                        }
                     }
                 }
             }
         }
 
-        // Job Header Card
+        // 2. LIVE WORKER TRACKING MAP SECTION (Phase 7 & 8)
+        item {
+            Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)) {
+                // Tracking Status Bar
+                Surface(
+                    shape = RoundedCornerShape(12.dp),
+                    color = when (booking.status) {
+                        JobStatus.ON_THE_WAY -> FixoBlue50
+                        JobStatus.ARRIVED -> FixoEmerald50
+                        JobStatus.IN_PROGRESS -> FixoAmber100
+                        JobStatus.COMPLETED -> FixoEmerald50
+                        else -> MaterialTheme.colorScheme.surfaceVariant
+                    },
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 12.dp, vertical = 10.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(
+                                imageVector = when (booking.status) {
+                                    JobStatus.ON_THE_WAY -> Icons.Default.Navigation
+                                    JobStatus.ARRIVED -> Icons.Default.CheckCircle
+                                    JobStatus.IN_PROGRESS -> Icons.Default.Build
+                                    JobStatus.COMPLETED -> Icons.Default.ThumbUp
+                                    else -> Icons.Default.AccessTime
+                                },
+                                contentDescription = null,
+                                tint = when (booking.status) {
+                                    JobStatus.ON_THE_WAY -> FixoBlue700
+                                    JobStatus.ARRIVED -> FixoEmerald600
+                                    JobStatus.IN_PROGRESS -> FixoAmber600
+                                    JobStatus.COMPLETED -> FixoEmerald600
+                                    else -> FixoSlate700
+                                },
+                                modifier = Modifier.size(20.dp)
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Column {
+                                Text(
+                                    text = when (booking.status) {
+                                        JobStatus.ON_THE_WAY -> "Artisan is en route"
+                                        JobStatus.ARRIVED -> "Artisan arrived on site"
+                                        JobStatus.IN_PROGRESS -> "Work in progress"
+                                        JobStatus.COMPLETION_REQUESTED -> "Inspection requested"
+                                        JobStatus.COMPLETED -> "Service completed & paid"
+                                        JobStatus.CANCELLED -> "Job cancelled & refunded"
+                                        JobStatus.SCHEDULED -> "Scheduled for ${booking.date}"
+                                        else -> "Booking confirmed"
+                                    },
+                                    style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold)
+                                )
+                                Text(
+                                    text = when (booking.status) {
+                                        JobStatus.ON_THE_WAY -> "ETA: $etaMinutes min ($distanceKm km away)"
+                                        JobStatus.ARRIVED -> "Location tracking closed. On-site inspection begun."
+                                        JobStatus.IN_PROGRESS -> "Diagnosing and repairing service items."
+                                        JobStatus.COMPLETION_REQUESTED -> "Please inspect work and release escrow."
+                                        JobStatus.COMPLETED -> "Escrow released to artisan."
+                                        else -> "Destination: ${booking.address}"
+                                    },
+                                    style = MaterialTheme.typography.bodySmall.copy(color = FixoSlate500)
+                                )
+                            }
+                        }
+
+                        if (isTrackingLive) {
+                            Surface(
+                                shape = RoundedCornerShape(16.dp),
+                                color = FixoEmerald500
+                            ) {
+                                Text(
+                                    text = "LIVE",
+                                    color = Color.White,
+                                    fontSize = 10.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                                )
+                            }
+                        }
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(10.dp))
+
+                // High-performance Live Vector Tracking Canvas
+                LiveTrackingMap(
+                    workerLat = workerLat,
+                    workerLng = workerLng,
+                    customerLat = customerLat,
+                    customerLng = customerLng,
+                    workerName = booking.workerName,
+                    destinationAddress = booking.address,
+                    isTrackingActive = isTrackingLive,
+                    workerSpeedKmh = booking.workerSpeedKmh,
+                    workerHeading = booking.workerHeading,
+                    etaMinutes = etaMinutes,
+                    distanceKm = distanceKm
+                )
+
+                // Location privacy notice (Phase 8 Requirement)
+                Spacer(modifier = Modifier.height(6.dp))
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Security,
+                        contentDescription = null,
+                        tint = FixoSlate500,
+                        modifier = Modifier.size(13.dp)
+                    )
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text(
+                        text = "Job-scoped GPS privacy: Location tracking is restricted to this appointment and terminates upon arrival.",
+                        style = MaterialTheme.typography.bodySmall.copy(
+                            color = FixoSlate500,
+                            fontSize = 10.sp
+                        )
+                    )
+                }
+            }
+        }
+
+        // 3. ARTISAN PROFILE CARD (Rating, Badges, Direct Call)
         item {
             Card(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(16.dp),
+                    .padding(horizontal = 16.dp, vertical = 6.dp),
+                shape = RoundedCornerShape(16.dp),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+            ) {
+                Column(modifier = Modifier.padding(16.dp)) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        AsyncImage(
+                            model = booking.workerAvatar,
+                            contentDescription = booking.workerName,
+                            modifier = Modifier
+                                .size(56.dp)
+                                .clip(RoundedCornerShape(14.dp)),
+                            contentScale = ContentScale.Crop
+                        )
+                        Spacer(modifier = Modifier.width(12.dp))
+                        Column(modifier = Modifier.weight(1f)) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Text(
+                                    text = booking.workerName,
+                                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold)
+                                )
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Icon(
+                                    imageVector = Icons.Default.Verified,
+                                    contentDescription = "Background Verified",
+                                    tint = FixoBlue600,
+                                    modifier = Modifier.size(16.dp)
+                                )
+                            }
+                            Text(
+                                text = "${booking.category.displayName} • Verified Professional",
+                                style = MaterialTheme.typography.bodySmall.copy(color = FixoSlate500)
+                            )
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                modifier = Modifier.padding(top = 2.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Star,
+                                    contentDescription = null,
+                                    tint = FixoGold500,
+                                    modifier = Modifier.size(14.dp)
+                                )
+                                Spacer(modifier = Modifier.width(3.dp))
+                                Text(
+                                    text = "4.9 (124 jobs completed)",
+                                    style = MaterialTheme.typography.labelSmall.copy(
+                                        color = FixoSlate700,
+                                        fontWeight = FontWeight.Medium
+                                    )
+                                )
+                            }
+                        }
+
+                        // Direct Call Action
+                        Surface(
+                            shape = CircleShape,
+                            color = FixoEmerald50,
+                            modifier = Modifier
+                                .size(44.dp)
+                                .clip(CircleShape)
+                                .clickable {
+                                    val dialIntent = Intent(Intent.ACTION_DIAL).apply {
+                                        data = Uri.parse("tel:${booking.workerPhone}")
+                                    }
+                                    try {
+                                        context.startActivity(dialIntent)
+                                    } catch (_: Exception) {}
+                                }
+                                .testTag("call_worker_button")
+                        ) {
+                            Box(contentAlignment = Alignment.Center) {
+                                Icon(
+                                    imageVector = Icons.Default.Phone,
+                                    contentDescription = "Call Artisan",
+                                    tint = FixoEmerald600,
+                                    modifier = Modifier.size(20.dp)
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        // 4. SERVICE & APPOINTMENT DETAILS CARD
+        item {
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 6.dp),
                 shape = RoundedCornerShape(16.dp),
                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
                 elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
@@ -158,52 +455,37 @@ fun JobTrackingScreen(
                     }
 
                     Spacer(modifier = Modifier.height(14.dp))
+                    Divider(color = FixoSlate100)
+                    Spacer(modifier = Modifier.height(12.dp))
 
                     Row(
                         modifier = Modifier.fillMaxWidth(),
-                        verticalAlignment = Alignment.CenterVertically
+                        horizontalArrangement = Arrangement.SpaceBetween
                     ) {
-                        AsyncImage(
-                            model = booking.workerAvatar,
-                            contentDescription = booking.workerName,
-                            modifier = Modifier
-                                .size(50.dp)
-                                .clip(RoundedCornerShape(12.dp)),
-                            contentScale = ContentScale.Crop
-                        )
-                        Spacer(modifier = Modifier.width(12.dp))
-                        Column(modifier = Modifier.weight(1f)) {
+                        Column {
                             Text(
-                                text = booking.workerName,
-                                style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold)
+                                text = "Service",
+                                style = MaterialTheme.typography.labelSmall.copy(color = FixoSlate500)
                             )
                             Text(
-                                text = "${booking.category.displayName} • ${booking.workerPhone}",
-                                style = MaterialTheme.typography.bodySmall.copy(color = FixoSlate500)
+                                text = booking.serviceTitle,
+                                style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold)
                             )
                         }
-                        Surface(
-                            shape = CircleShape,
-                            color = FixoEmerald50,
-                            modifier = Modifier
-                                .size(38.dp)
-                                .clip(CircleShape)
-                                .clickable { }
-                        ) {
-                            Box(contentAlignment = Alignment.Center) {
-                                Icon(
-                                    imageVector = Icons.Default.Phone,
-                                    contentDescription = "Call Artisan",
-                                    tint = FixoEmerald600,
-                                    modifier = Modifier.size(18.dp)
+                        Column(horizontalAlignment = Alignment.End) {
+                            Text(
+                                text = "Service Price",
+                                style = MaterialTheme.typography.labelSmall.copy(color = FixoSlate500)
+                            )
+                            Text(
+                                text = formatFixoCurrency(booking.priceAmount),
+                                style = MaterialTheme.typography.bodyMedium.copy(
+                                    fontWeight = FontWeight.Bold,
+                                    color = FixoEmerald600
                                 )
-                            }
+                            )
                         }
                     }
-
-                    Spacer(modifier = Modifier.height(12.dp))
-
-                    Divider(color = FixoSlate100)
 
                     Spacer(modifier = Modifier.height(10.dp))
 
@@ -212,12 +494,46 @@ fun JobTrackingScreen(
                         horizontalArrangement = Arrangement.SpaceBetween
                     ) {
                         Column {
-                            Text(text = "Scheduled Time", style = MaterialTheme.typography.labelSmall.copy(color = FixoSlate500))
-                            Text(text = "${booking.date} (${booking.timeSlot})", style = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.Bold))
+                            Text(
+                                text = "Appointment Date & Time",
+                                style = MaterialTheme.typography.labelSmall.copy(color = FixoSlate500)
+                            )
+                            Text(
+                                text = "${booking.date} (${booking.timeSlot})",
+                                style = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.SemiBold)
+                            )
                         }
                         Column(horizontalAlignment = Alignment.End) {
-                            Text(text = "Location", style = MaterialTheme.typography.labelSmall.copy(color = FixoSlate500))
-                            Text(text = booking.address, style = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.Bold))
+                            Text(
+                                text = "Payment Method",
+                                style = MaterialTheme.typography.labelSmall.copy(color = FixoSlate500)
+                            )
+                            Text(
+                                text = booking.paymentMethod.label,
+                                style = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.SemiBold)
+                            )
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(10.dp))
+
+                    Column {
+                        Text(
+                            text = "Site Address",
+                            style = MaterialTheme.typography.labelSmall.copy(color = FixoSlate500)
+                        )
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(
+                                imageVector = Icons.Default.LocationOn,
+                                contentDescription = null,
+                                tint = FixoEmerald600,
+                                modifier = Modifier.size(16.dp)
+                            )
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text(
+                                text = booking.address,
+                                style = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.SemiBold)
+                            )
                         }
                     }
 
@@ -225,43 +541,52 @@ fun JobTrackingScreen(
                         Spacer(modifier = Modifier.height(10.dp))
                         Divider(color = FixoSlate100)
                         Spacer(modifier = Modifier.height(8.dp))
-                        Text(text = "Job Description & Notes", style = MaterialTheme.typography.labelSmall.copy(color = FixoSlate500))
+                        Text(
+                            text = "Customer Instructions & Site Notes",
+                            style = MaterialTheme.typography.labelSmall.copy(color = FixoSlate500)
+                        )
                         Spacer(modifier = Modifier.height(2.dp))
-                        Text(text = booking.notes, style = MaterialTheme.typography.bodySmall)
+                        Text(
+                            text = booking.notes,
+                            style = MaterialTheme.typography.bodySmall
+                        )
                     }
                 }
             }
         }
 
-        // Interactive Lifecycle Stepper
+        // 5. JOB LIFECYCLE PROGRESS & ACTIONS (Phase 10 & 11)
         item {
             Card(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 16.dp),
+                    .padding(horizontal = 16.dp, vertical = 6.dp),
                 shape = RoundedCornerShape(16.dp),
                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
                 elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
             ) {
                 Column(modifier = Modifier.padding(16.dp)) {
                     Text(
-                        text = "Real-Time Service Progress",
+                        text = "Service Lifecycle Progress",
                         style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold)
                     )
                     Spacer(modifier = Modifier.height(12.dp))
 
-                    val steps = listOf(
+                    val lifecycleSteps = listOf(
                         JobStatus.REQUESTED to "Service Requested",
                         JobStatus.ACCEPTED to "Artisan Accepted",
-                        JobStatus.EN_ROUTE to "En Route to Site",
-                        JobStatus.IN_PROGRESS to "Work In Progress",
+                        JobStatus.ON_THE_WAY to "Artisan En Route (Live Tracking)",
+                        JobStatus.ARRIVED to "Artisan Arrived on Site",
+                        JobStatus.IN_PROGRESS to "Work in Progress",
                         JobStatus.COMPLETION_REQUESTED to "Inspection Ready",
-                        JobStatus.COMPLETED to "Escrow Released & Done"
+                        JobStatus.COMPLETED to "Approved & Escrow Released"
                     )
 
-                    val currentIdx = steps.indexOfFirst { it.first == booking.status }.coerceAtLeast(0)
+                    val currentIdx = lifecycleSteps.indexOfFirst {
+                        it.first == booking.status || (booking.status == JobStatus.SCHEDULED && it.first == JobStatus.ACCEPTED)
+                    }.coerceAtLeast(0)
 
-                    steps.forEachIndexed { index, (status, label) ->
+                    lifecycleSteps.forEachIndexed { index, (status, label) ->
                         val isDone = index <= currentIdx
                         val isCurrent = index == currentIdx
 
@@ -314,77 +639,127 @@ fun JobTrackingScreen(
                         }
                     }
 
-                    Spacer(modifier = Modifier.height(14.dp))
+                    Spacer(modifier = Modifier.height(16.dp))
 
-                    // Advance Lifecycle Action (for instant testing/demonstration)
-                    Row(
+                    // ACTION CONTROLS ACCORDING TO USER ROLE & STATE MACHINE
+                    Column(
                         modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        if (booking.status != JobStatus.COMPLETED) {
-                            val nextStatus = when (booking.status) {
-                                JobStatus.REQUESTED -> JobStatus.ACCEPTED
-                                JobStatus.ACCEPTED -> JobStatus.EN_ROUTE
-                                JobStatus.EN_ROUTE -> JobStatus.IN_PROGRESS
-                                JobStatus.IN_PROGRESS -> JobStatus.COMPLETION_REQUESTED
-                                JobStatus.COMPLETION_REQUESTED -> JobStatus.COMPLETED
-                                else -> JobStatus.COMPLETED
-                            }
-                            Button(
-                                onClick = { onAdvanceStatus(nextStatus) },
-                                shape = RoundedCornerShape(8.dp),
-                                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
-                                modifier = Modifier.weight(1f)
-                            ) {
-                                Text(
-                                    text = "Simulate Next Step",
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    fontSize = 12.sp
-                                )
+                        // Worker Actions
+                        if (currentRole == UserRole.WORKER || currentRole == UserRole.ADMIN) {
+                            when (booking.status) {
+                                JobStatus.REQUESTED -> {
+                                    Button(
+                                        onClick = { onAdvanceStatus(JobStatus.ACCEPTED) },
+                                        shape = RoundedCornerShape(10.dp),
+                                        colors = ButtonDefaults.buttonColors(containerColor = FixoBlue600),
+                                        modifier = Modifier.fillMaxWidth()
+                                    ) {
+                                        Text("Accept Service Request", fontWeight = FontWeight.Bold)
+                                    }
+                                }
+                                JobStatus.ACCEPTED, JobStatus.SCHEDULED -> {
+                                    Button(
+                                        onClick = onStartTrip,
+                                        shape = RoundedCornerShape(10.dp),
+                                        colors = ButtonDefaults.buttonColors(containerColor = FixoBlue600),
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .testTag("worker_start_trip_button")
+                                    ) {
+                                        Icon(Icons.Default.NearMe, contentDescription = null, modifier = Modifier.size(18.dp))
+                                        Spacer(modifier = Modifier.width(8.dp))
+                                        Text("Start Trip to Site (Activate GPS)", fontWeight = FontWeight.Bold)
+                                    }
+                                }
+                                JobStatus.ON_THE_WAY -> {
+                                    Button(
+                                        onClick = onMarkArrived,
+                                        shape = RoundedCornerShape(10.dp),
+                                        colors = ButtonDefaults.buttonColors(containerColor = FixoEmerald600),
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .testTag("worker_mark_arrived_button")
+                                    ) {
+                                        Icon(Icons.Default.LocationOn, contentDescription = null, modifier = Modifier.size(18.dp))
+                                        Spacer(modifier = Modifier.width(8.dp))
+                                        Text("I Have Arrived (Stop Tracking)", fontWeight = FontWeight.Bold)
+                                    }
+                                }
+                                JobStatus.ARRIVED -> {
+                                    Button(
+                                        onClick = onStartWork,
+                                        shape = RoundedCornerShape(10.dp),
+                                        colors = ButtonDefaults.buttonColors(containerColor = FixoBlue600),
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .testTag("worker_start_work_button")
+                                    ) {
+                                        Icon(Icons.Default.Build, contentDescription = null, modifier = Modifier.size(18.dp))
+                                        Spacer(modifier = Modifier.width(8.dp))
+                                        Text("Start Diagnostic & Work", fontWeight = FontWeight.Bold)
+                                    }
+                                }
+                                JobStatus.IN_PROGRESS -> {
+                                    Button(
+                                        onClick = onRequestCompletion,
+                                        shape = RoundedCornerShape(10.dp),
+                                        colors = ButtonDefaults.buttonColors(containerColor = FixoGold500),
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .testTag("worker_request_completion_button")
+                                    ) {
+                                        Text("Work Finished — Request Inspection & Release", fontWeight = FontWeight.Bold, color = Color.Black)
+                                    }
+                                }
+                                else -> {}
                             }
                         }
-                    }
 
-                    if (booking.status == JobStatus.REQUESTED || booking.status == JobStatus.ACCEPTED) {
-                        Spacer(modifier = Modifier.height(10.dp))
-                        OutlinedButton(
-                            onClick = { onAdvanceStatus(JobStatus.CANCELLED) },
-                            shape = RoundedCornerShape(8.dp),
-                            colors = ButtonDefaults.outlinedButtonColors(contentColor = FixoRed500),
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            Text("Cancel Booking & Refund Escrow", fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+                        // Customer Actions: Cancellation before transit
+                        if (booking.status == JobStatus.REQUESTED || booking.status == JobStatus.ACCEPTED || booking.status == JobStatus.SCHEDULED) {
+                            OutlinedButton(
+                                onClick = { showCancelDialog = true },
+                                shape = RoundedCornerShape(10.dp),
+                                colors = ButtonDefaults.outlinedButtonColors(contentColor = FixoRed500),
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .testTag("cancel_booking_button")
+                            ) {
+                                Text("Cancel Booking & Refund Escrow", fontWeight = FontWeight.SemiBold)
+                            }
                         }
                     }
                 }
             }
         }
 
-        // Escrow Release Card (When finished or ready)
+        // 6. ESCROW RELEASE CARD (For Customer when work is ready)
         item {
             Card(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(16.dp),
+                    .padding(horizontal = 16.dp, vertical = 6.dp),
                 shape = RoundedCornerShape(16.dp),
                 colors = CardDefaults.cardColors(containerColor = FixoEmerald50),
-                border = androidx.compose.foundation.BorderStroke(1.dp, FixoEmerald600.copy(alpha = 0.3f))
+                border = androidx.compose.foundation.BorderStroke(1.dp, FixoEmerald600.copy(alpha = 0.35f))
             ) {
                 Column(modifier = Modifier.padding(16.dp)) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Icon(Icons.Default.Lock, contentDescription = "Escrow", tint = FixoEmerald600, modifier = Modifier.size(20.dp))
                         Spacer(modifier = Modifier.width(8.dp))
                         Text(
-                            text = "Escrow Protection: ${com.example.data.model.formatFixoCurrency(booking.priceAmount)} Secured",
+                            text = "FIXO Escrow: ${formatFixoCurrency(booking.priceAmount)} Secured",
                             style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold, color = FixoEmerald600)
                         )
                     }
                     Spacer(modifier = Modifier.height(4.dp))
                     Text(
                         text = if (booking.escrowStatus == EscrowStatus.RELEASED)
-                            "Payment has been released to ${booking.workerName}. Thank you for using FIXO Escrow Guarantee!"
+                            "Payment has been released to ${booking.workerName}. Thank you for using FIXO Escrow Protection!"
                         else
-                            "Once the artisan has completed the work to your satisfaction, release the funds and submit your verified review.",
+                            "Funds are safely locked in platform escrow. Release payment only after the technician has completed the work to your full satisfaction.",
                         style = MaterialTheme.typography.bodySmall.copy(color = FixoSlate700)
                     )
 
@@ -400,7 +775,7 @@ fun JobTrackingScreen(
                             colors = ButtonDefaults.buttonColors(containerColor = FixoEmerald600)
                         ) {
                             Text(
-                                text = "Release Escrow & Review (+${booking.pointsEarned.coerceAtLeast(25)} Points)",
+                                text = "Inspect, Release Escrow & Review (+50 Points)",
                                 fontWeight = FontWeight.Bold,
                                 color = Color.White
                             )
@@ -410,74 +785,170 @@ fun JobTrackingScreen(
             }
         }
 
-        // Live Chat with Artisan
+        // 7. COMPLETED REVIEW CARD (If completed)
+        if (booking.customerRating > 0f) {
+            item {
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 6.dp),
+                    shape = RoundedCornerShape(16.dp),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+                ) {
+                    Column(modifier = Modifier.padding(16.dp)) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = "Your Verified Review",
+                                style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold)
+                            )
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                repeat(5) { i ->
+                                    Icon(
+                                        imageVector = Icons.Default.Star,
+                                        contentDescription = null,
+                                        tint = if (i < booking.customerRating.toInt()) FixoGold500 else FixoSlate200,
+                                        modifier = Modifier.size(16.dp)
+                                    )
+                                }
+                            }
+                        }
+                        if (booking.customerReviewText.isNotBlank()) {
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Text(
+                                text = "\"${booking.customerReviewText}\"",
+                                style = MaterialTheme.typography.bodyMedium.copy(fontStyle = androidx.compose.ui.text.font.FontStyle.Italic)
+                            )
+                        }
+                        Spacer(modifier = Modifier.height(6.dp))
+                        Text(
+                            text = "Reward: +${booking.pointsEarned.coerceAtLeast(50)} FIXO Loyalty Points Credited",
+                            style = MaterialTheme.typography.labelSmall.copy(color = FixoEmerald600, fontWeight = FontWeight.Bold)
+                        )
+                    }
+                }
+            }
+        }
+
+        // 8. DIRECT MESSAGES WITH ARTISAN (Phase 12)
         item {
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 6.dp)
+                    .padding(horizontal = 16.dp, vertical = 8.dp)
             ) {
-                Text(
-                    text = "Direct Messages with ${booking.workerName}",
-                    style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold)
-                )
-                Spacer(modifier = Modifier.height(8.dp))
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = "Direct Messages (${booking.workerName})",
+                        style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold)
+                    )
+                    Text(
+                        text = "${chatMessages.size} messages",
+                        style = MaterialTheme.typography.bodySmall.copy(color = FixoSlate500)
+                    )
+                }
+                Spacer(modifier = Modifier.height(4.dp))
             }
         }
 
         // Chat message bubbles
         items(chatMessages) { msg ->
-            val isMe = msg.senderRole == UserRole.CUSTOMER
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 4.dp),
-                horizontalAlignment = if (isMe) Alignment.End else Alignment.Start
-            ) {
+            val isMe = (currentRole == UserRole.CUSTOMER && msg.senderRole == UserRole.CUSTOMER) ||
+                    (currentRole == UserRole.WORKER && msg.senderRole == UserRole.WORKER)
+            val isSystem = msg.senderRole == UserRole.ADMIN || msg.senderId == "system"
+
+            if (isSystem) {
                 Box(
                     modifier = Modifier
-                        .clip(
-                            RoundedCornerShape(
-                                topStart = 12.dp,
-                                topEnd = 12.dp,
-                                bottomStart = if (isMe) 12.dp else 2.dp,
-                                bottomEnd = if (isMe) 2.dp else 12.dp
-                            )
+                        .fillMaxWidth()
+                        .padding(horizontal = 24.dp, vertical = 4.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Surface(
+                        shape = RoundedCornerShape(12.dp),
+                        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f)
+                    ) {
+                        Text(
+                            text = "🔔 ${msg.message}",
+                            style = MaterialTheme.typography.labelSmall.copy(
+                                color = FixoSlate700,
+                                textAlign = TextAlign.Center
+                            ),
+                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
                         )
-                        .background(if (isMe) FixoBlue600 else MaterialTheme.colorScheme.surfaceVariant)
-                        .padding(horizontal = 12.dp, vertical = 8.dp)
+                    }
+                }
+            } else {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 4.dp),
+                    horizontalAlignment = if (isMe) Alignment.End else Alignment.Start
                 ) {
                     Text(
-                        text = msg.message,
-                        style = MaterialTheme.typography.bodyMedium.copy(
-                            color = if (isMe) Color.White else MaterialTheme.colorScheme.onSurfaceVariant
-                        )
+                        text = if (isMe) "You" else msg.senderName,
+                        style = MaterialTheme.typography.labelSmall.copy(
+                            color = FixoSlate500,
+                            fontSize = 10.sp
+                        ),
+                        modifier = Modifier.padding(horizontal = 4.dp, vertical = 1.dp)
                     )
+                    Box(
+                        modifier = Modifier
+                            .clip(
+                                RoundedCornerShape(
+                                    topStart = 14.dp,
+                                    topEnd = 14.dp,
+                                    bottomStart = if (isMe) 14.dp else 2.dp,
+                                    bottomEnd = if (isMe) 2.dp else 14.dp
+                                )
+                            )
+                            .background(if (isMe) FixoBlue600 else MaterialTheme.colorScheme.surfaceVariant)
+                            .padding(horizontal = 14.dp, vertical = 9.dp)
+                    ) {
+                        Text(
+                            text = msg.message,
+                            style = MaterialTheme.typography.bodyMedium.copy(
+                                color = if (isMe) Color.White else MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        )
+                    }
                 }
             }
         }
 
-        // Chat Input Row
+        // 9. CHAT INPUT BAR WITH QUICK CHIPS
         item {
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(16.dp)
+                    .padding(horizontal = 16.dp, vertical = 8.dp)
             ) {
-                // Quick chips
+                // Quick reply chips
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(6.dp)
                 ) {
-                    listOf("I'm at the location", "Water main shut off", "Please call my phone").forEach { quick ->
+                    listOf("I'm at the location", "Water main shut off", "Please call when near gate").forEach { quick ->
                         Box(
                             modifier = Modifier
-                                .clip(RoundedCornerShape(6.dp))
+                                .clip(RoundedCornerShape(8.dp))
                                 .background(MaterialTheme.colorScheme.surfaceVariant)
                                 .clickable { onSendMessage(quick) }
-                                .padding(horizontal = 8.dp, vertical = 4.dp)
+                                .padding(horizontal = 8.dp, vertical = 5.dp)
                         ) {
-                            Text(text = quick, style = MaterialTheme.typography.bodySmall.copy(fontSize = 10.sp))
+                            Text(
+                                text = quick,
+                                style = MaterialTheme.typography.bodySmall.copy(fontSize = 11.sp)
+                            )
                         }
                     }
                 }
@@ -494,7 +965,7 @@ fun JobTrackingScreen(
                         modifier = Modifier
                             .weight(1f)
                             .testTag("chat_input"),
-                        placeholder = { Text("Type message to artisan...") },
+                        placeholder = { Text("Message artisan or customer...") },
                         shape = RoundedCornerShape(24.dp),
                         singleLine = true,
                         colors = OutlinedTextFieldDefaults.colors(
@@ -516,10 +987,42 @@ fun JobTrackingScreen(
                             .background(FixoBlue600)
                             .testTag("chat_send_button")
                     ) {
-                        Icon(Icons.AutoMirrored.Filled.Send, contentDescription = "Send", tint = Color.White, modifier = Modifier.size(20.dp))
+                        Icon(
+                            Icons.AutoMirrored.Filled.Send,
+                            contentDescription = "Send",
+                            tint = Color.White,
+                            modifier = Modifier.size(20.dp)
+                        )
                     }
                 }
             }
         }
+    }
+
+    // Cancellation Dialog
+    if (showCancelDialog) {
+        AlertDialog(
+            onDismissRequest = { showCancelDialog = false },
+            title = { Text("Cancel Appointment?", fontWeight = FontWeight.Bold) },
+            text = {
+                Text("Are you sure you want to cancel this booking? Since the artisan has not yet started transit, 100% of your escrow funds (${formatFixoCurrency(booking.priceAmount)}) will be immediately refunded back to your FIXO wallet.")
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        showCancelDialog = false
+                        onCancelBooking()
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = FixoRed500)
+                ) {
+                    Text("Confirm Cancellation & Refund", color = Color.White)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showCancelDialog = false }) {
+                    Text("Keep Appointment")
+                }
+            }
+        )
     }
 }

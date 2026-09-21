@@ -22,6 +22,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Language
 import androidx.compose.material.icons.filled.Lock
+import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Shield
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.SwapHoriz
@@ -84,6 +85,8 @@ fun FixoTopBar(
     onLogout: () -> Unit = {},
     isDevEnvironment: Boolean = false,
     onToggleEnvironment: () -> Unit = {},
+    unreadNotificationCount: Int = 0,
+    onNotificationsClick: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     var roleMenuExpanded by remember { mutableStateOf(false) }
@@ -319,6 +322,37 @@ fun FixoTopBar(
                                 color = if (isDevEnvironment) FixoAmber600 else FixoEmerald600
                             )
                         )
+                    }
+
+                    Spacer(modifier = Modifier.width(6.dp))
+
+                    // Notifications Bell
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(8.dp))
+                            .background(MaterialTheme.colorScheme.surfaceVariant)
+                            .clickable { onNotificationsClick() }
+                            .padding(horizontal = 7.dp, vertical = 6.dp)
+                            .testTag("notifications_topbar_button"),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Box {
+                            Icon(
+                                imageVector = Icons.Default.Notifications,
+                                contentDescription = "Notifications",
+                                modifier = Modifier.size(16.dp),
+                                tint = MaterialTheme.colorScheme.onSurface
+                            )
+                            if (unreadNotificationCount > 0) {
+                                Box(
+                                    modifier = Modifier
+                                        .size(7.dp)
+                                        .align(Alignment.TopEnd)
+                                        .clip(CircleShape)
+                                        .background(FixoRed500)
+                                )
+                            }
+                        }
                     }
 
                     Spacer(modifier = Modifier.width(6.dp))

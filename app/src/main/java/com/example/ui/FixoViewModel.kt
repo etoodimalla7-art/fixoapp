@@ -73,7 +73,14 @@ data class FixoUiState(
     val isEnterpriseCreateDialogVisible: Boolean = false,
     val isDisputeDialogVisible: Boolean = false,
     val isDevEnvironment: Boolean = false,
-    val savedWorkerIds: Set<String> = emptySet()
+    val savedWorkerIds: Set<String> = emptySet(),
+    val notifications: List<com.example.data.model.FixoNotification> = emptyList(),
+    val unreadNotificationCount: Int = 0,
+    val isNotificationsDialogVisible: Boolean = false,
+    val activeWorkerLocation: com.example.data.model.WorkerLocation? = null,
+    val selectedWorkerReviews: List<com.example.data.model.WorkerReview> = emptyList(),
+    val isStartTripConfirmationVisible: Boolean = false,
+    val pendingStartTripBooking: Booking? = null
 )
 
 class FixoViewModel(application: Application) : AndroidViewModel(application) {
@@ -209,6 +216,20 @@ class FixoViewModel(application: Application) : AndroidViewModel(application) {
                 _uiState.value = _uiState.value.copy(transactions = txs)
             }
         }
+
+        // Observe notifications for current user
+        viewModelScope.launch {
+            repository.getNotificationsForUser("usr_cust_1").collect { notifs ->
+                _uiState.value = _uiState.value.copy(notifications = notifs)
+            }
+        }
+
+        // Observe unread notification count
+        viewModelScope.launch {
+            repository.getUnreadNotificationCount("usr_cust_1").collect { count ->
+                _uiState.value = _uiState.value.copy(unreadNotificationCount = count)
+            }
+        }
     }
 
     fun switchRole(role: UserRole) {
@@ -275,9 +296,104 @@ class FixoViewModel(application: Application) : AndroidViewModel(application) {
     fun selectBooking(booking: Booking) {
         _uiState.value = _uiState.value.copy(selectedBooking = booking)
         viewModelScope.launch {
+            repository.getBookingById(booking.id).collect { updatedBooking ->
+                if (updatedBooking != null) {
+                    _uiState.value = _uiState.value.copy(selectedBooking = updatedBooking)
+                }
+            }
+        }
+        viewModelScope.launch {
             repository.getMessagesForBooking(booking.id).collect { msgs ->
                 _uiState.value = _uiState.value.copy(chatMessages = msgs)
             }
+        }
+        viewModelScope.launch {
+            repository.getWorkerLocation(booking.id).collect { loc ->
+                _uiState.value = _uiState.value.copy(activeWorkerLocation = loc)
+            }
+        }
+        viewModelScope.launch {
+            repository.getReviewsForWorker(booking.workerId).collect { reviews ->
+                _uiState.value = _uiState.value.copy(selectedWorkerReviews = reviews)
+            }
+        }
+    }
+
+    fun openStartTripConfirmation(booking: Booking) {
+        _uiState.value = _uiState.value.copy(
+            isStartTripConfirmationVisible = true,
+            pendingStartTripBooking = booking
+        )
+    }
+
+    fun closeStartTripConfirmation() {
+        _uiState.value = _uiState.value.copy(
+            isStartTripConfirmationVisible = false,
+            pendingStartTripBooking = null
+        )
+    }
+
+    fun confirmStartTrip() {
+        val booking = _uiState.value.pendingStartTripBooking ?: return
+        viewModelScope.launch {
+            // Real Start Trip from Douala workshop location towards customer site
+            val startLat = if (booking.workerLat != 0.0) booking.workerLat else 4.0380
+            val startLng = if (booking.workerLng != 0.0) booking.workerLng else 9.6990
+            repository.startWorkerTrip(booking.id, startLat, startLng)
+            _uiState.value = _uiState.value.copy(
+                isStartTripConfirmationVisible = false,
+                pendingStartTripBooking = null
+            )
+            showToast("Trip Started! Live GPS location shared with customer.")
+        }
+    }
+
+    fun markWorkerArrived(bookingId: String) {
+        viewModelScope.launch {
+            repository.markWorkerArrived(bookingId)
+            showToast("Arrival confirmed! Location tracking stopped.")
+        }
+    }
+
+    fun startWork(bookingId: String) {
+        viewModelScope.launch {
+            repository.startWork(bookingId)
+            showToast("Work started on-site.")
+        }
+    }
+
+    fun requestJobCompletion(bookingId: String) {
+        viewModelScope.launch {
+            repository.requestJobCompletion(bookingId)
+            showToast("Completion requested. Customer notified to inspect.")
+        }
+    }
+
+    fun updateWorkerLiveLocation(bookingId: String, lat: Double, lng: Double, speedKmh: Float = 25f, heading: Float = 0f) {
+        viewModelScope.launch {
+            repository.updateWorkerLocation(bookingId, lat, lng, speedKmh, heading)
+        }
+    }
+
+    fun openNotificationsDialog() {
+        _uiState.value = _uiState.value.copy(isNotificationsDialogVisible = true)
+    }
+
+    fun closeNotificationsDialog() {
+        _uiState.value = _uiState.value.copy(isNotificationsDialogVisible = false)
+    }
+
+    fun markNotificationRead(id: String) {
+        viewModelScope.launch {
+            repository.markNotificationRead(id)
+        }
+    }
+
+    fun markAllNotificationsRead() {
+        val user = _uiState.value.currentUser ?: return
+        viewModelScope.launch {
+            repository.markAllNotificationsRead(user.id)
+            showToast("All notifications marked as read")
         }
     }
 
@@ -330,6 +446,13 @@ class FixoViewModel(application: Application) : AndroidViewModel(application) {
         viewModelScope.launch {
             repository.updateJobStatus(bookingId, newStatus)
             showToast("Job status updated to ${newStatus.name}")
+        }
+    }
+
+    fun cancelBooking(bookingId: String) {
+        viewModelScope.launch {
+            repository.updateJobStatus(bookingId, com.example.data.model.JobStatus.CANCELLED)
+            showToast("Booking cancelled and escrow refunded to wallet.")
         }
     }
 

@@ -20,6 +20,9 @@ import com.example.data.model.User
 import com.example.data.model.UserRole
 import com.example.data.model.VerificationStatus
 import com.example.data.model.WalletTransaction
+import com.example.data.model.WorkerLocation
+import com.example.data.model.FixoNotification
+import com.example.data.model.WorkerReview
 import com.example.data.model.WorkerProfile
 import com.example.localization.AppLanguage
 import kotlinx.coroutines.CoroutineScope
@@ -31,6 +34,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.util.UUID
+import kotlin.math.roundToInt
 
 class FixoRepository(context: Context) {
     private val database = FixoDatabase.getDatabase(context)
@@ -67,6 +71,9 @@ class FixoRepository(context: Context) {
             dao.insertRewards(FixoSeedData.defaultRewards)
             dao.insertEnterpriseProjects(FixoSeedData.defaultEnterpriseProjects)
             dao.insertDisputes(FixoSeedData.defaultDisputes)
+            FixoSeedData.defaultLocations.forEach { dao.insertWorkerLocation(it) }
+            dao.insertNotifications(FixoSeedData.defaultNotifications)
+            dao.insertWorkerReviews(FixoSeedData.defaultReviews)
         }
     }
 
@@ -81,6 +88,9 @@ class FixoRepository(context: Context) {
         dao.clearTransactions()
         dao.clearEnterpriseProjects()
         dao.clearDisputes()
+        dao.clearWorkerLocations()
+        dao.clearNotifications()
+        dao.clearWorkerReviews()
 
         FixoSeedData.defaultUsers.forEach { dao.insertUser(it) }
         dao.insertWorkers(FixoSeedData.defaultWorkers)
@@ -92,6 +102,9 @@ class FixoRepository(context: Context) {
         dao.insertRewards(FixoSeedData.defaultRewards)
         dao.insertEnterpriseProjects(FixoSeedData.defaultEnterpriseProjects)
         dao.insertDisputes(FixoSeedData.defaultDisputes)
+        FixoSeedData.defaultLocations.forEach { dao.insertWorkerLocation(it) }
+        dao.insertNotifications(FixoSeedData.defaultNotifications)
+        dao.insertWorkerReviews(FixoSeedData.defaultReviews)
     }
 
     suspend fun clearDatabaseToCleanState() {
@@ -105,6 +118,9 @@ class FixoRepository(context: Context) {
         dao.clearTransactions()
         dao.clearEnterpriseProjects()
         dao.clearDisputes()
+        dao.clearWorkerLocations()
+        dao.clearNotifications()
+        dao.clearWorkerReviews()
     }
 
     fun setRole(role: UserRole) {
@@ -295,15 +311,258 @@ class FixoRepository(context: Context) {
         return booking
     }
 
+    fun calculateHaversineDistanceKm(lat1: Double, lon1: Double, lat2: Double, lon2: Double): Double {
+        val r = 6371.0 // Earth radius in km
+        val dLat = Math.toRadians(lat2 - lat1)
+        val dLon = Math.toRadians(lon2 - lon1)
+        val a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+                Math.cos(Math.toRadians(lat1)) * Math.cos(Math.toRadians(lat2)) *
+                Math.sin(dLon / 2) * Math.sin(dLon / 2)
+        val c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
+        return (r * c * 10.0).roundToInt() / 10.0
+    }
+
+    fun calculateEtaMinutes(distanceKm: Double, averageSpeedKmh: Double = 25.0): Int {
+        if (distanceKm <= 0.05) return 0
+        val effectiveSpeed = if (averageSpeedKmh > 5.0) averageSpeedKmh else 25.0
+        val hours = distanceKm / effectiveSpeed
+        return Math.max(1, (hours * 60.0).roundToInt())
+    }
+
+    suspend fun startWorkerTrip(bookingId: String, currentLat: Double, currentLng: Double) {
+        val booking = dao.getBookingByIdDirect(bookingId) ?: return
+        // State Machine validation
+        if (booking.status != JobStatus.ACCEPTED && booking.status != JobStatus.SCHEDULED && booking.status != JobStatus.REQUESTED) {
+            return
+        }
+
+        val distance = calculateHaversineDistanceKm(currentLat, currentLng, booking.customerLat, booking.customerLng)
+        val eta = calculateEtaMinutes(distance, 26.5)
+
+        val updated = booking.copy(
+            status = JobStatus.ON_THE_WAY,
+            workerLat = currentLat,
+            workerLng = currentLng,
+            trackingActive = true,
+            distanceKm = distance,
+            etaMinutes = eta,
+            workerSpeedKmh = 26.5f,
+            workerHeading = 35.0f,
+            lastLocationUpdate = System.currentTimeMillis()
+        )
+        dao.updateBooking(updated)
+
+        // Job-scoped worker location
+        val loc = WorkerLocation(
+            bookingId = booking.id,
+            workerId = booking.workerId,
+            latitude = currentLat,
+            longitude = currentLng,
+            speedKmh = 26.5f,
+            heading = 35.0f,
+            destinationLat = booking.customerLat,
+            destinationLng = booking.customerLng,
+            destinationAddress = booking.address,
+            isTrackingActive = true,
+            updatedAt = System.currentTimeMillis()
+        )
+        dao.insertWorkerLocation(loc)
+
+        // Deliver notification to customer
+        val notif = FixoNotification(
+            id = "notif_" + UUID.randomUUID().toString().take(8),
+            userId = booking.customerId,
+            title = "Artisan Started Trip",
+            message = "${booking.workerName} has started heading to ${booking.address}. Estimated arrival in $eta mins.",
+            type = "WORKER_STARTED_TRIP",
+            bookingId = booking.id,
+            timestamp = System.currentTimeMillis(),
+            isRead = false
+        )
+        dao.insertNotification(notif)
+
+        // Add automated chat message
+        val chatMsg = ChatMessage(
+            id = "msg_" + UUID.randomUUID().toString().take(8),
+            bookingId = booking.id,
+            senderId = booking.workerId,
+            senderName = booking.workerName,
+            senderRole = UserRole.WORKER,
+            message = "I have started my trip to your address (${booking.address}). You can track my live GPS location on the tracking screen. ETA: $eta min."
+        )
+        dao.insertChatMessage(chatMsg)
+
+        try {
+            api.updateJobStatus(bookingId, JobStatus.ON_THE_WAY.name)
+        } catch (_: Exception) {}
+    }
+
+    suspend fun updateWorkerLocation(bookingId: String, lat: Double, lng: Double, speedKmh: Float = 25f, heading: Float = 0f) {
+        val booking = dao.getBookingByIdDirect(bookingId) ?: return
+        if (!booking.trackingActive || booking.status != JobStatus.ON_THE_WAY) return
+
+        val distance = calculateHaversineDistanceKm(lat, lng, booking.customerLat, booking.customerLng)
+        val eta = calculateEtaMinutes(distance, speedKmh.toDouble())
+
+        val updated = booking.copy(
+            workerLat = lat,
+            workerLng = lng,
+            distanceKm = distance,
+            etaMinutes = eta,
+            workerSpeedKmh = speedKmh,
+            workerHeading = heading,
+            lastLocationUpdate = System.currentTimeMillis()
+        )
+        dao.updateBooking(updated)
+
+        val loc = WorkerLocation(
+            bookingId = booking.id,
+            workerId = booking.workerId,
+            latitude = lat,
+            longitude = lng,
+            speedKmh = speedKmh,
+            heading = heading,
+            destinationLat = booking.customerLat,
+            destinationLng = booking.customerLng,
+            destinationAddress = booking.address,
+            isTrackingActive = true,
+            updatedAt = System.currentTimeMillis()
+        )
+        dao.insertWorkerLocation(loc)
+    }
+
+    suspend fun markWorkerArrived(bookingId: String) {
+        val booking = dao.getBookingByIdDirect(bookingId) ?: return
+        if (booking.status != JobStatus.ON_THE_WAY) return
+
+        val updated = booking.copy(
+            status = JobStatus.ARRIVED,
+            trackingActive = false,
+            distanceKm = 0.0,
+            etaMinutes = 0,
+            lastLocationUpdate = System.currentTimeMillis()
+        )
+        dao.updateBooking(updated)
+
+        // Stop job-scoped location tracking
+        dao.deleteWorkerLocation(booking.id)
+
+        // Customer notification
+        val notif = FixoNotification(
+            id = "notif_" + UUID.randomUUID().toString().take(8),
+            userId = booking.customerId,
+            title = "Artisan Has Arrived!",
+            message = "${booking.workerName} has arrived at ${booking.address}.",
+            type = "WORKER_ARRIVED",
+            bookingId = booking.id,
+            timestamp = System.currentTimeMillis(),
+            isRead = false
+        )
+        dao.insertNotification(notif)
+
+        val chatMsg = ChatMessage(
+            id = "msg_" + UUID.randomUUID().toString().take(8),
+            bookingId = booking.id,
+            senderId = booking.workerId,
+            senderName = booking.workerName,
+            senderRole = UserRole.WORKER,
+            message = "I have arrived at your destination address. Ready to inspect and begin work!"
+        )
+        dao.insertChatMessage(chatMsg)
+
+        try {
+            api.updateJobStatus(bookingId, JobStatus.ARRIVED.name)
+        } catch (_: Exception) {}
+    }
+
+    suspend fun startWork(bookingId: String) {
+        val booking = dao.getBookingByIdDirect(bookingId) ?: return
+        if (booking.status != JobStatus.ARRIVED) return
+
+        val updated = booking.copy(status = JobStatus.IN_PROGRESS)
+        dao.updateBooking(updated)
+
+        val chatMsg = ChatMessage(
+            id = "msg_" + UUID.randomUUID().toString().take(8),
+            bookingId = booking.id,
+            senderId = booking.workerId,
+            senderName = booking.workerName,
+            senderRole = UserRole.WORKER,
+            message = "Diagnostic completed. Repair work has officially begun."
+        )
+        dao.insertChatMessage(chatMsg)
+
+        try {
+            api.updateJobStatus(bookingId, JobStatus.IN_PROGRESS.name)
+        } catch (_: Exception) {}
+    }
+
+    suspend fun requestJobCompletion(bookingId: String) {
+        val booking = dao.getBookingByIdDirect(bookingId) ?: return
+        if (booking.status != JobStatus.IN_PROGRESS) return
+
+        val updated = booking.copy(status = JobStatus.COMPLETION_REQUESTED)
+        dao.updateBooking(updated)
+
+        val notif = FixoNotification(
+            id = "notif_" + UUID.randomUUID().toString().take(8),
+            userId = booking.customerId,
+            title = "Work Complete — Inspection Ready",
+            message = "${booking.workerName} has finished the work. Please inspect and approve escrow release.",
+            type = "REVIEW_REQUEST",
+            bookingId = booking.id,
+            timestamp = System.currentTimeMillis(),
+            isRead = false
+        )
+        dao.insertNotification(notif)
+
+        val chatMsg = ChatMessage(
+            id = "msg_" + UUID.randomUUID().toString().take(8),
+            bookingId = booking.id,
+            senderId = booking.workerId,
+            senderName = booking.workerName,
+            senderRole = UserRole.WORKER,
+            message = "Work has been finished! Please inspect the repair and tap 'Review & Release Escrow' on the tracking screen."
+        )
+        dao.insertChatMessage(chatMsg)
+
+        try {
+            api.updateJobStatus(bookingId, JobStatus.COMPLETION_REQUESTED.name)
+        } catch (_: Exception) {}
+    }
+
     suspend fun updateJobStatus(bookingId: String, newStatus: JobStatus) {
         val booking = dao.getBookingByIdDirect(bookingId) ?: return
+
+        // Route to specialized lifecycle transitions
+        when (newStatus) {
+            JobStatus.ON_THE_WAY -> {
+                startWorkerTrip(bookingId, booking.workerLat, booking.workerLng)
+                return
+            }
+            JobStatus.ARRIVED -> {
+                markWorkerArrived(bookingId)
+                return
+            }
+            JobStatus.IN_PROGRESS -> {
+                startWork(bookingId)
+                return
+            }
+            JobStatus.COMPLETION_REQUESTED -> {
+                requestJobCompletion(bookingId)
+                return
+            }
+            else -> {}
+        }
+
         val updated = booking.copy(status = newStatus)
         dao.updateBooking(updated)
 
         // If cancelled, automatically refund holding escrow back to customer balance
         if (newStatus == JobStatus.CANCELLED && booking.escrowStatus == EscrowStatus.HOLDING) {
-            val refundedBooking = updated.copy(escrowStatus = EscrowStatus.REFUNDED)
+            val refundedBooking = updated.copy(escrowStatus = EscrowStatus.REFUNDED, trackingActive = false)
             dao.updateBooking(refundedBooking)
+            dao.deleteWorkerLocation(booking.id)
 
             val customer = dao.getUserById(booking.customerId).first()
             if (customer != null) {
@@ -338,7 +597,9 @@ class FixoRepository(context: Context) {
         // Add automated status message
         val statusText = when (newStatus) {
             JobStatus.ACCEPTED -> "Artisan accepted the job request."
-            JobStatus.EN_ROUTE -> "Artisan is en route to the location."
+            JobStatus.SCHEDULED -> "Service appointment scheduled."
+            JobStatus.ON_THE_WAY -> "Artisan is en route to site."
+            JobStatus.ARRIVED -> "Artisan arrived on site."
             JobStatus.IN_PROGRESS -> "Work has commenced on-site."
             JobStatus.COMPLETION_REQUESTED -> "Artisan completed the repair and requested inspection & escrow release."
             JobStatus.COMPLETED -> "Customer inspected and approved the work. Escrow funds released!"
@@ -367,11 +628,25 @@ class FixoRepository(context: Context) {
         val updated = booking.copy(
             status = JobStatus.COMPLETED,
             escrowStatus = EscrowStatus.RELEASED,
+            trackingActive = false,
             customerRating = rating,
             customerReviewText = reviewText,
             pointsEarned = points
         )
         dao.updateBooking(updated)
+        dao.deleteWorkerLocation(booking.id)
+
+        // Insert worker review
+        val review = WorkerReview(
+            id = "rev_" + UUID.randomUUID().toString().take(8),
+            bookingId = booking.id,
+            workerId = booking.workerId,
+            customerId = booking.customerId,
+            customerName = booking.customerName,
+            rating = rating,
+            comment = reviewText
+        )
+        dao.insertWorkerReview(review)
 
         // Credit points and reduce escrowLocked for Customer
         val customer = dao.getUserById(booking.customerId).first()
@@ -416,6 +691,31 @@ class FixoRepository(context: Context) {
         )
         dao.insertTransaction(tx)
 
+        // Notifications
+        dao.insertNotification(
+            FixoNotification(
+                id = "notif_" + UUID.randomUUID().toString().take(8),
+                userId = targetUserId,
+                title = "Payment Released!",
+                message = "${com.example.data.model.formatFixoCurrency(netPayout)} credited to your wallet for job #${booking.id}.",
+                type = "PAYMENT",
+                bookingId = booking.id,
+                timestamp = System.currentTimeMillis()
+            )
+        )
+
+        dao.insertNotification(
+            FixoNotification(
+                id = "notif_" + UUID.randomUUID().toString().take(8),
+                userId = booking.customerId,
+                title = "Job Completed",
+                message = "Job #${booking.id} completed. +$points FIXO Points added to your account!",
+                type = "JOB_COMPLETED",
+                bookingId = booking.id,
+                timestamp = System.currentTimeMillis()
+            )
+        )
+
         // Remote backend sync
         try {
             api.releaseEscrow(bookingId, rating, reviewText)
@@ -423,6 +723,25 @@ class FixoRepository(context: Context) {
             // Room DB provides local offline-first source of truth
         }
     }
+
+    // JOB TRACKING & LOCATIONS
+    fun getWorkerLocation(bookingId: String): Flow<WorkerLocation?> =
+        dao.getWorkerLocation(bookingId)
+
+    // NOTIFICATIONS
+    fun getNotificationsForUser(userId: String): Flow<List<FixoNotification>> =
+        dao.getNotificationsForUser(userId)
+
+    fun getUnreadNotificationCount(userId: String): Flow<Int> =
+        dao.getUnreadNotificationCount(userId)
+
+    suspend fun markNotificationRead(id: String) = dao.markNotificationRead(id)
+
+    suspend fun markAllNotificationsRead(userId: String) = dao.markAllNotificationsRead(userId)
+
+    // REVIEWS
+    fun getReviewsForWorker(workerId: String): Flow<List<WorkerReview>> =
+        dao.getReviewsForWorker(workerId)
 
     // CHAT
     fun getMessagesForBooking(bookingId: String): Flow<List<ChatMessage>> =
