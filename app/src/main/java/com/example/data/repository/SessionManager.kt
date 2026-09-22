@@ -105,9 +105,21 @@ class SessionManager(context: Context) {
         _isDevEnvironment.value = enabled
     }
 
-    fun saveSession(userId: String, role: UserRole, accessToken: String, refreshToken: String) {
-        // Encrypt tokens into KeyStore vault
-        secureStorage.saveTokens(accessToken, refreshToken)
+    fun saveSession(
+        userId: String,
+        role: UserRole,
+        accessToken: String = "",
+        refreshToken: String = ""
+    ) {
+        if (accessToken.isNotEmpty() && refreshToken.isNotEmpty()) {
+            // Encrypt real backend tokens into KeyStore vault
+            secureStorage.saveTokens(accessToken, refreshToken)
+            NetworkClient.setAuthToken(accessToken)
+        } else {
+            // Unauthenticated or local demo profile: clear any cryptographic tokens
+            secureStorage.clearTokens()
+            NetworkClient.setAuthToken(null)
+        }
 
         // Store non-sensitive session metadata
         prefs.edit()
@@ -118,7 +130,6 @@ class SessionManager(context: Context) {
             .remove(LEGACY_REFRESH_TOKEN)
             .apply()
 
-        NetworkClient.setAuthToken(accessToken)
         _currentUserId.value = userId
         _currentRole.value = role
         _isAuthenticated.value = true

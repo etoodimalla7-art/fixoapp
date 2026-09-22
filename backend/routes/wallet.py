@@ -1,5 +1,6 @@
 import uuid
 import time
+import logging
 from fastapi import APIRouter, HTTPException, Depends, Header
 from typing import List, Optional
 from backend.database import get_database
@@ -7,6 +8,8 @@ from backend.models import (
     LedgerTransactionModel, MtnMomoWebhook, OrangeMoneyWebhook
 )
 from backend.security import get_current_user_claims
+
+logger = logging.getLogger("fixo.wallet")
 
 router = APIRouter(prefix="/wallet", tags=["Wallet & Payments"])
 
@@ -81,10 +84,12 @@ async def request_payout(
 async def mtn_momo_webhook(payload: MtnMomoWebhook, x_callback_signature: Optional[str] = Header(None)):
     db = get_database()
     if payload.status == "SUCCESSFUL":
-        # Find pending transaction or credit user based on external_id
-        amount_float = float(payload.amount)
-        # Authoritative idempotent update
-        print(f"MTN MoMo payment confirmed: {payload.financial_transaction_id}, Amount: {amount_float} {payload.currency}")
+        # Authoritative idempotent update - safe structured log without sensitive financial data
+        logger.info(
+            "Payment webhook processed: provider=MTN_MOMO, status=%s, timestamp=%d",
+            payload.status,
+            int(time.time() * 1000)
+        )
     return {"status": "ACKNOWLEDGED"}
 
 # Webhook for Orange Money WebPay
@@ -92,5 +97,10 @@ async def mtn_momo_webhook(payload: MtnMomoWebhook, x_callback_signature: Option
 async def orange_money_webhook(payload: OrangeMoneyWebhook):
     db = get_database()
     if payload.status == "SUCCESS":
-        print(f"Orange Money WebPay confirmed: {payload.txnid}, Amount: {payload.amount}")
+        # Authoritative idempotent update - safe structured log without sensitive financial data
+        logger.info(
+            "Payment webhook processed: provider=ORANGE_MONEY, status=%s, timestamp=%d",
+            payload.status,
+            int(time.time() * 1000)
+        )
     return {"status": "ACKNOWLEDGED"}

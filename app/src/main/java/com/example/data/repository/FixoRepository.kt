@@ -939,6 +939,91 @@ class FixoRepository(context: Context) {
         }
     }
 
+    suspend fun loginWithBackend(email: String, password: String): Result<User> {
+        return try {
+            val response = api.login(com.example.data.remote.LoginDto(email = email, password = password))
+            if (response.isSuccessful && response.body() != null) {
+                val authRes = response.body()!!
+                val userRole = runCatching { UserRole.valueOf(authRes.role) }.getOrDefault(UserRole.CUSTOMER)
+                sessionManager.saveSession(
+                    userId = authRes.user_id,
+                    role = userRole,
+                    accessToken = authRes.access_token,
+                    refreshToken = authRes.refresh_token
+                )
+                val existingUser = dao.getUserById(authRes.user_id).first()
+                val user = existingUser ?: User(
+                    id = authRes.user_id,
+                    role = userRole,
+                    name = authRes.name,
+                    email = authRes.email,
+                    phone = "+237 600 000 000",
+                    avatarUrl = "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=400",
+                    balance = 0.0,
+                    fixoPoints = 50
+                )
+                dao.insertUser(user)
+                _currentRole.value = userRole
+                Result.success(user)
+            } else {
+                val errBody = response.errorBody()?.string()
+                val errorMsg = if (!errBody.isNullOrBlank()) errBody else "Authentication failed (HTTP ${response.code()})"
+                Result.failure(Exception(errorMsg))
+            }
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    suspend fun registerWithBackend(
+        name: String,
+        email: String,
+        password: String,
+        phone: String,
+        role: UserRole
+    ): Result<User> {
+        return try {
+            val response = api.register(
+                com.example.data.remote.RegisterDto(
+                    name = name,
+                    email = email,
+                    password = password,
+                    phone = phone,
+                    role = role.name
+                )
+            )
+            if (response.isSuccessful && response.body() != null) {
+                val authRes = response.body()!!
+                val userRole = runCatching { UserRole.valueOf(authRes.role) }.getOrDefault(role)
+                sessionManager.saveSession(
+                    userId = authRes.user_id,
+                    role = userRole,
+                    accessToken = authRes.access_token,
+                    refreshToken = authRes.refresh_token
+                )
+                val user = User(
+                    id = authRes.user_id,
+                    role = userRole,
+                    name = authRes.name,
+                    email = authRes.email,
+                    phone = phone,
+                    avatarUrl = "https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=400",
+                    balance = 0.0,
+                    fixoPoints = 50
+                )
+                dao.insertUser(user)
+                _currentRole.value = userRole
+                Result.success(user)
+            } else {
+                val errBody = response.errorBody()?.string()
+                val errorMsg = if (!errBody.isNullOrBlank()) errBody else "Registration failed (HTTP ${response.code()})"
+                Result.failure(Exception(errorMsg))
+            }
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
     // ORGANIZATIONS & WORKFORCE RECRUITMENT
     fun getAllOrganizations(): Flow<List<com.example.data.model.Organization>> = dao.getAllOrganizations()
 
@@ -1018,9 +1103,7 @@ class FixoRepository(context: Context) {
         dao.insertUser(newUser)
         sessionManager.saveSession(
             userId = newUser.id,
-            role = newUser.role,
-            accessToken = "fixo_jwt_${newUser.id}",
-            refreshToken = "fixo_rf_${newUser.id}"
+            role = newUser.role
         )
         _currentRole.value = UserRole.CUSTOMER
         return newUser
@@ -1095,9 +1178,7 @@ class FixoRepository(context: Context) {
         )
         sessionManager.saveSession(
             userId = newUser.id,
-            role = newUser.role,
-            accessToken = "fixo_jwt_${newUser.id}",
-            refreshToken = "fixo_rf_${newUser.id}"
+            role = newUser.role
         )
         _currentRole.value = UserRole.WORKER
         return Pair(newUser, newWorker)
@@ -1163,9 +1244,7 @@ class FixoRepository(context: Context) {
         dao.insertOrganization(newOrg)
         sessionManager.saveSession(
             userId = newUser.id,
-            role = newUser.role,
-            accessToken = "fixo_jwt_${newUser.id}",
-            refreshToken = "fixo_rf_${newUser.id}"
+            role = newUser.role
         )
         _currentRole.value = UserRole.ENTERPRISE
         return Pair(newUser, newOrg)

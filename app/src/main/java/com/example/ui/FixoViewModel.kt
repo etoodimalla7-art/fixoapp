@@ -774,9 +774,7 @@ class FixoViewModel(application: Application) : AndroidViewModel(application) {
                 )
             sessionManager.saveSession(
                 userId = matchedUser.id,
-                role = role,
-                accessToken = "fixo_jwt_${matchedUser.id}",
-                refreshToken = "fixo_rf_${matchedUser.id}"
+                role = role
             )
             repository.setRole(role)
             _uiState.value = _uiState.value.copy(
@@ -785,6 +783,24 @@ class FixoViewModel(application: Application) : AndroidViewModel(application) {
                 currentRole = role
             )
             showToast("Welcome back, ${matchedUser.name}!")
+        }
+    }
+
+    fun loginWithBackend(email: String, password: String) {
+        viewModelScope.launch {
+            _uiState.value = _uiState.value.copy(authLoading = true)
+            val result = repository.loginWithBackend(email, password)
+            _uiState.value = _uiState.value.copy(authLoading = false)
+            result.onSuccess { user ->
+                _uiState.value = _uiState.value.copy(
+                    isAuthenticated = true,
+                    currentUser = user,
+                    currentRole = user.role
+                )
+                showToast("Welcome back, ${user.name}!")
+            }.onFailure { err ->
+                showToast(err.message ?: "Authentication failed")
+            }
         }
     }
 
@@ -806,9 +822,7 @@ class FixoViewModel(application: Application) : AndroidViewModel(application) {
     fun quickLoginAs(user: User) {
         sessionManager.saveSession(
             userId = user.id,
-            role = user.role,
-            accessToken = "fixo_jwt_${user.id}",
-            refreshToken = "fixo_rf_${user.id}"
+            role = user.role
         )
         repository.setRole(user.role)
         _uiState.value = _uiState.value.copy(
