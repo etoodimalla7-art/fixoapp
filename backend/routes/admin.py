@@ -1,7 +1,8 @@
 import uuid
 import time
-from fastapi import APIRouter, HTTPException, Depends, Query
+from fastapi import APIRouter, HTTPException, Depends, Query, status
 from typing import List, Optional
+from pydantic import BaseModel, Field
 from backend.database import get_database
 from backend.models import (
     AdminDashboardStatsModel, DisputeModel, ResolveDisputeRequest,
@@ -16,8 +17,14 @@ PLATFORM_COMMISSION_PERCENT = 0.10
 
 def require_admin(claims: dict = Depends(get_current_user_claims)):
     if claims.get("role") != "ADMIN":
-        raise HTTPException(status_code=403, detail="Admin privileges required")
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Forbidden: Authoritative platform administrator privileges required."
+        )
     return claims
+
+class SuspendUserRequest(BaseModel):
+    reason: str = Field(..., min_length=5, max_length=500)
 
 @router.get("/stats", response_model=AdminDashboardStatsModel)
 async def get_admin_stats(admin: dict = Depends(require_admin)):
@@ -74,7 +81,6 @@ async def resolve_dispute(
     price_xaf = booking["price_amount_xaf"]
 
     if req.resolution.value == "RESOLVED_REFUND_CUSTOMER":
-        # 100% Refund to customer wallet from escrow
         if booking["escrow_status"] == EscrowStatus.HOLDING.value:
             await db.users.update_one(
                 {"id": booking["customer_id"]},
@@ -99,7 +105,6 @@ async def resolve_dispute(
         )
 
     elif req.resolution.value == "RESOLVED_RELEASE_WORKER":
-        # Escrow released to worker (minus platform commission)
         worker_payout = price_xaf * (1.0 - PLATFORM_COMMISSION_PERCENT)
         if booking["escrow_status"] == EscrowStatus.HOLDING.value:
             await db.users.update_one(
@@ -130,7 +135,6 @@ async def resolve_dispute(
             {"$set": {"status": JobStatus.COMPLETED.value, "escrow_status": EscrowStatus.RELEASED.value}}
         )
 
-    # Update dispute record
     await db.disputes.update_one(
         {"id": dispute_id},
         {"$set": {
@@ -140,12 +144,14 @@ async def resolve_dispute(
         }}
     )
 
-    # Audit log
+    # Cryptographic/auditable ledger of administrative action
     await db.audit_logs.insert_one({
+        "id": f"aud_{uuid.uuid4().hex[:12]}",
         "event": "DISPUTE_RESOLVED",
-        "dispute_id": dispute_id,
+        "resource_id": dispute_id,
         "resolution": req.resolution.value,
-        "admin_id": admin["sub"],
+        "actor_id": admin["sub"],
+        "admin_notes": req.admin_notes,
         "timestamp": now
     })
 
@@ -183,4 +189,97 @@ async def verify_worker(
             {"$set": {"verification_status": status.value}}
         )
 
+    now = int(time.time() * 1000)
+    await db.audit_logs.insert_one({
+        "id": f"aud_{uuid.uuid4().hex[:12]}",
+        "event": "WORKER_VERIFICATION_DECISION",
+        "resource_id": worker_id,
+        "decision": status.value,
+        "actor_id": admin["sub"],
+        "timestamp": now
+    })
+
     return {"status": "success", "message": f"Worker verification updated to {status.value}"}
+
+@router.post("/users/{user_id}/suspend")
+async def suspend_user(
+    user_id: str,
+    req: SuspendUserRequest,
+    admin: dict = Depends(require_admin)
+):
+    """
+    Administrative user suspension.
+    Instantly marks user suspended and immediately revokes all active authentication sessions.
+    """
+    db = get_database()
+    now_ms = int(time.time() * 1000)
+
+    user = await db.users.find_one({"id": user_id})
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    await db.users.update_one(
+        {"id": user_id},
+        {"$set": {
+            "is_suspended": True,
+            "suspension_reason": req.reason,
+            "suspended_at": now_ms,
+            "suspended_by": admin["sub"]
+        }}
+    )
+
+    # Invalidate all active sessions for this user immediately
+    res = await db.sessions.update_many(
+        {"user_id": user_id, "is_revoked": False},
+        {"$set": {
+            "is_revoked": True,
+            "revoked_at": now_ms,
+            "revocation_reason": f"ADMIN_SUSPENSION: {req.reason}"
+        }}
+    )
+
+    await db.audit_logs.insert_one({
+        "id": f"aud_{uuid.uuid4().hex[:12]}",
+        "event": "USER_SUSPENDED",
+        "resource_id": user_id,
+        "actor_id": admin["sub"],
+        "reason": req.reason,
+        "sessions_revoked": res.modified_count,
+        "timestamp": now_ms
+    })
+
+    return {
+        "status": "success",
+        "message": f"User {user_id} suspended and {res.modified_count} session(s) revoked."
+    }
+
+@router.post("/users/{user_id}/unsuspend")
+async def unsuspend_user(
+    user_id: str,
+    admin: dict = Depends(require_admin)
+):
+    db = get_database()
+    now_ms = int(time.time() * 1000)
+
+    user = await db.users.find_one({"id": user_id})
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    await db.users.update_one(
+        {"id": user_id},
+        {"$set": {
+            "is_suspended": False,
+            "unsuspended_at": now_ms,
+            "unsuspended_by": admin["sub"]
+        }}
+    )
+
+    await db.audit_logs.insert_one({
+        "id": f"aud_{uuid.uuid4().hex[:12]}",
+        "event": "USER_UNSUSPENDED",
+        "resource_id": user_id,
+        "actor_id": admin["sub"],
+        "timestamp": now_ms
+    })
+
+    return {"status": "success", "message": f"User {user_id} suspension removed."}

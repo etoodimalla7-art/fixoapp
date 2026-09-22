@@ -2,9 +2,9 @@ package com.example.data.repository
 
 import android.content.Context
 import android.content.SharedPreferences
-import com.example.data.model.User
 import com.example.data.model.UserRole
 import com.example.data.remote.NetworkClient
+import com.example.data.security.SecureTokenStorage
 import com.example.localization.AppLanguage
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -19,6 +19,8 @@ enum class ThemeMode {
 class SessionManager(context: Context) {
     private val prefs: SharedPreferences =
         context.getSharedPreferences("fixo_auth_session", Context.MODE_PRIVATE)
+
+    private val secureStorage = SecureTokenStorage(context)
 
     private val _isAuthenticated = MutableStateFlow(prefs.getBoolean(KEY_IS_AUTH, false))
     val isAuthenticated: StateFlow<Boolean> = _isAuthenticated.asStateFlow()
@@ -64,8 +66,17 @@ class SessionManager(context: Context) {
     val shareLocation: StateFlow<Boolean> = _shareLocation.asStateFlow()
 
     init {
-        val token = prefs.getString(KEY_ACCESS_TOKEN, null)
+        // Securely retrieve encrypted access token
+        val token = secureStorage.getAccessToken()
         NetworkClient.setAuthToken(token)
+
+        // Clean up legacy plaintext tokens if they existed from older versions
+        if (prefs.contains(LEGACY_ACCESS_TOKEN) || prefs.contains(LEGACY_REFRESH_TOKEN)) {
+            prefs.edit()
+                .remove(LEGACY_ACCESS_TOKEN)
+                .remove(LEGACY_REFRESH_TOKEN)
+                .apply()
+        }
     }
 
     fun setThemeMode(mode: ThemeMode) {
@@ -95,18 +106,30 @@ class SessionManager(context: Context) {
     }
 
     fun saveSession(userId: String, role: UserRole, accessToken: String, refreshToken: String) {
+        // Encrypt tokens into KeyStore vault
+        secureStorage.saveTokens(accessToken, refreshToken)
+
+        // Store non-sensitive session metadata
         prefs.edit()
             .putBoolean(KEY_IS_AUTH, true)
             .putString(KEY_USER_ID, userId)
             .putString(KEY_USER_ROLE, role.name)
-            .putString(KEY_ACCESS_TOKEN, accessToken)
-            .putString(KEY_REFRESH_TOKEN, refreshToken)
+            .remove(LEGACY_ACCESS_TOKEN)
+            .remove(LEGACY_REFRESH_TOKEN)
             .apply()
 
         NetworkClient.setAuthToken(accessToken)
         _currentUserId.value = userId
         _currentRole.value = role
         _isAuthenticated.value = true
+    }
+
+    fun getAccessToken(): String? {
+        return secureStorage.getAccessToken()
+    }
+
+    fun getRefreshToken(): String? {
+        return secureStorage.getRefreshToken()
     }
 
     fun switchRole(role: UserRole) {
@@ -120,10 +143,14 @@ class SessionManager(context: Context) {
     }
 
     fun logout() {
+        // Clear cryptographic token vault
+        secureStorage.clearTokens()
+
+        // Invalidate session flags
         prefs.edit()
             .putBoolean(KEY_IS_AUTH, false)
-            .remove(KEY_ACCESS_TOKEN)
-            .remove(KEY_REFRESH_TOKEN)
+            .remove(LEGACY_ACCESS_TOKEN)
+            .remove(LEGACY_REFRESH_TOKEN)
             .apply()
 
         NetworkClient.setAuthToken(null)
@@ -134,8 +161,6 @@ class SessionManager(context: Context) {
         private const val KEY_IS_AUTH = "key_is_auth"
         private const val KEY_USER_ID = "key_user_id"
         private const val KEY_USER_ROLE = "key_user_role"
-        private const val KEY_ACCESS_TOKEN = "key_access_token"
-        private const val KEY_REFRESH_TOKEN = "key_refresh_token"
         private const val KEY_APP_LANG = "key_app_lang"
         private const val KEY_THEME_MODE = "key_theme_mode"
         private const val KEY_IS_DEV_ENV = "key_is_dev_env"
@@ -143,5 +168,9 @@ class SessionManager(context: Context) {
         private const val KEY_NOTIF_MESSAGES = "key_notif_messages"
         private const val KEY_NOTIF_PAYMENTS = "key_notif_payments"
         private const val KEY_SHARE_LOCATION = "key_share_location"
+
+        // Obsolete legacy keys purged on initialization
+        private const val LEGACY_ACCESS_TOKEN = "key_access_token"
+        private const val LEGACY_REFRESH_TOKEN = "key_refresh_token"
     }
 }

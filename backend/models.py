@@ -1,6 +1,6 @@
 from enum import Enum
 from typing import Optional, List
-from pydantic import BaseModel, Field, EmailStr
+from pydantic import BaseModel, Field
 import time
 
 class UserRole(str, Enum):
@@ -49,14 +49,15 @@ class PaymentMethod(str, Enum):
 # Auth Schemas
 class RegisterRequest(BaseModel):
     name: str = Field(..., min_length=2, max_length=100)
-    email: EmailStr
+    email: str = Field(..., pattern=r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
     password: str = Field(..., min_length=8)
-    phone: str = Field(..., regex=r"^\+?[0-9]{8,15}$")
+    phone: str = Field(..., pattern=r"^\+?[0-9]{8,15}$")
+    username: Optional[str] = Field(None, pattern=r"^[a-zA-Z0-9_.-]{3,30}$")
     role: UserRole = UserRole.CUSTOMER
     category: Optional[ServiceCategory] = None
 
 class LoginRequest(BaseModel):
-    email: EmailStr
+    email: str = Field(..., pattern=r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
     password: str
 
 class RefreshTokenRequest(BaseModel):
@@ -75,6 +76,71 @@ class TokenResponse(BaseModel):
     role: UserRole
     name: str
     email: str
+    username: Optional[str] = None
+    is_phone_verified: bool = False
+    is_email_verified: bool = False
+
+class RequestOtpRequest(BaseModel):
+    phone: str = Field(..., pattern=r"^\+?[0-9]{8,15}$")
+    purpose: str = "PHONE_VERIFICATION"  # PHONE_VERIFICATION, PHONE_CHANGE, PASSWORD_RESET
+
+class VerifyOtpRequest(BaseModel):
+    phone: str = Field(..., pattern=r"^\+?[0-9]{8,15}$")
+    otp: str = Field(..., min_length=6, max_length=6)
+    purpose: str = "PHONE_VERIFICATION"
+
+class ChangePhoneRequest(BaseModel):
+    new_phone: str = Field(..., pattern=r"^\+?[0-9]{8,15}$")
+
+class VerifyPhoneChangeRequest(BaseModel):
+    new_phone: str = Field(..., pattern=r"^\+?[0-9]{8,15}$")
+    otp: str = Field(..., min_length=6, max_length=6)
+
+class ChangeUsernameRequest(BaseModel):
+    new_username: str = Field(..., pattern=r"^[a-zA-Z0-9_.-]{3,30}$")
+
+class PasswordResetRequest(BaseModel):
+    email: str = Field(..., pattern=r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
+
+class PasswordResetConfirmRequest(BaseModel):
+    token: str = Field(..., min_length=16)
+    new_password: str = Field(..., min_length=8)
+
+class LogoutRequest(BaseModel):
+    refresh_token: Optional[str] = None
+
+class SessionModel(BaseModel):
+    id: str
+    user_id: str
+    token_hash: str
+    device_id: Optional[str] = "unknown"
+    created_at: int
+    expires_at: int
+    last_used_at: int
+    is_revoked: bool = False
+    revoked_at: Optional[int] = None
+    revocation_reason: Optional[str] = None
+
+class OrganizationMemberRole(str, Enum):
+    OWNER = "OWNER"
+    ADMIN = "ADMIN"
+    MANAGER = "MANAGER"
+    RECRUITER = "RECRUITER"
+    FINANCE = "FINANCE"
+    MEMBER = "MEMBER"
+
+class OrganizationMemberModel(BaseModel):
+    id: str
+    organization_id: str
+    user_id: str
+    user_name: str
+    user_email: str
+    role: OrganizationMemberRole
+    created_at: int = Field(default_factory=lambda: int(time.time() * 1000))
+
+class AddOrganizationMemberRequest(BaseModel):
+    user_email: str = Field(..., pattern=r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
+    role: OrganizationMemberRole = OrganizationMemberRole.MEMBER
 
 # Domain Models
 class UserModel(BaseModel):
@@ -84,6 +150,14 @@ class UserModel(BaseModel):
     email: str
     phone: str
     password_hash: str
+    username: Optional[str] = None
+    username_lower: Optional[str] = None
+    current_verified_phone: Optional[str] = None
+    pending_phone: Optional[str] = None
+    phone_verification_status: str = "UNVERIFIED"
+    is_phone_verified: bool = False
+    is_email_verified: bool = False
+    organization_id: Optional[str] = None
     avatar_url: str = ""
     rating: float = 0.0
     balance_xaf: float = 0.0
