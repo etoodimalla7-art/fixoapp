@@ -76,6 +76,88 @@ data class WithdrawRequestDto(
     val phone_number: String
 )
 
+data class CancelBookingDto(
+    val reason: String
+)
+
+data class ReviewBookingDto(
+    val rating: Float,
+    val review_text: String
+)
+
+data class CreateDisputeDto(
+    val reason: String,
+    val description: String,
+    val evidence_urls: List<String> = emptyList()
+)
+
+data class UpdateLocationDto(
+    val latitude: Double,
+    val longitude: Double,
+    val speed_kmh: Float = 0f,
+    val bearing_degrees: Float = 0f,
+    val accuracy_meters: Float = 0f
+)
+
+data class SendChatMessageDto(
+    val text: String,
+    val attachment_url: String? = null,
+    val attachment_type: String? = null
+)
+
+data class ConversationDto(
+    val id: String,
+    val booking_id: String? = null,
+    val customer_id: String,
+    val customer_name: String,
+    val worker_id: String,
+    val worker_name: String,
+    val last_message: String = "",
+    val last_message_time: Long = 0L,
+    val customer_unread: Int = 0,
+    val worker_unread: Int = 0
+)
+
+data class ChatMessageDto(
+    val id: String,
+    val conversation_id: String,
+    val booking_id: String? = null,
+    val sender_id: String,
+    val sender_name: String,
+    val sender_role: String,
+    val recipient_id: String,
+    val text: String,
+    val attachment_url: String? = null,
+    val attachment_type: String? = null,
+    val delivery_status: String = "SENT",
+    val is_read: Boolean = false,
+    val created_at: Long = 0L
+)
+
+data class NotificationDto(
+    val id: String,
+    val user_id: String,
+    val category: String,
+    val title: String,
+    val body: String,
+    val reference_id: String? = null,
+    val deep_link: String? = null,
+    val is_read: Boolean = false,
+    val created_at: Long = 0L
+)
+
+data class WorkerLocationResponseDto(
+    val booking_id: String,
+    val worker_id: String,
+    val latitude: Double = 0.0,
+    val longitude: Double = 0.0,
+    val speed_kmh: Float = 0f,
+    val bearing_degrees: Float = 0f,
+    val accuracy_meters: Float = 0f,
+    val is_active: Boolean = true,
+    val updated_at: Long = 0L
+)
+
 interface FixoApiService {
 
     @POST("api/v1/auth/register")
@@ -144,4 +226,70 @@ interface FixoApiService {
 
     @POST("api/v1/wallet/withdraw/request")
     suspend fun requestWithdrawal(@Body body: WithdrawRequestDto): Response<Map<String, Any>>
+
+    @POST("api/v1/bookings/{id}/cancel")
+    suspend fun cancelBooking(
+        @Path("id") bookingId: String,
+        @Body body: CancelBookingDto
+    ): Response<Map<String, Any>>
+
+    @POST("api/v1/bookings/{id}/review")
+    suspend fun reviewBooking(
+        @Path("id") bookingId: String,
+        @Body body: ReviewBookingDto
+    ): Response<Map<String, String>>
+
+    @POST("api/v1/bookings/{id}/dispute")
+    suspend fun createDispute(
+        @Path("id") bookingId: String,
+        @Body body: CreateDisputeDto
+    ): Response<Map<String, Any>>
+
+    @POST("api/v1/bookings/{id}/location")
+    suspend fun updateWorkerLocation(
+        @Path("id") bookingId: String,
+        @Body body: UpdateLocationDto
+    ): Response<Map<String, String>>
+
+    @GET("api/v1/bookings/{id}/location")
+    suspend fun getWorkerLocation(
+        @Path("id") bookingId: String
+    ): Response<WorkerLocationResponseDto>
+
+    @GET("api/v1/chat/conversations")
+    suspend fun getConversations(): Response<List<ConversationDto>>
+
+    @POST("api/v1/chat/conversations")
+    suspend fun getOrCreateConversation(
+        @Query("worker_id") workerId: String,
+        @Query("booking_id") bookingId: String? = null
+    ): Response<ConversationDto>
+
+    @GET("api/v1/chat/conversations/{id}/messages")
+    suspend fun getChatMessages(
+        @Path("id") conversationId: String,
+        @Query("limit") limit: Int = 50
+    ): Response<List<ChatMessageDto>>
+
+    @POST("api/v1/chat/conversations/{id}/messages")
+    suspend fun sendChatMessage(
+        @Path("id") conversationId: String,
+        @Body body: SendChatMessageDto
+    ): Response<ChatMessageDto>
+
+    @PUT("api/v1/chat/conversations/{id}/read")
+    suspend fun markChatRead(
+        @Path("id") conversationId: String
+    ): Response<Map<String, String>>
+
+    @GET("api/v1/notifications")
+    suspend fun getNotifications(): Response<List<NotificationDto>>
+
+    @PUT("api/v1/notifications/{id}/read")
+    suspend fun markNotificationRead(
+        @Path("id") notificationId: String
+    ): Response<Map<String, String>>
+
+    @PUT("api/v1/notifications/read-all")
+    suspend fun markAllNotificationsRead(): Response<Map<String, String>>
 }

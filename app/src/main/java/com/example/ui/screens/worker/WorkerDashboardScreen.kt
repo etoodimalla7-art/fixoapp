@@ -75,12 +75,14 @@ import com.example.ui.theme.FixoBlue700
 import com.example.ui.theme.FixoEmerald100
 import com.example.ui.theme.FixoEmerald50
 import com.example.ui.theme.FixoEmerald600
+import com.example.ui.theme.FixoGold500
 import com.example.ui.theme.FixoNavy800
 import com.example.ui.theme.FixoNavy900
 import com.example.ui.theme.FixoSlate100
 import com.example.ui.theme.FixoSlate200
 import com.example.ui.theme.FixoSlate500
 import com.example.ui.theme.FixoSlate700
+import com.example.ui.theme.FixoWhite
 
 @Composable
 fun WorkerDashboardScreen(

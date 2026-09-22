@@ -452,7 +452,7 @@ class FixoViewModel(application: Application) : AndroidViewModel(application) {
                 isBookingDialogVisible = false,
                 selectedBooking = booking
             )
-            showToast("Booking Confirmed! $${service.price} held safely in Escrow.")
+            showToast("Booking Confirmed! ${com.example.data.model.formatFixoCurrency(service.price)} held safely in Escrow.")
         }
     }
 
@@ -583,7 +583,7 @@ class FixoViewModel(application: Application) : AndroidViewModel(application) {
         viewModelScope.launch {
             repository.depositFunds(user.id, amount, method, phone)
             _uiState.value = _uiState.value.copy(isDepositDialogVisible = false)
-            showToast("Deposited $$amount via $method! Balance updated.")
+            showToast("Deposited ${com.example.data.model.formatFixoCurrency(amount)} via $method! Balance updated.")
         }
     }
 
@@ -601,7 +601,7 @@ class FixoViewModel(application: Application) : AndroidViewModel(application) {
             val success = repository.withdrawFunds(user.id, amount, method, account)
             _uiState.value = _uiState.value.copy(isWithdrawDialogVisible = false)
             if (success) {
-                showToast("Payout of $$amount transferred to $method ($account)!")
+                showToast("Payout of ${com.example.data.model.formatFixoCurrency(amount)} transferred to $method ($account)!")
             } else {
                 showToast("Insufficient balance for withdrawal.")
             }
