@@ -21,7 +21,7 @@ services:
     environment:
       - MONGODB_URL=mongodb://mongodb:27017
       - DATABASE_NAME=fixo_production
-      - JWT_SECRET_KEY=fixo_super_secret_production_key_change_in_prod_991823
+      - JWT_SECRET_KEY=${JWT_SECRET_KEY:?JWT_SECRET_KEY environment variable is required}
       - PUBLIC_BASE_URL=https://fixo.cm
     depends_on:
       - mongodb

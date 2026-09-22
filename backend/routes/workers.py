@@ -1,10 +1,16 @@
 from fastapi import APIRouter, HTTPException, Query, Depends
 from typing import Optional, List
+from pydantic import BaseModel
 from backend.database import get_database
 from backend.models import WorkerProfileModel, ServiceItemModel, ServiceCategory
 from backend.security import get_current_user_claims
 
 router = APIRouter(prefix="/workers", tags=["Workers"])
+
+class UpdateAvailabilityRequest(BaseModel):
+    working_days: List[str]
+    slot_intervals: List[str]
+    emergency_available: bool = False
 
 @router.get("", response_model=List[WorkerProfileModel])
 async def list_workers(
@@ -53,18 +59,16 @@ async def get_worker_services(worker_id: str):
 
 @router.put("/profile/availability")
 async def update_availability(
-    working_days: List[str],
-    slot_intervals: List[str],
-    emergency_available: bool,
+    req: UpdateAvailabilityRequest,
     claims: dict = Depends(get_current_user_claims)
 ):
     db = get_database()
     result = await db.workers.update_one(
         {"user_id": claims["sub"]},
         {"$set": {
-            "working_days": working_days,
-            "slot_intervals": slot_intervals,
-            "emergency_callout_available": emergency_available
+            "working_days": req.working_days,
+            "slot_intervals": req.slot_intervals,
+            "emergency_callout_available": req.emergency_available
         }}
     )
     if result.matched_count == 0:

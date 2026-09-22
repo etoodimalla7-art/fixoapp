@@ -11,17 +11,12 @@ from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 ENVIRONMENT = os.getenv("ENVIRONMENT", "development").lower()
 JWT_SECRET_KEY = os.getenv("JWT_SECRET_KEY", "")
 
-# Enforce fail-fast security policy for production
-if ENVIRONMENT == "production":
-    if not JWT_SECRET_KEY or len(JWT_SECRET_KEY) < 32:
-        raise RuntimeError(
-            "CRITICAL SECURITY FAILURE: JWT_SECRET_KEY environment variable is mandatory in production "
-            "and must be at least 32 characters in length."
-        )
-else:
-    # Development / Testing fallback with explicit warning
-    if not JWT_SECRET_KEY:
-        JWT_SECRET_KEY = "fixo-dev-test-secret-key-cameroon-security-testing-32chars"
+# Enforce fail-fast security policy: No hard-coded fallback JWT secrets allowed
+if not JWT_SECRET_KEY or len(JWT_SECRET_KEY) < 32:
+    raise RuntimeError(
+        "CRITICAL SECURITY FAILURE: JWT_SECRET_KEY environment variable is mandatory "
+        "and must be at least 32 characters in length."
+    )
 
 ALGORITHM = "HS256"
 JWT_ISSUER = "fixo-auth"

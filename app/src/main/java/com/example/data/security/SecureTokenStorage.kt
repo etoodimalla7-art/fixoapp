@@ -175,6 +175,10 @@ class SecureTokenStorage(private val context: Context) {
             .apply()
     }
 
+    fun hasValidTokens(): Boolean {
+        return !getAccessToken().isNullOrEmpty()
+    }
+
     companion object {
         private const val TAG = "SecureTokenStorage"
         private const val ANDROID_KEY_STORE = "AndroidKeyStore"

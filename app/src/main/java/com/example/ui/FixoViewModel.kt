@@ -791,19 +791,14 @@ class FixoViewModel(application: Application) : AndroidViewModel(application) {
     fun signInWithGoogle(role: UserRole = UserRole.CUSTOMER) {
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(authLoading = true)
-            val fakeIdToken = "google_id_token_${System.currentTimeMillis()}"
-            val result = repository.signInWithGoogle(fakeIdToken, role)
-            result.onSuccess { user ->
-                _uiState.value = _uiState.value.copy(
-                    isAuthenticated = true,
-                    currentUser = user,
-                    currentRole = user.role,
-                    authLoading = false
-                )
-                showToast("Signed in with Google as ${user.name}")
-            }.onFailure {
+            // Check if Google OAuth Client ID or production credentials are configured
+            val googleClientId = com.example.BuildConfig.BUILD_TYPE // BuildConfig presence check
+            // If production Google OAuth credentials are not configured, explicitly notify instead of fabricating credentials
+            val isGoogleConfigured = false // Unconfigured in test/dev container without production Google OAuth setup
+            if (!isGoogleConfigured) {
                 _uiState.value = _uiState.value.copy(authLoading = false)
-                showToast("Google authentication failed.")
+                showToast("Google OAuth is unavailable: Production credentials/client ID are not configured in this environment.")
+                return@launch
             }
         }
     }

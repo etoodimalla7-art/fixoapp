@@ -926,46 +926,16 @@ class FixoRepository(context: Context) {
                 _currentRole.value = userRole
                 Result.success(user)
             } else {
-                val user = User(
-                    id = "usr_goog_${System.currentTimeMillis() % 100000}",
-                    role = role,
-                    name = "Google Verified Client",
-                    email = "google.cameroon@gmail.com",
-                    phone = "+237 670 123 456",
-                    avatarUrl = "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=400",
-                    balance = 0.0,
-                    fixoPoints = 50
-                )
-                dao.insertUser(user)
-                sessionManager.saveSession(
-                    userId = user.id,
-                    role = user.role,
-                    accessToken = "fixo_jwt_${user.id}",
-                    refreshToken = "fixo_rf_${user.id}"
-                )
-                _currentRole.value = user.role
-                Result.success(user)
+                val errBody = response.errorBody()?.string()
+                val errorMsg = if (!errBody.isNullOrBlank()) {
+                    errBody
+                } else {
+                    "Google authentication failed (HTTP ${response.code()})"
+                }
+                Result.failure(Exception(errorMsg))
             }
         } catch (e: Exception) {
-            val user = User(
-                id = "usr_goog_${System.currentTimeMillis() % 100000}",
-                role = role,
-                name = "Google Verified Client",
-                email = "google.cameroon@gmail.com",
-                phone = "+237 670 123 456",
-                avatarUrl = "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=400",
-                balance = 0.0,
-                fixoPoints = 50
-            )
-            dao.insertUser(user)
-            sessionManager.saveSession(
-                userId = user.id,
-                role = user.role,
-                accessToken = "fixo_jwt_${user.id}",
-                refreshToken = "fixo_rf_${user.id}"
-            )
-            _currentRole.value = user.role
-            Result.success(user)
+            Result.failure(e)
         }
     }
 
