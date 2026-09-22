@@ -243,4 +243,45 @@ interface FixoDao {
 
     @Query("DELETE FROM worker_reviews")
     suspend fun clearWorkerReviews()
+
+    // ORGANIZATIONS
+    @Query("SELECT * FROM organizations ORDER BY rating DESC, completedProjectsCount DESC")
+    fun getAllOrganizations(): Flow<List<com.example.data.model.Organization>>
+
+    @Query("SELECT * FROM organizations WHERE id = :id")
+    fun getOrganizationById(id: String): Flow<com.example.data.model.Organization?>
+
+    @Query("SELECT * FROM organizations WHERE id = :id")
+    suspend fun getOrganizationByIdDirect(id: String): com.example.data.model.Organization?
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertOrganizations(orgs: List<com.example.data.model.Organization>)
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertOrganization(org: com.example.data.model.Organization)
+
+    @Update
+    suspend fun updateOrganization(org: com.example.data.model.Organization)
+
+    @Query("DELETE FROM organizations")
+    suspend fun clearOrganizations()
+
+    // WORKFORCE REQUESTS
+    @Query("SELECT * FROM workforce_requests ORDER BY createdAt DESC")
+    fun getAllWorkforceRequests(): Flow<List<com.example.data.model.WorkforceRequest>>
+
+    @Query("SELECT * FROM workforce_requests WHERE organizationId = :orgId ORDER BY createdAt DESC")
+    fun getWorkforceRequestsForOrg(orgId: String): Flow<List<com.example.data.model.WorkforceRequest>>
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertWorkforceRequests(requests: List<com.example.data.model.WorkforceRequest>)
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertWorkforceRequest(request: com.example.data.model.WorkforceRequest)
+
+    @Update
+    suspend fun updateWorkforceRequest(request: com.example.data.model.WorkforceRequest)
+
+    @Query("DELETE FROM workforce_requests")
+    suspend fun clearWorkforceRequests()
 }

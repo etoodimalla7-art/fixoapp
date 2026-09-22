@@ -32,10 +32,13 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.data.model.Organization
 import com.example.data.model.UserRole
 import com.example.data.model.WorkerProfile
+import com.example.data.model.WorkforceRequest
 import com.example.data.repository.ThemeMode
 import com.example.ui.components.BookingDialog
+import com.example.ui.components.CameroonLocationPickerModal
 import com.example.ui.components.DepositDialog
 import com.example.ui.components.DisputeDialog
 import com.example.ui.components.FixoBottomNav
@@ -54,7 +57,12 @@ import com.example.ui.screens.customer.CustomerServicesScreen
 import com.example.ui.screens.customer.JobTrackingScreen
 import com.example.ui.screens.customer.WorkerProfileScreen
 import com.example.ui.screens.enterprise.EnterpriseScreen
+import com.example.ui.screens.enterprise.OrganizationDetailScreen
+import com.example.ui.screens.enterprise.WorkforceRecruitmentScreen
+import com.example.ui.screens.help.HelpCenterScreen
+import com.example.ui.screens.onboarding.OnboardingScreen
 import com.example.ui.screens.profile.ProfileScreen
+import com.example.ui.screens.profile.VerificationCenterScreen
 import com.example.ui.screens.reels.ReelsFeedScreen
 import com.example.ui.screens.splash.FixoSplashScreen
 import com.example.ui.screens.wallet.WalletRewardsScreen
@@ -76,6 +84,12 @@ fun FixoApp(
     var isViewingConversations by remember { mutableStateOf(false) }
     var activeChatBookingId by remember { mutableStateOf<String?>(null) }
     var showSplashScreen by remember { mutableStateOf(true) }
+    var isViewingOnboarding by remember { mutableStateOf(false) }
+    var isViewingVerificationCenter by remember { mutableStateOf(false) }
+    var isViewingHelpCenter by remember { mutableStateOf(false) }
+    var isViewingLocationPicker by remember { mutableStateOf(false) }
+    var isViewingWorkforceRecruitment by remember { mutableStateOf(false) }
+    var selectedOrganization by remember { mutableStateOf<Organization?>(null) }
 
     // When role changes, reset tab to 0
     LaunchedEffect(uiState.currentRole) {
@@ -84,6 +98,10 @@ fun FixoApp(
         isViewingWallet = false
         isViewingConversations = false
         activeChatBookingId = null
+        isViewingVerificationCenter = false
+        isViewingHelpCenter = false
+        isViewingWorkforceRecruitment = false
+        selectedOrganization = null
     }
 
     // Show toast message when triggered
@@ -109,59 +127,75 @@ fun FixoApp(
 
     if (!showSplashScreen) {
         if (!uiState.isAuthenticated) {
-        com.example.ui.screens.AuthScreen(
-            currentLanguage = uiState.currentLanguage,
-            onLogin = { email, role ->
-                viewModel.login(email, role)
-            },
-            onQuickLogin = { user ->
-                viewModel.quickLoginAs(user)
-            },
-            onGoogleSignIn = { role ->
-                viewModel.signInWithGoogle(role)
-            },
-            isDevEnvironment = uiState.isDevEnvironment,
-            onToggleEnvironment = {
-                viewModel.toggleDevEnvironment()
-            },
-            modifier = modifier
-        )
-    } else {
-        Scaffold(
-            modifier = modifier.fillMaxSize(),
-            topBar = {
-                FixoTopBar(
-                    currentRole = uiState.currentRole,
-                    currentLanguage = uiState.currentLanguage,
-                    currentUser = uiState.currentUser,
-                    onRoleSelected = { role ->
-                        viewModel.switchRole(role)
-                    },
-                    onLanguageToggle = {
-                        viewModel.toggleLanguage()
-                    },
-                    onWalletClick = {
-                        isViewingWallet = true
-                    },
-                    onLogout = {
-                        viewModel.logout()
-                    },
-                    isDevEnvironment = uiState.isDevEnvironment,
-                    onToggleEnvironment = {
-                        viewModel.toggleDevEnvironment()
-                    },
-                    unreadNotificationCount = uiState.unreadNotificationCount,
-                    onNotificationsClick = {
-                        viewModel.openNotificationsDialog()
-                    },
-                    unreadMessageCount = uiState.unreadMessageCount,
-                    onMessagesClick = {
-                        isViewingConversations = true
-                        isViewingWallet = false
-                        activeChatBookingId = null
-                    }
-                )
-            },
+            com.example.ui.screens.AuthScreen(
+                currentLanguage = uiState.currentLanguage,
+                onLogin = { email, role ->
+                    viewModel.login(email, role)
+                },
+                onQuickLogin = { user ->
+                    viewModel.quickLoginAs(user)
+                },
+                onGoogleSignIn = { role ->
+                    viewModel.signInWithGoogle(role)
+                },
+                isDevEnvironment = uiState.isDevEnvironment,
+                onToggleEnvironment = {
+                    viewModel.toggleDevEnvironment()
+                },
+                onRegisterCustomer = { name, username, phone, email, region, city, quarter ->
+                    viewModel.registerCustomer(name, username, phone, email, region, city, quarter)
+                },
+                onRegisterWorker = { name, username, phone, email, category, hourlyRate, bio, serviceArea ->
+                    viewModel.registerWorker(name, username, phone, email, category, hourlyRate, bio, serviceArea)
+                },
+                onRegisterOrg = { name, type, description, phone, email, address, city, region, regNumber, repName, repTitle ->
+                    viewModel.registerOrganization(name, type, description, phone, email, address, city, region, regNumber, repName, repTitle)
+                },
+                modifier = modifier
+            )
+        } else {
+            Scaffold(
+                modifier = modifier.fillMaxSize(),
+                topBar = {
+                    FixoTopBar(
+                        currentRole = uiState.currentRole,
+                        currentLanguage = uiState.currentLanguage,
+                        currentUser = uiState.currentUser,
+                        onRoleSelected = { role ->
+                            viewModel.switchRole(role)
+                        },
+                        onLanguageToggle = {
+                            viewModel.toggleLanguage()
+                        },
+                        onWalletClick = {
+                            isViewingWallet = true
+                        },
+                        onLogout = {
+                            viewModel.logout()
+                        },
+                        isDevEnvironment = uiState.isDevEnvironment,
+                        onToggleEnvironment = {
+                            viewModel.toggleDevEnvironment()
+                        },
+                        unreadNotificationCount = uiState.unreadNotificationCount,
+                        onNotificationsClick = {
+                            viewModel.openNotificationsDialog()
+                        },
+                        unreadMessageCount = uiState.unreadMessageCount,
+                        onMessagesClick = {
+                            isViewingConversations = true
+                            isViewingWallet = false
+                            activeChatBookingId = null
+                        },
+                        selectedQuarter = uiState.selectedQuarter.name,
+                        onLocationClick = {
+                            isViewingLocationPicker = true
+                        },
+                        onHelpClick = {
+                            isViewingHelpCenter = true
+                        }
+                    )
+                },
         bottomBar = {
             FixoBottomNav(
                 currentRole = uiState.currentRole,
@@ -187,6 +221,64 @@ fun FixoApp(
                 .padding(innerPadding)
         ) {
             when {
+                isViewingOnboarding -> {
+                    OnboardingScreen(
+                        onComplete = { role ->
+                            isViewingOnboarding = false
+                            viewModel.switchRole(role)
+                        },
+                        onSkipToLogin = {
+                            isViewingOnboarding = false
+                        }
+                    )
+                }
+                isViewingHelpCenter -> {
+                    HelpCenterScreen(
+                        onBack = { isViewingHelpCenter = false },
+                        onContactSupport = {
+                            viewModel.showToast("Connecting to WhatsApp Support (+237 670 000 000)...")
+                        }
+                    )
+                }
+                isViewingVerificationCenter -> {
+                    VerificationCenterScreen(
+                        currentUser = uiState.currentUser,
+                        onBack = { isViewingVerificationCenter = false },
+                        onSubmitWorkerVerification = { cni, tradeReg ->
+                            viewModel.submitProfessionalVerification(cni, tradeReg)
+                        },
+                        onSubmitOrgVerification = { rccm, niu ->
+                            viewModel.submitOrganizationVerification(rccm, niu)
+                        }
+                    )
+                }
+                isViewingWorkforceRecruitment -> {
+                    WorkforceRecruitmentScreen(
+                        currentUser = uiState.currentUser,
+                        workforceRequests = uiState.workforceRequests,
+                        onBack = { isViewingWorkforceRecruitment = false },
+                        onApplyToRequest = { reqId, _ ->
+                            viewModel.applyForWorkforceRequest(reqId)
+                        },
+                        onCreateRequest = { title, cat, needed, rate, loc, _, desc ->
+                            viewModel.createWorkforceRequest(title, cat, needed, rate, loc, "Immediate", "Ongoing", desc)
+                        }
+                    )
+                }
+                selectedOrganization != null -> {
+                    OrganizationDetailScreen(
+                        organization = selectedOrganization!!,
+                        workforceRequests = uiState.workforceRequests.filter { it.organizationId == selectedOrganization!!.id },
+                        onBack = { selectedOrganization = null },
+                        onContact = {
+                            viewModel.showToast("Connecting to ${selectedOrganization!!.representativeName}...")
+                        },
+                        onOpenRequest = { _ ->
+                            selectedOrganization = null
+                            isViewingWorkforceRecruitment = true
+                        }
+                    )
+                }
                 activeChatBookingId != null -> {
                     val chatBooking = uiState.allBookings.find { it.id == activeChatBookingId }
                         ?: uiState.customerBookings.find { it.id == activeChatBookingId }
@@ -430,7 +522,9 @@ fun FixoApp(
                                     notifPayments = uiState.notifPayments,
                                     shareLocation = uiState.shareLocation,
                                     onNotificationPrefChanged = { j, m, p -> viewModel.setNotificationPref(j, m, p) },
-                                    onShareLocationChanged = { viewModel.setShareLocation(it) }
+                                    onShareLocationChanged = { viewModel.setShareLocation(it) },
+                                    onOpenVerificationCenter = { isViewingVerificationCenter = true },
+                                    onOpenHelpCenter = { isViewingHelpCenter = true }
                                 )
                             }
                         }
@@ -537,7 +631,9 @@ fun FixoApp(
                             onWorkerClicked = {},
                             onOpenDispute = { viewModel.openDisputeDialog() },
                             onLogout = { viewModel.logout() },
-                            onDeleteAccount = { viewModel.deleteAccount() }
+                            onDeleteAccount = { viewModel.deleteAccount() },
+                            onOpenVerificationCenter = { isViewingVerificationCenter = true },
+                            onOpenHelpCenter = { isViewingHelpCenter = true }
                         )
                     }
                 }
@@ -546,7 +642,12 @@ fun FixoApp(
                     EnterpriseScreen(
                         user = uiState.currentUser,
                         projects = uiState.enterpriseProjects,
-                        onOpenCreateProject = { viewModel.openEnterpriseCreateDialog() }
+                        workforceRequests = uiState.workforceRequests,
+                        onOpenCreateProject = { viewModel.openEnterpriseCreateDialog() },
+                        onOpenWorkforceRecruitment = { isViewingWorkforceRecruitment = true },
+                        onOpenOrgProfile = {
+                            selectedOrganization = uiState.allOrganizations.firstOrNull()
+                        }
                     )
                 }
 
@@ -661,6 +762,17 @@ fun FixoApp(
             booking = uiState.pendingStartTripBooking!!,
             onDismiss = { viewModel.closeStartTripConfirmation() },
             onConfirm = { viewModel.confirmStartTrip() }
+        )
+    }
+
+    if (isViewingLocationPicker) {
+        CameroonLocationPickerModal(
+            selectedQuarter = uiState.selectedQuarter,
+            onQuarterSelected = { quarter ->
+                viewModel.setQuarter(quarter)
+                isViewingLocationPicker = false
+            },
+            onDismiss = { isViewingLocationPicker = false }
         )
     }
     }

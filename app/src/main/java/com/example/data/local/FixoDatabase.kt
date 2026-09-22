@@ -95,9 +95,11 @@ class FixoTypeConverters {
         DisputeReport::class,
         com.example.data.model.WorkerLocation::class,
         com.example.data.model.FixoNotification::class,
-        com.example.data.model.WorkerReview::class
+        com.example.data.model.WorkerReview::class,
+        com.example.data.model.Organization::class,
+        com.example.data.model.WorkforceRequest::class
     ],
-    version = 3,
+    version = 4,
     exportSchema = false
 )
 @TypeConverters(FixoTypeConverters::class)

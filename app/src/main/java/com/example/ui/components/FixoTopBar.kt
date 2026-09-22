@@ -19,9 +19,12 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Email
+import androidx.compose.material.icons.filled.HelpOutline
 import androidx.compose.material.icons.filled.Language
+import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Shield
@@ -90,6 +93,9 @@ fun FixoTopBar(
     onNotificationsClick: () -> Unit = {},
     unreadMessageCount: Int = 0,
     onMessagesClick: () -> Unit = {},
+    selectedQuarter: String? = "Akwa, Douala",
+    onLocationClick: () -> Unit = {},
+    onHelpClick: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     var roleMenuExpanded by remember { mutableStateOf(false) }
@@ -418,6 +424,70 @@ fun FixoTopBar(
                             )
                         }
                     }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            // Sub-bar: Cameroon Location Selector & Help Center Link
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                // Interactive Location Selector Pill
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(8.dp))
+                        .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f))
+                        .clickable { onLocationClick() }
+                        .padding(horizontal = 8.dp, vertical = 4.dp)
+                        .testTag("topbar_location_pill")
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.LocationOn,
+                        contentDescription = "Location",
+                        tint = FixoBlue600,
+                        modifier = Modifier.size(13.dp)
+                    )
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text(
+                        text = selectedQuarter ?: "Akwa, Douala",
+                        style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                    Spacer(modifier = Modifier.width(2.dp))
+                    Icon(
+                        imageVector = Icons.Default.ArrowDropDown,
+                        contentDescription = null,
+                        tint = FixoSlate500,
+                        modifier = Modifier.size(16.dp)
+                    )
+                }
+
+                // Quick Help Link
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier
+                        .clickable { onHelpClick() }
+                        .padding(horizontal = 4.dp, vertical = 2.dp)
+                        .testTag("topbar_help_link")
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.HelpOutline,
+                        contentDescription = "Help Center",
+                        tint = FixoSlate500,
+                        modifier = Modifier.size(13.dp)
+                    )
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text(
+                        text = "Help & FAQ",
+                        style = MaterialTheme.typography.labelSmall.copy(
+                            fontWeight = FontWeight.Medium,
+                            color = FixoSlate500
+                        )
+                    )
                 }
             }
         }

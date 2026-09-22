@@ -190,4 +190,80 @@ class FixoCoreLifecycleTest {
         assertEquals("Hello! Please bring 3/4 inch brass fittings.", lastMsg.message)
         assertEquals("DELIVERED", lastMsg.deliveryState)
     }
+
+    @Test
+    fun testWorkforceRecruitmentListingAndApplication() = runBlocking {
+        val requestsBefore = repository.getAllWorkforceRequests().first().size
+        val newRequest = com.example.data.model.WorkforceRequest(
+            id = "wfr_test_1",
+            organizationId = "org_1",
+            organizationName = "Société Camerounaise de BTP",
+            projectTitle = "Douala Port Expansion Electrical Wiring",
+            category = ServiceCategory.ELECTRICAL,
+            requiredCount = 5,
+            recruitedCount = 0,
+            ratePerDayXaf = 25000.0,
+            location = "Douala Port, Littoral",
+            startDate = "2026-10-01",
+            endDate = "2026-10-15",
+            description = "Industrial 3-phase wiring and panel installations."
+        )
+        repository.createWorkforceRequest(newRequest)
+
+        val requestsAfter = repository.getAllWorkforceRequests().first()
+        assertEquals(requestsBefore + 1, requestsAfter.size)
+
+        val created = requestsAfter.find { it.id == "wfr_test_1" }
+        assertNotNull(created)
+        assertEquals(0, created!!.recruitedCount)
+        assertEquals(25000.0, created.dailyRate, 0.01)
+
+        // Artisan applies
+        repository.applyForWorkforceRequest("wfr_test_1", "wrk_1")
+        val updated = repository.getAllWorkforceRequests().first().find { it.id == "wfr_test_1" }
+        assertEquals(1, updated?.recruitedCount)
+
+        // Check enterprise notification was generated
+        val notifs = repository.getNotificationsForUser("org_1").first()
+        assertTrue("Enterprise should receive workforce application notification", notifs.any { it.type == "WORKFORCE_APPLICATION" })
+    }
+
+    @Test
+    fun testWorkerLiveTrackingGpsUpdatesAndCleanupOnArrival() = runBlocking {
+        val bookings = repository.getAllBookings().first()
+        val targetBooking = bookings.first()
+        val bookingId = targetBooking.id
+
+        // Start trip
+        repository.startWorkerTrip(bookingId, 4.0505, 9.6950)
+        var booking = repository.getBookingById(bookingId).first()
+        assertTrue(booking?.trackingActive == true)
+
+        // Update GPS
+        repository.updateWorkerLocation(bookingId, 4.0450, 9.6930, 22.5f, 195.0f)
+        var location = repository.getWorkerLocation(bookingId).first()
+        assertNotNull(location)
+        assertEquals(4.0450, location!!.latitude, 0.0001)
+        assertEquals(9.6930, location.longitude, 0.0001)
+        assertEquals(22.5f, location.speedKmh, 0.1f)
+        assertEquals(195.0f, location.heading, 0.1f)
+
+        // Mark arrived
+        repository.markWorkerArrived(bookingId)
+        booking = repository.getBookingById(bookingId).first()
+        assertEquals(JobStatus.ARRIVED, booking?.status)
+        assertFalse(booking?.trackingActive == true)
+    }
+
+    @Test
+    fun testVerificationStatusTransitions() = runBlocking {
+        val user = repository.getUserById("usr_worker_1").first()
+        assertNotNull(user)
+
+        val pendingUser = user!!.copy(verificationStatus = com.example.data.model.VerificationStatus.PENDING)
+        repository.updateCurrentUser(pendingUser)
+
+        val updated = repository.getUserById("usr_worker_1").first()
+        assertEquals(com.example.data.model.VerificationStatus.PENDING, updated?.verificationStatus)
+    }
 }

@@ -133,6 +133,8 @@ fun ProfileScreen(
     shareLocation: Boolean = true,
     onNotificationPrefChanged: (Boolean, Boolean, Boolean) -> Unit = { _, _, _ -> },
     onShareLocationChanged: (Boolean) -> Unit = {},
+    onOpenVerificationCenter: () -> Unit = {},
+    onOpenHelpCenter: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     var showEditProfileDialog by remember { mutableStateOf(false) }
@@ -801,10 +803,19 @@ fun ProfileScreen(
                     Spacer(modifier = Modifier.height(12.dp))
 
                     ActionRow(
+                        icon = Icons.Default.Security,
+                        title = if (language == AppLanguage.FR) "Centre de Vérification & CNI" else "Trust & Verification Center",
+                        subtitle = "National ID (CNI), Trade Diplomas & Pro Badges",
+                        onClick = onOpenVerificationCenter
+                    )
+
+                    HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp), color = FixoNeutral200)
+
+                    ActionRow(
                         icon = Icons.AutoMirrored.Filled.HelpOutline,
                         title = if (language == AppLanguage.FR) "Centre d'Aide & FAQ" else "Help Center & FAQ",
                         subtitle = "Escrow protection, pricing, artisan guarantees",
-                        onClick = { showFaqDialog = true }
+                        onClick = onOpenHelpCenter
                     )
 
                     HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp), color = FixoNeutral200)

@@ -102,7 +102,14 @@ data class User(
     val escrowLocked: Double = 0.0,
     val fixoPoints: Int = 0,
     val verificationStatus: VerificationStatus = VerificationStatus.UNVERIFIED,
-    val loyaltyTier: LoyaltyTier = LoyaltyTier.BRONZE
+    val loyaltyTier: LoyaltyTier = LoyaltyTier.BRONZE,
+    val username: String = "",
+    val region: String = "Littoral",
+    val city: String = "Douala",
+    val quarter: String = "Akwa",
+    val isPhoneVerified: Boolean = true,
+    val isEmailVerified: Boolean = false,
+    val organizationId: String? = null
 )
 
 @Entity(tableName = "workers")
@@ -315,4 +322,157 @@ data class DisputeReport(
     val adminNotes: String = "",
     val timestamp: Long = System.currentTimeMillis()
 )
+
+@Entity(tableName = "organizations")
+data class Organization(
+    @PrimaryKey val id: String,
+    val name: String,
+    val type: String, // Construction & Renovation, Facilities Management, Multi-Trade Agency, Electrical Engineering
+    val description: String,
+    val logoUrl: String = "",
+    val phone: String,
+    val email: String,
+    val address: String,
+    val city: String = "Douala",
+    val region: String = "Littoral",
+    val registrationNumber: String, // RCCM / NIU
+    val authorizedRepresentative: String,
+    val representativeTitle: String = "Managing Director",
+    val verificationStatus: VerificationStatus = VerificationStatus.VERIFIED_PRO,
+    val rating: Double = 4.9,
+    val completedProjectsCount: Int = 18,
+    val activeWorkersCount: Int = 32,
+    val website: String = "",
+    val servicesOffered: String = "Commercial Plumbing, Industrial Electrical, Architectural Masonry, HVAC Installations",
+    val createdAt: Long = System.currentTimeMillis()
+) {
+    val isVerified: Boolean get() = verificationStatus == VerificationStatus.VERIFIED_PRO || verificationStatus == VerificationStatus.MASTER_CRAFTSMAN
+    val businessType: String get() = type
+    val representativeName: String get() = authorizedRepresentative
+}
+
+@Entity(tableName = "workforce_requests")
+data class WorkforceRequest(
+    @PrimaryKey val id: String,
+    val organizationId: String,
+    val organizationName: String,
+    val projectTitle: String,
+    val category: ServiceCategory,
+    val requiredCount: Int,
+    val recruitedCount: Int = 0,
+    val ratePerDayXaf: Double,
+    val location: String,
+    val startDate: String,
+    val endDate: String,
+    val status: String = "OPEN", // OPEN, IN_PROGRESS, COMPLETED
+    val description: String = "",
+    val createdAt: Long = System.currentTimeMillis()
+) {
+    val title: String get() = projectTitle
+    val neededWorkers: Int get() = requiredCount
+    val filledWorkers: Int get() = recruitedCount
+    val dailyRate: Double get() = ratePerDayXaf
+    val applicantIds: List<String> get() = emptyList()
+}
+
+// Cameroon Location Data Structure
+data class CameroonQuarter(val name: String, val lat: Double, val lng: Double)
+data class CameroonCity(val name: String, val quarters: List<CameroonQuarter>)
+data class CameroonRegion(val name: String, val cities: List<CameroonCity>)
+
+object CameroonLocationRegistry {
+    val regions: List<CameroonRegion> = listOf(
+        CameroonRegion(
+            name = "Littoral",
+            cities = listOf(
+                CameroonCity(
+                    name = "Douala",
+                    quarters = listOf(
+                        CameroonQuarter("Akwa", 4.0505, 9.6950),
+                        CameroonQuarter("Bonamoussadi", 4.0880, 9.7360),
+                        CameroonQuarter("Bonapriso", 4.0150, 9.6920),
+                        CameroonQuarter("Makepe", 4.0720, 9.7450),
+                        CameroonQuarter("Deido", 4.0620, 9.7100),
+                        CameroonQuarter("Bali", 4.0320, 9.6890),
+                        CameroonQuarter("Kotto", 4.0950, 9.7550),
+                        CameroonQuarter("Denver", 4.0820, 9.7280),
+                        CameroonQuarter("Bepanda", 4.0580, 9.7320),
+                        CameroonQuarter("New Bell", 4.0280, 9.7210)
+                    )
+                ),
+                CameroonCity(
+                    name = "Edea",
+                    quarters = listOf(
+                        CameroonQuarter("Centre-Ville", 3.8000, 10.1333),
+                        CameroonQuarter("Pout", 3.7920, 10.1250)
+                    )
+                )
+            )
+        ),
+        CameroonRegion(
+            name = "Centre",
+            cities = listOf(
+                CameroonCity(
+                    name = "Yaoundé",
+                    quarters = listOf(
+                        CameroonQuarter("Bastos", 3.8860, 11.5140),
+                        CameroonQuarter("Omnisport", 3.8820, 11.5360),
+                        CameroonQuarter("Biyem-Assi", 3.8340, 11.4880),
+                        CameroonQuarter("Mendong", 3.8200, 11.4720),
+                        CameroonQuarter("Tsinga", 3.8750, 11.5020),
+                        CameroonQuarter("Essos", 3.8680, 11.5450),
+                        CameroonQuarter("Odza", 3.8100, 11.5350),
+                        CameroonQuarter("Santa Barbara", 3.8990, 11.5200)
+                    )
+                )
+            )
+        ),
+        CameroonRegion(
+            name = "West",
+            cities = listOf(
+                CameroonCity(
+                    name = "Bafoussam",
+                    quarters = listOf(
+                        CameroonQuarter("Djeleng", 5.4770, 10.4180),
+                        CameroonQuarter("Famla", 5.4850, 10.4280),
+                        CameroonQuarter("Toukouop", 5.4690, 10.4050)
+                    )
+                )
+            )
+        ),
+        CameroonRegion(
+            name = "South-West",
+            cities = listOf(
+                CameroonCity(
+                    name = "Buea",
+                    quarters = listOf(
+                        CameroonQuarter("Molyko", 4.1520, 9.2890),
+                        CameroonQuarter("Clerks Quarters", 4.1620, 9.2780),
+                        CameroonQuarter("Bokwango", 4.1450, 9.2550)
+                    )
+                ),
+                CameroonCity(
+                    name = "Limbe",
+                    quarters = listOf(
+                        CameroonQuarter("Down Beach", 4.0150, 9.2150),
+                        CameroonQuarter("Bota", 4.0080, 9.1850)
+                    )
+                )
+            )
+        )
+    )
+
+    fun getDefaultQuarter(): CameroonQuarter = regions.first().cities.first().quarters.first()
+
+    fun findQuarter(quarterName: String): CameroonQuarter? {
+        for (region in regions) {
+            for (city in region.cities) {
+                val found = city.quarters.find { it.name.equals(quarterName, ignoreCase = true) }
+                if (found != null) return found
+            }
+        }
+        return null
+    }
+}
+
 

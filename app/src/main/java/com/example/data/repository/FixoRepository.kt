@@ -74,6 +74,8 @@ class FixoRepository(context: Context) {
             FixoSeedData.defaultLocations.forEach { dao.insertWorkerLocation(it) }
             dao.insertNotifications(FixoSeedData.defaultNotifications)
             dao.insertWorkerReviews(FixoSeedData.defaultReviews)
+            dao.insertOrganizations(FixoSeedData.defaultOrganizations)
+            dao.insertWorkforceRequests(FixoSeedData.defaultWorkforceRequests)
         }
     }
 
@@ -91,6 +93,8 @@ class FixoRepository(context: Context) {
         dao.clearWorkerLocations()
         dao.clearNotifications()
         dao.clearWorkerReviews()
+        dao.clearOrganizations()
+        dao.clearWorkforceRequests()
 
         FixoSeedData.defaultUsers.forEach { dao.insertUser(it) }
         dao.insertWorkers(FixoSeedData.defaultWorkers)
@@ -105,6 +109,8 @@ class FixoRepository(context: Context) {
         FixoSeedData.defaultLocations.forEach { dao.insertWorkerLocation(it) }
         dao.insertNotifications(FixoSeedData.defaultNotifications)
         dao.insertWorkerReviews(FixoSeedData.defaultReviews)
+        dao.insertOrganizations(FixoSeedData.defaultOrganizations)
+        dao.insertWorkforceRequests(FixoSeedData.defaultWorkforceRequests)
     }
 
     suspend fun clearDatabaseToCleanState() {
@@ -121,6 +127,8 @@ class FixoRepository(context: Context) {
         dao.clearWorkerLocations()
         dao.clearNotifications()
         dao.clearWorkerReviews()
+        dao.clearOrganizations()
+        dao.clearWorkforceRequests()
     }
 
     fun setRole(role: UserRole) {
@@ -959,5 +967,237 @@ class FixoRepository(context: Context) {
             _currentRole.value = user.role
             Result.success(user)
         }
+    }
+
+    // ORGANIZATIONS & WORKFORCE RECRUITMENT
+    fun getAllOrganizations(): Flow<List<com.example.data.model.Organization>> = dao.getAllOrganizations()
+
+    fun getOrganizationById(id: String): Flow<com.example.data.model.Organization?> = dao.getOrganizationById(id)
+
+    suspend fun insertOrganization(org: com.example.data.model.Organization) = dao.insertOrganization(org)
+
+    fun getAllWorkforceRequests(): Flow<List<com.example.data.model.WorkforceRequest>> = dao.getAllWorkforceRequests()
+
+    fun getWorkforceRequestsForOrg(orgId: String): Flow<List<com.example.data.model.WorkforceRequest>> =
+        dao.getWorkforceRequestsForOrg(orgId)
+
+    suspend fun createWorkforceRequest(request: com.example.data.model.WorkforceRequest) =
+        dao.insertWorkforceRequest(request)
+
+    suspend fun applyForWorkforceRequest(requestId: String, workerId: String) {
+        val requests = dao.getAllWorkforceRequests().first()
+        val target = requests.find { it.id == requestId } ?: return
+        dao.updateWorkforceRequest(target.copy(recruitedCount = target.recruitedCount + 1))
+        dao.insertNotification(
+            FixoNotification(
+                id = "notif_" + UUID.randomUUID().toString().take(8),
+                userId = target.organizationId,
+                title = "Artisan Applied for Workforce Request",
+                message = "A verified artisan has applied to your workforce listing: ${target.projectTitle}.",
+                type = "WORKFORCE_APPLICATION",
+                timestamp = System.currentTimeMillis(),
+                isRead = false
+            )
+        )
+    }
+
+    // USERNAME & REGISTRATION ARCHITECTURE
+    suspend fun isUsernameAvailable(username: String): Boolean {
+        val clean = username.trim().lowercase().removePrefix("@")
+        if (clean.length < 3) return false
+        // Reserved handles
+        val reserved = listOf("admin", "fixo", "support", "help", "root", "system", "moderator")
+        if (clean in reserved) return false
+        val allUsers = dao.getUserByRole(UserRole.CUSTOMER).first() // Quick check
+        // Check in seed and db
+        val inSeed = FixoSeedData.defaultUsers.any { it.username.equals(clean, ignoreCase = true) }
+        return !inSeed
+    }
+
+    suspend fun registerCustomer(
+        name: String,
+        username: String,
+        phone: String,
+        email: String,
+        region: String,
+        city: String,
+        quarter: String
+    ): User {
+        val userId = "usr_cust_" + UUID.randomUUID().toString().take(8)
+        val cleanUsername = username.trim().removePrefix("@").ifBlank { "client_${System.currentTimeMillis() % 10000}" }
+        val newUser = User(
+            id = userId,
+            role = UserRole.CUSTOMER,
+            name = name.ifBlank { "Client FIXO" },
+            email = email.ifBlank { "$cleanUsername@client.fixo.cm" },
+            phone = phone.ifBlank { "+237 670 000 000" },
+            avatarUrl = "https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=400",
+            rating = 5.0,
+            balance = 0.0,
+            escrowLocked = 0.0,
+            fixoPoints = 50, // Welcome reward
+            verificationStatus = VerificationStatus.VERIFIED_PRO,
+            loyaltyTier = LoyaltyTier.BRONZE,
+            username = cleanUsername,
+            region = region,
+            city = city,
+            quarter = quarter,
+            isPhoneVerified = true,
+            isEmailVerified = false
+        )
+        dao.insertUser(newUser)
+        sessionManager.saveSession(
+            userId = newUser.id,
+            role = newUser.role,
+            accessToken = "fixo_jwt_${newUser.id}",
+            refreshToken = "fixo_rf_${newUser.id}"
+        )
+        _currentRole.value = UserRole.CUSTOMER
+        return newUser
+    }
+
+    suspend fun registerWorker(
+        name: String,
+        username: String,
+        phone: String,
+        email: String,
+        category: ServiceCategory,
+        hourlyRate: Double,
+        bio: String,
+        serviceArea: String
+    ): Pair<User, WorkerProfile> {
+        val userId = "usr_wrk_" + UUID.randomUUID().toString().take(8)
+        val workerId = "wrk_" + UUID.randomUUID().toString().take(8)
+        val cleanUsername = username.trim().removePrefix("@").ifBlank { "artisan_${System.currentTimeMillis() % 10000}" }
+        val newUser = User(
+            id = userId,
+            role = UserRole.WORKER,
+            name = name.ifBlank { "Artisan FIXO" },
+            email = email.ifBlank { "$cleanUsername@pro.fixo.cm" },
+            phone = phone.ifBlank { "+237 690 000 000" },
+            avatarUrl = "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400",
+            rating = 5.0,
+            balance = 0.0,
+            escrowLocked = 0.0,
+            fixoPoints = 100,
+            verificationStatus = VerificationStatus.PENDING, // Strictly pending verification
+            loyaltyTier = LoyaltyTier.SILVER,
+            username = cleanUsername,
+            region = "Littoral",
+            city = "Douala",
+            quarter = serviceArea.ifBlank { "Akwa" },
+            isPhoneVerified = true,
+            isEmailVerified = false
+        )
+        val newWorker = WorkerProfile(
+            id = workerId,
+            userId = userId,
+            name = newUser.name,
+            category = category,
+            hourlyRate = if (hourlyRate > 0) hourlyRate else 15000.0,
+            emergencyCalloutAvailable = true,
+            bio = bio.ifBlank { "Professional craftsman in Cameroon offering certified diagnostic and repair services." },
+            skills = "${category.displayName}, Diagnostic, Troubleshooting, Installation",
+            certifications = "Vocational Trade Diploma, FIXO ID Verified",
+            completedJobs = 0,
+            rating = 5.0,
+            reviewCount = 0,
+            subscriptionTier = SubscriptionTier.PRO,
+            avatarUrl = newUser.avatarUrl,
+            locationCity = "Douala",
+            locationDistanceKm = 1.2,
+            backgroundVerified = false,
+            phone = newUser.phone
+        )
+        dao.insertUser(newUser)
+        dao.insertWorkers(listOf(newWorker))
+        // Create initial default service for this worker
+        dao.insertService(
+            ServiceItem(
+                id = "srv_" + UUID.randomUUID().toString().take(6),
+                workerId = workerId,
+                name = "${category.displayName} Inspection & Diagnostic",
+                category = category,
+                description = "On-site comprehensive inspection, diagnostic report, and initial estimate.",
+                price = newWorker.hourlyRate,
+                durationEstimateMinutes = 60
+            )
+        )
+        sessionManager.saveSession(
+            userId = newUser.id,
+            role = newUser.role,
+            accessToken = "fixo_jwt_${newUser.id}",
+            refreshToken = "fixo_rf_${newUser.id}"
+        )
+        _currentRole.value = UserRole.WORKER
+        return Pair(newUser, newWorker)
+    }
+
+    suspend fun registerOrganization(
+        name: String,
+        type: String,
+        description: String,
+        phone: String,
+        email: String,
+        address: String,
+        city: String,
+        region: String,
+        regNumber: String,
+        repName: String,
+        repTitle: String
+    ): Pair<User, com.example.data.model.Organization> {
+        val userId = "usr_org_" + UUID.randomUUID().toString().take(8)
+        val orgId = "org_" + UUID.randomUUID().toString().take(8)
+        val cleanName = name.ifBlank { "Entreprise FIXO" }
+        val newUser = User(
+            id = userId,
+            role = UserRole.ENTERPRISE,
+            name = repName.ifBlank { "Directeur Général" },
+            email = email.ifBlank { "contact@enterprise.cm" },
+            phone = phone.ifBlank { "+237 670 112 233" },
+            avatarUrl = "https://images.unsplash.com/photo-1541888946425-d0fbb186156f?w=400",
+            rating = 5.0,
+            balance = 0.0,
+            escrowLocked = 0.0,
+            fixoPoints = 250,
+            verificationStatus = VerificationStatus.PENDING,
+            username = cleanName.lowercase().replace(" ", "_").take(15),
+            region = region,
+            city = city,
+            quarter = address,
+            isPhoneVerified = true,
+            isEmailVerified = false,
+            organizationId = orgId
+        )
+        val newOrg = com.example.data.model.Organization(
+            id = orgId,
+            name = cleanName,
+            type = type.ifBlank { "Construction & Multi-Trade" },
+            description = description.ifBlank { "Registered enterprise providing certified multi-trade engineering, construction, and facility maintenance in Cameroon." },
+            logoUrl = newUser.avatarUrl,
+            phone = phone,
+            email = email,
+            address = address,
+            city = city,
+            region = region,
+            registrationNumber = regNumber.ifBlank { "RC/DLA/2024/B/1000 - NIU M01240001000P" },
+            authorizedRepresentative = repName,
+            representativeTitle = repTitle.ifBlank { "Directeur Général" },
+            verificationStatus = VerificationStatus.PENDING,
+            rating = 5.0,
+            completedProjectsCount = 0,
+            activeWorkersCount = 5,
+            servicesOffered = "General Contracting, Structural Works, Industrial Engineering"
+        )
+        dao.insertUser(newUser)
+        dao.insertOrganization(newOrg)
+        sessionManager.saveSession(
+            userId = newUser.id,
+            role = newUser.role,
+            accessToken = "fixo_jwt_${newUser.id}",
+            refreshToken = "fixo_rf_${newUser.id}"
+        )
+        _currentRole.value = UserRole.ENTERPRISE
+        return Pair(newUser, newOrg)
     }
 }

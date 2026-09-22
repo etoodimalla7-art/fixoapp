@@ -417,5 +417,119 @@ object FixoSeedData {
         EnterpriseProject("ent_2", "Grand Horizon Residences", "Sanitary PEX Re-Pipe Project", 10, ServiceCategory.PLUMBING, 1450000.0, "OPEN", "Yaoundé Bastos Residences", 3)
     )
 
+    val defaultOrganizations = listOf(
+        com.example.data.model.Organization(
+            id = "org_1",
+            name = "Bâtir Cameroon SARL",
+            type = "Construction & Civil Engineering",
+            description = "Leading multi-disciplinary construction, structural masonry, and turn-key residential renovation contractor in Central Africa with over 15 years operating history.",
+            logoUrl = "https://images.unsplash.com/photo-1541888946425-d0fbb186156f?w=400",
+            phone = "+237 670 112 233",
+            email = "contact@batir-cameroon.cm",
+            address = "Boulevard de la Liberté, Akwa",
+            city = "Douala",
+            region = "Littoral",
+            registrationNumber = "RC/DLA/2012/B/4521 - NIU M02120003412P",
+            authorizedRepresentative = "Ing. Patrick Ndjock",
+            representativeTitle = "Chief Executive Engineer",
+            verificationStatus = VerificationStatus.VERIFIED_PRO,
+            rating = 4.9,
+            completedProjectsCount = 38,
+            activeWorkersCount = 45,
+            website = "https://batir-cameroon.cm",
+            servicesOffered = "Structural Masonry, Full Home Renovation, Commercial Roofing, High-Pressure Plumbing Networks"
+        ),
+        com.example.data.model.Organization(
+            id = "org_2",
+            name = "Douala Électro-Clim Services",
+            type = "HVAC & Industrial Electrical",
+            description = "Specialized industrial air conditioning, cold storage installations, and commercial high-voltage wiring for commercial plazas and residential villas.",
+            logoUrl = "https://images.unsplash.com/photo-1581092160607-ee22621dd758?w=400",
+            phone = "+237 690 445 566",
+            email = "services@electroclim-douala.com",
+            address = "Rue Joss, Bonanjo",
+            city = "Douala",
+            region = "Littoral",
+            registrationNumber = "RC/DLA/2018/B/8912 - NIU M05180009811T",
+            authorizedRepresentative = "Mme. Claire Tchouaffe",
+            representativeTitle = "Operations Director",
+            verificationStatus = VerificationStatus.VERIFIED_PRO,
+            rating = 4.8,
+            completedProjectsCount = 24,
+            activeWorkersCount = 22,
+            website = "https://electroclim-douala.com",
+            servicesOffered = "HVAC Chiller Installation, Backup Generator Wiring, Smart Inverter Split Maintenance, Solar Inverter Micro-Grids"
+        ),
+        com.example.data.model.Organization(
+            id = "org_3",
+            name = "Yaoundé Finition & Déco",
+            type = "Architectural Finishing & Carpentry",
+            description = "Luxury hardwood cabinetry, plasterboard ceiling moulding, tile paving, and waterproof micro-cement finishes.",
+            logoUrl = "https://images.unsplash.com/photo-1513694203232-719a280e022f?w=400",
+            phone = "+237 655 778 899",
+            email = "info@yde-finition.cm",
+            address = "Montée Ane Rouge, Centre-Ville",
+            city = "Yaoundé",
+            region = "Centre",
+            registrationNumber = "RC/YAO/2016/B/3110 - NIU M08160007622L",
+            authorizedRepresentative = "M. Rodrigue Kamga",
+            representativeTitle = "Managing Master Artisan",
+            verificationStatus = VerificationStatus.VERIFIED_PRO,
+            rating = 5.0,
+            completedProjectsCount = 42,
+            activeWorkersCount = 28,
+            website = "https://yde-finition.cm",
+            servicesOffered = "Bespoke Hardwood Kitchens, Gypsum Board Acoustic Ceilings, Anti-Slip Terracotta Paving, Fine Acrylic Emulsion Painting"
+        )
+    )
+
+    val defaultWorkforceRequests = listOf(
+        com.example.data.model.WorkforceRequest(
+            id = "wfr_1",
+            organizationId = "org_1",
+            organizationName = "Bâtir Cameroon SARL",
+            projectTitle = "Commercial Office Tower Renovation",
+            category = ServiceCategory.ELECTRICAL,
+            requiredCount = 8,
+            recruitedCount = 5,
+            ratePerDayXaf = 25000.0,
+            location = "Bonanjo, Douala",
+            startDate = "Next Monday",
+            endDate = "3 Weeks",
+            status = "OPEN",
+            description = "Seeking 3 certified electricians experienced in cable-tray routing, main distribution panel wiring, and emergency lighting circuits."
+        ),
+        com.example.data.model.WorkforceRequest(
+            id = "wfr_2",
+            organizationId = "org_1",
+            organizationName = "Bâtir Cameroon SARL",
+            projectTitle = "Residential Villa Hydro Plumbing",
+            category = ServiceCategory.PLUMBING,
+            requiredCount = 5,
+            recruitedCount = 3,
+            ratePerDayXaf = 20000.0,
+            location = "Bonamoussadi, Douala",
+            startDate = "Immediate",
+            endDate = "10 Days",
+            status = "OPEN",
+            description = "Need licensed plumbers for Multilayer PPR and PEX pipe press fittings, booster pumps, and underground drainage slope inspection."
+        ),
+        com.example.data.model.WorkforceRequest(
+            id = "wfr_3",
+            organizationId = "org_2",
+            organizationName = "Douala Électro-Clim Services",
+            projectTitle = "Shopping Mall VRV Air Conditioning Setup",
+            category = ServiceCategory.AC_COOLING,
+            requiredCount = 6,
+            recruitedCount = 2,
+            ratePerDayXaf = 30000.0,
+            location = "Akwa Mall, Douala",
+            startDate = "1st of next month",
+            endDate = "1 Month",
+            status = "OPEN",
+            description = "Recruiting HVAC technicians for refrigerant R410a copper brazing, vacuum testing, and central cassette duct installations."
+        )
+    )
+
     val defaultDisputes = emptyList<DisputeReport>()
 }

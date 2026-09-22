@@ -82,7 +82,14 @@ data class FixoUiState(
     val activeWorkerLocation: com.example.data.model.WorkerLocation? = null,
     val selectedWorkerReviews: List<com.example.data.model.WorkerReview> = emptyList(),
     val isStartTripConfirmationVisible: Boolean = false,
-    val pendingStartTripBooking: Booking? = null
+    val pendingStartTripBooking: Booking? = null,
+    val allOrganizations: List<com.example.data.model.Organization> = emptyList(),
+    val selectedOrganization: com.example.data.model.Organization? = null,
+    val workforceRequests: List<com.example.data.model.WorkforceRequest> = emptyList(),
+    val selectedQuarter: com.example.data.model.CameroonQuarter = com.example.data.model.CameroonLocationRegistry.getDefaultQuarter(),
+    val isLocationPickerVisible: Boolean = false,
+    val isVerificationCenterVisible: Boolean = false,
+    val isHelpCenterVisible: Boolean = false
 )
 
 class FixoViewModel(application: Application) : AndroidViewModel(application) {
@@ -209,6 +216,20 @@ class FixoViewModel(application: Application) : AndroidViewModel(application) {
         viewModelScope.launch {
             repository.getAllDisputes().collect { disputes ->
                 _uiState.value = _uiState.value.copy(disputes = disputes)
+            }
+        }
+
+        // Observe organizations
+        viewModelScope.launch {
+            repository.getAllOrganizations().collect { orgs ->
+                _uiState.value = _uiState.value.copy(allOrganizations = orgs)
+            }
+        }
+
+        // Observe workforce requests
+        viewModelScope.launch {
+            repository.getAllWorkforceRequests().collect { requests ->
+                _uiState.value = _uiState.value.copy(workforceRequests = requests)
             }
         }
 
@@ -862,6 +883,192 @@ class FixoViewModel(application: Application) : AndroidViewModel(application) {
 
     fun clearSelectedWorker() {
         _uiState.value = _uiState.value.copy(selectedWorker = null)
+    }
+
+    fun selectOrganization(org: com.example.data.model.Organization?) {
+        _uiState.value = _uiState.value.copy(selectedOrganization = org)
+    }
+
+    fun selectCameroonQuarter(quarter: com.example.data.model.CameroonQuarter) {
+        _uiState.value = _uiState.value.copy(
+            selectedQuarter = quarter,
+            isLocationPickerVisible = false
+        )
+        showToast("Location updated to ${quarter.name}, Douala")
+    }
+
+    fun showLocationPicker(show: Boolean) {
+        _uiState.value = _uiState.value.copy(isLocationPickerVisible = show)
+    }
+
+    fun showVerificationCenter(show: Boolean) {
+        _uiState.value = _uiState.value.copy(isVerificationCenterVisible = show)
+    }
+
+    fun showHelpCenter(show: Boolean) {
+        _uiState.value = _uiState.value.copy(isHelpCenterVisible = show)
+    }
+
+    fun registerCustomer(
+        name: String,
+        username: String,
+        phone: String,
+        email: String,
+        region: String,
+        city: String,
+        quarter: String
+    ) {
+        viewModelScope.launch {
+            _uiState.value = _uiState.value.copy(authLoading = true)
+            val user = repository.registerCustomer(name, username, phone, email, region, city, quarter)
+            _uiState.value = _uiState.value.copy(
+                isAuthenticated = true,
+                currentUser = user,
+                currentRole = UserRole.CUSTOMER,
+                authLoading = false
+            )
+            showToast("Welcome to FIXO, ${user.name}!")
+        }
+    }
+
+    fun registerWorker(
+        name: String,
+        username: String,
+        phone: String,
+        email: String,
+        category: ServiceCategory,
+        hourlyRate: Double,
+        bio: String,
+        serviceArea: String
+    ) {
+        viewModelScope.launch {
+            _uiState.value = _uiState.value.copy(authLoading = true)
+            val pair = repository.registerWorker(name, username, phone, email, category, hourlyRate, bio, serviceArea)
+            _uiState.value = _uiState.value.copy(
+                isAuthenticated = true,
+                currentUser = pair.first,
+                currentRole = UserRole.WORKER,
+                authLoading = false
+            )
+            showToast("Artisan profile registered! Please complete ID verification.")
+        }
+    }
+
+    fun registerOrganization(
+        name: String,
+        type: String,
+        description: String,
+        phone: String,
+        email: String,
+        address: String,
+        city: String,
+        region: String,
+        regNumber: String,
+        repName: String,
+        repTitle: String
+    ) {
+        viewModelScope.launch {
+            _uiState.value = _uiState.value.copy(authLoading = true)
+            val pair = repository.registerOrganization(
+                name, type, description, phone, email, address, city, region, regNumber, repName, repTitle
+            )
+            _uiState.value = _uiState.value.copy(
+                isAuthenticated = true,
+                currentUser = pair.first,
+                currentRole = UserRole.ENTERPRISE,
+                selectedOrganization = pair.second,
+                authLoading = false
+            )
+            showToast("Enterprise account registered for ${pair.second.name}!")
+        }
+    }
+
+    fun sendPhoneOtp(phone: String, onResult: (Boolean, String) -> Unit) {
+        viewModelScope.launch {
+            if (phone.length < 8) {
+                onResult(false, "Invalid phone number format. Please provide Cameroon number.")
+                return@launch
+            }
+            onResult(true, "OTP code sent to $phone")
+            showToast("Verification code sent to $phone")
+        }
+    }
+
+    fun verifyPhoneOtp(phone: String, otp: String, role: UserRole, onResult: (Boolean) -> Unit) {
+        viewModelScope.launch {
+            if (otp.trim().length == 6) {
+                onResult(true)
+                login(email = "$phone@fixo.cm", role = role)
+            } else {
+                onResult(false)
+                showToast("Invalid 6-digit OTP code")
+            }
+        }
+    }
+
+    fun createWorkforceRequest(
+        title: String,
+        category: ServiceCategory,
+        requiredCount: Int,
+        ratePerDayXaf: Double,
+        location: String,
+        startDate: String,
+        endDate: String,
+        description: String
+    ) {
+        viewModelScope.launch {
+            val org = _uiState.value.selectedOrganization
+                ?: _uiState.value.allOrganizations.firstOrNull()
+                ?: return@launch
+            val request = com.example.data.model.WorkforceRequest(
+                id = "wfr_" + java.util.UUID.randomUUID().toString().take(8),
+                organizationId = org.id,
+                organizationName = org.name,
+                projectTitle = title,
+                category = category,
+                requiredCount = requiredCount,
+                ratePerDayXaf = ratePerDayXaf,
+                location = location,
+                startDate = startDate,
+                endDate = endDate,
+                description = description
+            )
+            repository.createWorkforceRequest(request)
+            showToast("Workforce recruitment listing published!")
+        }
+    }
+
+    fun applyForWorkforceRequest(requestId: String) {
+        viewModelScope.launch {
+            val worker = _uiState.value.currentUser ?: return@launch
+            repository.applyForWorkforceRequest(requestId, worker.id)
+            showToast("Application submitted to organization!")
+        }
+    }
+
+    fun submitProfessionalVerification(cniNumber: String, tradeReg: String) {
+        viewModelScope.launch {
+            val user = _uiState.value.currentUser ?: return@launch
+            val updated = user.copy(verificationStatus = com.example.data.model.VerificationStatus.PENDING)
+            repository.updateCurrentUser(updated)
+            _uiState.value = _uiState.value.copy(currentUser = updated)
+            showToast("Documents submitted for administrative review.")
+        }
+    }
+
+    fun submitOrganizationVerification(rccm: String, niu: String) {
+        viewModelScope.launch {
+            val user = _uiState.value.currentUser ?: return@launch
+            val updated = user.copy(verificationStatus = com.example.data.model.VerificationStatus.PENDING)
+            repository.updateCurrentUser(updated)
+            _uiState.value = _uiState.value.copy(currentUser = updated)
+            showToast("Enterprise compliance dossier submitted for review.")
+        }
+    }
+
+    fun setQuarter(quarter: com.example.data.model.CameroonQuarter) {
+        _uiState.value = _uiState.value.copy(selectedQuarter = quarter)
+        showToast("Location set to ${quarter.name}")
     }
 
     fun showToast(message: String) {
