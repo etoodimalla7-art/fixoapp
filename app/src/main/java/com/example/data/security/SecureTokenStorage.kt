@@ -24,8 +24,13 @@ class SecureTokenStorage(private val context: Context) {
     private val securePrefs: SharedPreferences =
         context.getSharedPreferences(VAULT_PREFS_NAME, Context.MODE_PRIVATE)
 
-    private val keyStore: KeyStore = KeyStore.getInstance(ANDROID_KEY_STORE).apply {
-        load(null)
+    private val keyStore: KeyStore? = try {
+        KeyStore.getInstance(ANDROID_KEY_STORE).apply {
+            load(null)
+        }
+    } catch (e: Exception) {
+        Log.w(TAG, "AndroidKeyStore provider unavailable in this runtime: ${e.message}")
+        null
     }
 
     init {
@@ -33,8 +38,9 @@ class SecureTokenStorage(private val context: Context) {
     }
 
     private fun ensureMasterKeyExists() {
+        val store = keyStore ?: return
         try {
-            if (!keyStore.containsAlias(KEY_ALIAS)) {
+            if (!store.containsAlias(KEY_ALIAS)) {
                 val keyGenerator = KeyGenerator.getInstance(
                     KeyProperties.KEY_ALGORITHM_AES,
                     ANDROID_KEY_STORE
@@ -58,9 +64,10 @@ class SecureTokenStorage(private val context: Context) {
     }
 
     private fun getSecretKey(): SecretKey? {
+        val store = keyStore ?: return null
         return try {
-            if (keyStore.containsAlias(KEY_ALIAS)) {
-                (keyStore.getEntry(KEY_ALIAS, null) as? KeyStore.SecretKeyEntry)?.secretKey
+            if (store.containsAlias(KEY_ALIAS)) {
+                (store.getEntry(KEY_ALIAS, null) as? KeyStore.SecretKeyEntry)?.secretKey
             } else {
                 null
             }
