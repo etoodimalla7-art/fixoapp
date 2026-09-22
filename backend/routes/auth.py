@@ -589,6 +589,13 @@ async def verify_phone_change(
     if not otp_doc or otp_doc.get("expires_at", 0) < now_ms:
         raise HTTPException(status_code=400, detail="Verification code has expired.")
 
+    if otp_doc.get("attempts", 0) >= otp_doc.get("max_attempts", 3):
+        await db.otps.update_one({"_id": otp_doc["_id"]}, {"$set": {"is_used": True}})
+        raise HTTPException(
+            status_code=400,
+            detail="Maximum verification attempts exceeded. Please request a new code."
+        )
+
     submitted_hash = hashlib.sha256(req.otp.strip().encode("utf-8")).hexdigest()
     if submitted_hash != otp_doc["otp_hash"]:
         await db.otps.update_one({"_id": otp_doc["_id"]}, {"$inc": {"attempts": 1}})

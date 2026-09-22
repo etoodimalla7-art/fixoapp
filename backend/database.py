@@ -44,6 +44,7 @@ async def init_db_indexes(db: AsyncIOMotorDatabase):
 
         # 3. OTP verification collection
         await db.otps.create_index([("phone", ASCENDING), ("purpose", ASCENDING)])
+        await db.otps.create_index([("created_at", ASCENDING)])
         await db.otps.create_index([("expires_at", ASCENDING)])
 
         # 4. Bookings: customer_id, worker_id, status
@@ -61,6 +62,7 @@ async def init_db_indexes(db: AsyncIOMotorDatabase):
 
         # 7. Enterprise & Organizations
         await db.organization_members.create_index([("organization_id", ASCENDING), ("user_id", ASCENDING)], unique=True)
+        await db.enterprise_projects.create_index([("org_id", ASCENDING)])
         await db.enterprise_projects.create_index([("organization_id", ASCENDING)])
         await db.workforce_requests.create_index([("organization_id", ASCENDING)])
 

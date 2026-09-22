@@ -175,3 +175,54 @@ async def test_password_reset_flow():
             "password": "NewSecurePassword2!"
         })
         assert new_login.status_code == 200
+
+@pytest.mark.anyio
+async def test_exceeding_max_otp_attempts_causes_rejection():
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as client:
+        phone = "+237699887766"
+
+        # 1. Request OTP
+        req_resp = await client.post("/api/v1/auth/otp/request", json={
+            "phone": phone,
+            "purpose": "PHONE_VERIFICATION"
+        })
+        assert req_resp.status_code == 200
+        actual_code = req_resp.json().get("debug_code")
+        assert actual_code is not None
+
+        # 2. Attempt 1 with wrong code
+        bad_1 = await client.post("/api/v1/auth/otp/verify", json={
+            "phone": phone,
+            "otp": "111111",
+            "purpose": "PHONE_VERIFICATION"
+        })
+        assert bad_1.status_code == 400
+        assert "2 attempt(s) remaining" in bad_1.json()["detail"]
+
+        # 3. Attempt 2 with wrong code
+        bad_2 = await client.post("/api/v1/auth/otp/verify", json={
+            "phone": phone,
+            "otp": "222222",
+            "purpose": "PHONE_VERIFICATION"
+        })
+        assert bad_2.status_code == 400
+        assert "1 attempt(s) remaining" in bad_2.json()["detail"]
+
+        # 4. Attempt 3 with wrong code -> exhausts attempts
+        bad_3 = await client.post("/api/v1/auth/otp/verify", json={
+            "phone": phone,
+            "otp": "333333",
+            "purpose": "PHONE_VERIFICATION"
+        })
+        assert bad_3.status_code == 400
+        assert "0 attempt(s) remaining" in bad_3.json()["detail"]
+
+        # 5. Attempt 4: Even with the CORRECT code, it must now be rejected because max attempts were exceeded
+        exhausted_attempt = await client.post("/api/v1/auth/otp/verify", json={
+            "phone": phone,
+            "otp": actual_code,
+            "purpose": "PHONE_VERIFICATION"
+        })
+        assert exhausted_attempt.status_code == 400
+        assert "Maximum verification attempts exceeded" in exhausted_attempt.json()["detail"]
