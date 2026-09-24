@@ -294,6 +294,7 @@ fun CustomerServicesScreen(
                     FilterChip(
                         selected = selectedCategory == null,
                         onClick = { selectedCategory = null },
+                        shape = RoundedCornerShape(24.dp),
                         label = { Text("All Trades", fontSize = 12.sp) },
                         colors = FilterChipDefaults.filterChipColors(
                             selectedContainerColor = MaterialTheme.colorScheme.primary,
@@ -307,6 +308,7 @@ fun CustomerServicesScreen(
                         onClick = {
                             selectedCategory = if (selectedCategory == category) null else category
                         },
+                        shape = RoundedCornerShape(24.dp),
                         label = { Text(category.displayName.substringBefore(" & "), fontSize = 12.sp) }
                     )
                 }
@@ -333,6 +335,7 @@ fun CustomerServicesScreen(
                             SortMode.NEAREST -> SortMode.TOP_RATED
                         }
                     },
+                    shape = RoundedCornerShape(24.dp),
                     label = { Text(sortMode.label, fontSize = 11.sp, fontWeight = FontWeight.Bold) },
                     colors = FilterChipDefaults.filterChipColors(
                         selectedContainerColor = FixoNavy900,
@@ -343,6 +346,7 @@ fun CustomerServicesScreen(
                 FilterChip(
                     selected = verifiedOnly,
                     onClick = { verifiedOnly = !verifiedOnly },
+                    shape = RoundedCornerShape(24.dp),
                     leadingIcon = {
                         Icon(
                             imageVector = Icons.Default.Verified,
@@ -357,6 +361,7 @@ fun CustomerServicesScreen(
                 FilterChip(
                     selected = emergencyOnly,
                     onClick = { emergencyOnly = !emergencyOnly },
+                    shape = RoundedCornerShape(24.dp),
                     leadingIcon = {
                         Icon(
                             imageVector = Icons.Default.FlashOn,
@@ -377,6 +382,7 @@ fun CustomerServicesScreen(
                             else -> 0.0
                         }
                     },
+                    shape = RoundedCornerShape(24.dp),
                     leadingIcon = {
                         Icon(Icons.Default.LocationOn, contentDescription = null, modifier = Modifier.size(13.dp), tint = FixoGold600)
                     },
@@ -390,6 +396,7 @@ fun CustomerServicesScreen(
                     onClick = {
                         minRating = if (minRating == 0.0) 4.8 else 0.0
                     },
+                    shape = RoundedCornerShape(24.dp),
                     leadingIcon = {
                         Icon(Icons.Default.Star, contentDescription = null, modifier = Modifier.size(13.dp), tint = FixoGold500)
                     },

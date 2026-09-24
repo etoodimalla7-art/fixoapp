@@ -210,11 +210,11 @@ fun FixoTopBar(
                     Box {
                         Box(
                             modifier = Modifier
-                                .clip(RoundedCornerShape(8.dp))
-                                .background(FixoBlue50)
-                                .border(1.dp, FixoBlue600.copy(alpha = 0.3f), RoundedCornerShape(8.dp))
+                                .clip(RoundedCornerShape(24.dp))
+                                .background(MaterialTheme.colorScheme.surfaceVariant)
+                                .border(1.5.dp, MaterialTheme.colorScheme.outline, RoundedCornerShape(24.dp))
                                 .clickable { roleMenuExpanded = true }
-                                .padding(horizontal = 8.dp, vertical = 6.dp)
+                                .padding(horizontal = 10.dp, vertical = 6.dp)
                                 .testTag("role_switcher_button"),
                             contentAlignment = Alignment.Center
                         ) {
@@ -223,7 +223,7 @@ fun FixoTopBar(
                                     imageVector = Icons.Default.SwapHoriz,
                                     contentDescription = "Switch Role",
                                     modifier = Modifier.size(16.dp),
-                                    tint = FixoBlue600
+                                    tint = MaterialTheme.colorScheme.primary
                                 )
                                 Spacer(modifier = Modifier.width(4.dp))
                                 Text(
@@ -235,7 +235,7 @@ fun FixoTopBar(
                                     },
                                     style = MaterialTheme.typography.labelMedium.copy(
                                         fontWeight = FontWeight.SemiBold,
-                                        color = FixoBlue600
+                                        color = MaterialTheme.colorScheme.onSurface
                                     )
                                 )
                             }

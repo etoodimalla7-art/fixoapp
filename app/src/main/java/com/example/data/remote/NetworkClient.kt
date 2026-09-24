@@ -55,10 +55,21 @@ object NetworkClient {
 
     private var retrofitInstance: Retrofit? = null
 
+    private val effectiveBaseUrl: String
+        get() {
+            val configUrl = try {
+                com.example.BuildConfig.API_BASE_URL
+            } catch (e: Throwable) {
+                null
+            }
+            val raw = customBaseUrl ?: configUrl?.takeIf { it.isNotBlank() } ?: DEFAULT_BASE_URL
+            return if (raw.endsWith("/")) raw else "$raw/"
+        }
+
     private fun getRetrofit(): Retrofit {
         return retrofitInstance ?: synchronized(this) {
             val retrofit = Retrofit.Builder()
-                .baseUrl(customBaseUrl ?: DEFAULT_BASE_URL)
+                .baseUrl(effectiveBaseUrl)
                 .client(okHttpClient)
                 .addConverterFactory(MoshiConverterFactory.create(moshi))
                 .build()

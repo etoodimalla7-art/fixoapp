@@ -1056,6 +1056,8 @@ class FixoRepository(context: Context) {
         )
     }
 
+    suspend fun insertNotification(notification: FixoNotification) = dao.insertNotification(notification)
+
     // USERNAME & REGISTRATION ARCHITECTURE
     suspend fun isUsernameAvailable(username: String): Boolean {
         val clean = username.trim().lowercase().removePrefix("@")

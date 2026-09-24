@@ -639,12 +639,22 @@ fun ProfileScreen(
                         color = MaterialTheme.colorScheme.onSurface
                     )
                     Text(
-                        text = if (language == AppLanguage.FR) "Personnalisez le mode clair ou sombre" else "Switch between System, Light, or Dark mode",
+                        text = if (language == AppLanguage.FR) "Architecture Double Thème Adaptative" else "Adaptive Dual-Theme Architecture",
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                    Text(
+                        text = if (language == AppLanguage.FR)
+                            "Mode Sombre WCAG AAA (#080C15, #1A2232, Ambre #FFB800) ou Clair Plein Soleil (#F8FAFC, #FFFFFF)"
+                            else "WCAG AAA Dark Mode (#080C15, #1A2232, Amber #FFB800) or Bright Sunlight (#F8FAFC, #FFFFFF)",
                         fontSize = 11.sp,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
 
                     Spacer(modifier = Modifier.height(8.dp))
+
+                    val ambientLux by com.example.ui.theme.rememberAmbientLightSensorLux()
 
                     Row(
                         modifier = Modifier
@@ -655,26 +665,60 @@ fun ProfileScreen(
                         horizontalArrangement = Arrangement.spacedBy(4.dp)
                     ) {
                         ThemeOptionButton(
-                            label = "System",
+                            label = if (language == AppLanguage.FR) "Chantier Lux" else "Auto Lux",
                             icon = Icons.Default.BrightnessAuto,
-                            isSelected = themeMode == ThemeMode.SYSTEM,
-                            onClick = { onThemeModeChanged(ThemeMode.SYSTEM) },
+                            isSelected = themeMode == ThemeMode.AUTO_LUX,
+                            onClick = { onThemeModeChanged(ThemeMode.AUTO_LUX) },
                             modifier = Modifier.weight(1f)
                         )
                         ThemeOptionButton(
-                            label = "Light",
+                            label = if (language == AppLanguage.FR) "Clair" else "Light",
                             icon = Icons.Default.LightMode,
                             isSelected = themeMode == ThemeMode.LIGHT,
                             onClick = { onThemeModeChanged(ThemeMode.LIGHT) },
                             modifier = Modifier.weight(1f)
                         )
                         ThemeOptionButton(
-                            label = "Dark",
+                            label = if (language == AppLanguage.FR) "Sombre AAA" else "Dark AAA",
                             icon = Icons.Default.DarkMode,
                             isSelected = themeMode == ThemeMode.DARK,
                             onClick = { onThemeModeChanged(ThemeMode.DARK) },
                             modifier = Modifier.weight(1f)
                         )
+                        ThemeOptionButton(
+                            label = if (language == AppLanguage.FR) "Système" else "System",
+                            icon = Icons.Default.BrightnessAuto,
+                            isSelected = themeMode == ThemeMode.SYSTEM,
+                            onClick = { onThemeModeChanged(ThemeMode.SYSTEM) },
+                            modifier = Modifier.weight(1f)
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    // Live Chantier Lux Indicator Badge
+                    Surface(
+                        shape = RoundedCornerShape(24.dp),
+                        color = MaterialTheme.colorScheme.surfaceVariant,
+                        border = androidx.compose.foundation.BorderStroke(1.5.dp, MaterialTheme.colorScheme.outline)
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = if (ambientLux >= com.example.ui.theme.AmbientLightManager.SUNLIGHT_LUX_THRESHOLD) "☀️ Plein Soleil" else "🌑 Pénombre / Délestage",
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.primary
+                            )
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text(
+                                text = "Capteur: ${ambientLux.toInt()} lx • ${if (ambientLux >= com.example.ui.theme.AmbientLightManager.SUNLIGHT_LUX_THRESHOLD) "Clair actif" else "Sombre AAA actif"}",
+                                fontSize = 11.sp,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
                     }
 
                     Spacer(modifier = Modifier.height(14.dp))
@@ -889,7 +933,8 @@ fun ProfileScreen(
         item {
             Card(
                 modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(16.dp),
+                shape = RoundedCornerShape(14.dp),
+                border = androidx.compose.foundation.BorderStroke(1.5.dp, MaterialTheme.colorScheme.outline),
                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
                 elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
             ) {
@@ -898,10 +943,10 @@ fun ProfileScreen(
                         onClick = { showLogoutConfirm = true },
                         modifier = Modifier
                             .fillMaxWidth()
-                            .height(48.dp)
+                            .height(52.dp)
                             .testTag("profile_logout_button"),
                         shape = RoundedCornerShape(12.dp),
-                        border = androidx.compose.foundation.BorderStroke(1.dp, FixoNeutral400),
+                        border = androidx.compose.foundation.BorderStroke(1.5.dp, MaterialTheme.colorScheme.outline),
                         colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.onSurface)
                     ) {
                         Icon(
@@ -1660,15 +1705,16 @@ private fun ThemeOptionButton(
     modifier: Modifier = Modifier
 ) {
     Surface(
-        shape = RoundedCornerShape(9.dp),
+        shape = RoundedCornerShape(12.dp),
         color = if (isSelected) MaterialTheme.colorScheme.primary else Color.Transparent,
         tonalElevation = if (isSelected) 2.dp else 0.dp,
         modifier = modifier
+            .clip(RoundedCornerShape(12.dp))
             .clickable(onClick = onClick)
-            .testTag("theme_btn_${label.lowercase()}")
+            .testTag("theme_btn_${label.lowercase().replace(" ", "_")}")
     ) {
         Row(
-            modifier = Modifier.padding(vertical = 8.dp),
+            modifier = Modifier.padding(vertical = 12.dp, horizontal = 4.dp),
             horizontalArrangement = Arrangement.Center,
             verticalAlignment = Alignment.CenterVertically
         ) {
@@ -1676,14 +1722,15 @@ private fun ThemeOptionButton(
                 imageVector = icon,
                 contentDescription = label,
                 tint = if (isSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.size(15.dp)
+                modifier = Modifier.size(16.dp)
             )
             Spacer(modifier = Modifier.width(4.dp))
             Text(
                 text = label,
-                fontSize = 12.sp,
+                fontSize = 11.sp,
                 fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
-                color = if (isSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant
+                color = if (isSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 1
             )
         }
     }

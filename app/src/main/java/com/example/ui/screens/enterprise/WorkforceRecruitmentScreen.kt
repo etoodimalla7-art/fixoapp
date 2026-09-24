@@ -168,8 +168,8 @@ fun WorkforceRecruitmentScreen(
                 },
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(48.dp),
-                shape = RoundedCornerShape(10.dp),
+                    .height(52.dp),
+                shape = RoundedCornerShape(24.dp),
                 singleLine = true
             )
 
@@ -184,16 +184,16 @@ fun WorkforceRecruitmentScreen(
                     val isAll = selectedCategoryFilter == null
                     Box(
                         modifier = Modifier
-                            .clip(RoundedCornerShape(8.dp))
-                            .background(if (isAll) FixoNavy900 else MaterialTheme.colorScheme.surfaceVariant)
+                            .clip(RoundedCornerShape(24.dp))
+                            .background(if (isAll) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant)
                             .clickable { selectedCategoryFilter = null }
-                            .padding(horizontal = 12.dp, vertical = 6.dp)
+                            .padding(horizontal = 14.dp, vertical = 8.dp)
                     ) {
                         Text(
                             text = "All Trades",
                             style = MaterialTheme.typography.labelMedium.copy(
                                 fontWeight = if (isAll) FontWeight.Bold else FontWeight.Normal,
-                                color = if (isAll) Color.White else MaterialTheme.colorScheme.onSurface
+                                color = if (isAll) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface
                             )
                         )
                     }
@@ -203,16 +203,16 @@ fun WorkforceRecruitmentScreen(
                     val isSelected = selectedCategoryFilter == cat
                     Box(
                         modifier = Modifier
-                            .clip(RoundedCornerShape(8.dp))
-                            .background(if (isSelected) FixoBlue600 else MaterialTheme.colorScheme.surfaceVariant)
+                            .clip(RoundedCornerShape(24.dp))
+                            .background(if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant)
                             .clickable { selectedCategoryFilter = cat }
-                            .padding(horizontal = 10.dp, vertical = 6.dp)
+                            .padding(horizontal = 12.dp, vertical = 8.dp)
                     ) {
                         Text(
                             text = cat.displayName,
                             style = MaterialTheme.typography.labelMedium.copy(
                                 fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
-                                color = if (isSelected) Color.White else MaterialTheme.colorScheme.onSurface
+                                color = if (isSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface
                             )
                         )
                     }
@@ -534,10 +534,10 @@ private fun CreateWorkforceRequestDialog(
                     },
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(48.dp)
+                        .height(52.dp)
                         .testTag("submit_create_workforce_request_button"),
-                    shape = RoundedCornerShape(10.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = FixoBlue600),
+                    shape = RoundedCornerShape(12.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
                     enabled = title.isNotBlank()
                 ) {
                     Text("Publish Recruitment Offer", fontWeight = FontWeight.Bold, color = Color.White)

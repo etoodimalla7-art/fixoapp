@@ -17,6 +17,40 @@ enum class VerificationStatus {
     MASTER_CRAFTSMAN
 }
 
+enum class ArtisanKycStatus {
+    NOT_STARTED,
+    IN_REVIEW,
+    APPROVED
+}
+
+val VerificationStatus.artisanKycStatus: ArtisanKycStatus
+    get() = when (this) {
+        VerificationStatus.UNVERIFIED -> ArtisanKycStatus.NOT_STARTED
+        VerificationStatus.PENDING -> ArtisanKycStatus.IN_REVIEW
+        VerificationStatus.VERIFIED_PRO, VerificationStatus.MASTER_CRAFTSMAN -> ArtisanKycStatus.APPROVED
+    }
+
+enum class CameroonMobileOperator(val label: String, val badgeEmoji: String) {
+    MTN_MOMO("MTN MoMo", "🟡"),
+    ORANGE_MONEY("Orange Money", "🟠"),
+    UNKNOWN("Non détecté", "⚪")
+}
+
+fun detectCameroonOperator(phoneNumber: String): CameroonMobileOperator {
+    val digits = phoneNumber.filter { it.isDigit() }.removePrefix("237")
+    return when {
+        digits.startsWith("67") || digits.startsWith("68") ||
+            (digits.length >= 3 && digits.substring(0, 3) in listOf("650", "651", "652", "653", "654")) ->
+            CameroonMobileOperator.MTN_MOMO
+
+        digits.startsWith("69") ||
+            (digits.length >= 3 && digits.substring(0, 3) in listOf("655", "656", "657", "658", "659")) ->
+            CameroonMobileOperator.ORANGE_MONEY
+
+        else -> CameroonMobileOperator.UNKNOWN
+    }
+}
+
 enum class ServiceCategory(val displayName: String, val iconKey: String) {
     CLEANING("Cleaning", "cleaning"),
     PLUMBING("Plumbing", "plumbing"),
@@ -163,7 +197,10 @@ data class Reel(
     val bookingsCount: Int,
     val tags: String, // comma-separated
     val isPublished: Boolean = true,
-    val createdAt: Long = System.currentTimeMillis()
+    val createdAt: Long = System.currentTimeMillis(),
+    val priceAmount: Double = 15000.0,
+    val location: String = "Akwa, Douala",
+    val reviewsCount: Int = 84
 )
 
 @Entity(tableName = "bookings")

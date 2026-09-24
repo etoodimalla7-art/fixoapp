@@ -89,8 +89,21 @@ data class FixoUiState(
     val selectedQuarter: com.example.data.model.CameroonQuarter = com.example.data.model.CameroonLocationRegistry.getDefaultQuarter(),
     val isLocationPickerVisible: Boolean = false,
     val isVerificationCenterVisible: Boolean = false,
-    val isHelpCenterVisible: Boolean = false
-)
+    val isHelpCenterVisible: Boolean = false,
+    val isSessionChecked: Boolean = false,
+    val isViewingKycFunnel: Boolean = false,
+    val artisanKycOverride: com.example.data.model.ArtisanKycStatus? = null
+) {
+    val effectiveArtisanKycStatus: com.example.data.model.ArtisanKycStatus
+        get() = artisanKycOverride ?: currentUser?.verificationStatus?.let {
+            when (it) {
+                com.example.data.model.VerificationStatus.UNVERIFIED -> com.example.data.model.ArtisanKycStatus.NOT_STARTED
+                com.example.data.model.VerificationStatus.PENDING -> com.example.data.model.ArtisanKycStatus.IN_REVIEW
+                com.example.data.model.VerificationStatus.VERIFIED_PRO,
+                com.example.data.model.VerificationStatus.MASTER_CRAFTSMAN -> com.example.data.model.ArtisanKycStatus.APPROVED
+            }
+        } ?: com.example.data.model.ArtisanKycStatus.NOT_STARTED
+}
 
 class FixoViewModel(application: Application) : AndroidViewModel(application) {
     val repository = FixoRepository(application.applicationContext)
@@ -816,6 +829,158 @@ class FixoViewModel(application: Application) : AndroidViewModel(application) {
                 showToast("Google OAuth is unavailable: Production credentials/client ID are not configured in this environment.")
                 return@launch
             }
+        }
+    }
+
+    fun checkSessionOnSplashComplete() {
+        val hasSession = sessionManager.isAuthenticated.value && sessionManager.currentUserId.value.isNotBlank()
+        if (hasSession) {
+            val userId = sessionManager.currentUserId.value
+            val role = sessionManager.currentRole.value
+            val user = FixoSeedData.defaultUsers.find { it.id == userId }
+                ?: User(
+                    id = userId,
+                    role = role,
+                    name = if (role == UserRole.WORKER) "Marc Dubois" else "Sarah Jenkins",
+                    email = "$userId@fixo.cm",
+                    phone = "+237 671 234 567",
+                    avatarUrl = "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=300"
+                )
+            _uiState.value = _uiState.value.copy(
+                isAuthenticated = true,
+                currentUser = user,
+                currentRole = role,
+                isSessionChecked = true
+            )
+        } else {
+            _uiState.value = _uiState.value.copy(
+                isAuthenticated = false,
+                isSessionChecked = true
+            )
+        }
+    }
+
+    fun quickLoginCustomer() {
+        val sarah = FixoSeedData.defaultUsers.find { it.id == "usr_cust_1" }
+            ?: User(
+                id = "usr_cust_1",
+                role = UserRole.CUSTOMER,
+                name = "Sarah Jenkins",
+                email = "sarah.j@gmail.com",
+                phone = "+237 671 234 567",
+                avatarUrl = "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=300",
+                balance = 35000.0,
+                escrowLocked = 0.0,
+                city = "Douala",
+                quarter = "Bonapriso"
+            )
+        sessionManager.saveSession(
+            userId = sarah.id,
+            role = UserRole.CUSTOMER
+        )
+        repository.setRole(UserRole.CUSTOMER)
+        _uiState.value = _uiState.value.copy(
+            isAuthenticated = true,
+            currentUser = sarah,
+            currentRole = UserRole.CUSTOMER,
+            isViewingKycFunnel = false
+        )
+        showToast("Bienvenue Sarah ! Portefeuille Séquestre initialisé.")
+    }
+
+    fun quickLoginArtisan(status: com.example.data.model.ArtisanKycStatus) {
+        val marc = FixoSeedData.defaultUsers.find { it.id == "usr_worker_1" }
+            ?: User(
+                id = "usr_worker_1",
+                role = UserRole.WORKER,
+                name = "Marc Dubois",
+                email = "marc.craftsman@fixo.pro",
+                phone = "+237 699 876 543",
+                avatarUrl = "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=300",
+                balance = 48500.0,
+                escrowLocked = 15000.0,
+                city = "Douala",
+                quarter = "Akwa"
+            )
+        val updatedVerification = when (status) {
+            com.example.data.model.ArtisanKycStatus.NOT_STARTED -> com.example.data.model.VerificationStatus.UNVERIFIED
+            com.example.data.model.ArtisanKycStatus.IN_REVIEW -> com.example.data.model.VerificationStatus.PENDING
+            com.example.data.model.ArtisanKycStatus.APPROVED -> com.example.data.model.VerificationStatus.VERIFIED_PRO
+        }
+        val userWithStatus = marc.copy(verificationStatus = updatedVerification)
+
+        sessionManager.saveSession(
+            userId = userWithStatus.id,
+            role = UserRole.WORKER
+        )
+        repository.setRole(UserRole.WORKER)
+        _uiState.value = _uiState.value.copy(
+            isAuthenticated = true,
+            currentUser = userWithStatus,
+            currentRole = UserRole.WORKER,
+            artisanKycOverride = status,
+            isViewingKycFunnel = status == com.example.data.model.ArtisanKycStatus.NOT_STARTED
+        )
+        showToast("Connecté : Marc Dubois (Statut KYC : ${status.name})")
+    }
+
+    fun loginWithPhoneOtp(phone: String, isCustomer: Boolean) {
+        if (isCustomer) {
+            quickLoginCustomer()
+        } else {
+            quickLoginArtisan(com.example.data.model.ArtisanKycStatus.IN_REVIEW)
+        }
+    }
+
+    fun openArtisanKycFunnel() {
+        _uiState.value = _uiState.value.copy(isViewingKycFunnel = true)
+    }
+
+    fun closeArtisanKycFunnel() {
+        _uiState.value = _uiState.value.copy(isViewingKycFunnel = false)
+    }
+
+    fun submitArtisanKycDossier() {
+        val user = _uiState.value.currentUser ?: FixoSeedData.defaultUsers.find { it.id == "usr_worker_1" }
+        val updated = user?.copy(verificationStatus = com.example.data.model.VerificationStatus.PENDING)
+        viewModelScope.launch {
+            if (updated != null) {
+                repository.updateCurrentUser(updated)
+            }
+            _uiState.value = _uiState.value.copy(
+                currentUser = updated,
+                artisanKycOverride = com.example.data.model.ArtisanKycStatus.IN_REVIEW,
+                isViewingKycFunnel = false
+            )
+            showToast("Dossier KYC transmis avec succès ! En cours de revue.")
+        }
+    }
+
+    fun simulateApproveWorkerKyc() {
+        viewModelScope.launch {
+            val user = _uiState.value.currentUser ?: FixoSeedData.defaultUsers.find { it.id == "usr_worker_1" }
+            val approved = user?.copy(verificationStatus = com.example.data.model.VerificationStatus.VERIFIED_PRO)
+            if (approved != null) {
+                repository.updateCurrentUser(approved)
+            }
+
+            // Push silent notification
+            val notif = com.example.data.model.FixoNotification(
+                id = "notif_kyc_${System.currentTimeMillis()}",
+                userId = user?.id ?: "usr_worker_1",
+                title = "🎉 Homologation Validée !",
+                message = "Félicitations ! Votre profil artisan FIXO PRO a été approuvé. Votre Cockpit Pro est déverrouillé.",
+                type = "KYC_APPROVED",
+                timestamp = System.currentTimeMillis()
+            )
+            repository.insertNotification(notif)
+
+            _uiState.value = _uiState.value.copy(
+                currentUser = approved,
+                artisanKycOverride = com.example.data.model.ArtisanKycStatus.APPROVED,
+                isViewingKycFunnel = false
+            )
+            showToast("🟢 Homologation approuvée ! Cockpit Pro activé.")
         }
     }
 

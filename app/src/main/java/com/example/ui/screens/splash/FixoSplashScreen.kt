@@ -3,11 +3,10 @@ package com.example.ui.screens.splash
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.LinearEasing
-import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.Spring
-import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -19,6 +18,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -36,110 +36,143 @@ import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.R
 import com.example.localization.AppLanguage
+import com.example.ui.theme.FixoBgCanvas
 import com.example.ui.theme.FixoGold100
 import com.example.ui.theme.FixoGold400
 import com.example.ui.theme.FixoGold500
 import com.example.ui.theme.FixoGold600
 import com.example.ui.theme.FixoNavy800
 import com.example.ui.theme.FixoNavy900
-import com.example.ui.theme.FixoNavy950
 import com.example.ui.theme.FixoWhite
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
 /**
- * High-fidelity animated Splash Screen featuring the official FIXO brand logo
- * and color palette (Midnight Obsidian & Golden Amber).
+ * Splash Screen Animé (0.0s à 1.2s)
+ * Comportement matériel : Écran noir d'encre pur (#080C15). Aucune barre système apparente.
+ *
+ * Séquence visuelle :
+ * - 0.0s à 0.3s : Apparition de l'aile supérieure dorée du logo FIXO avec un balayage de lumière progressif.
+ * - 0.3s à 0.6s : Tracé de la base bleu nuit du logo et chute avec rebond élastique du point central ambre.
+ * - 0.6s à 1.0s : Apparition de la signature bilingue : L'Excellence à votre Porte / Craftsmanship on Demand.
+ * - 1.0s à 1.2s : Réduction fluide du logo vers le haut de l'écran pour former l'en-tête de la page d'authentification.
  */
 @Composable
 fun FixoSplashScreen(
-    language: AppLanguage = AppLanguage.EN,
+    language: AppLanguage = AppLanguage.FR,
     onSplashComplete: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val scale = remember { Animatable(0.7f) }
-    val alpha = remember { Animatable(0f) }
-    val glowPulse = remember { Animatable(0.85f) }
-    val progress = remember { Animatable(0.05f) }
+    // 0.0s - 0.3s : Wing appearance & light sweep
+    val wingAlpha = remember { Animatable(0f) }
+    val sweepProgress = remember { Animatable(0f) }
+
+    // 0.3s - 0.6s : Base trace & bouncing amber dot
+    val baseAlpha = remember { Animatable(0f) }
+    val dotDropOffsetY = remember { Animatable(-80f) }
+    val dotScale = remember { Animatable(0.2f) }
+
+    // 0.6s - 1.0s : Slogan bilingual
+    val sloganAlpha = remember { Animatable(0f) }
+
+    // 1.0s - 1.2s : Fluid reduction towards header position
+    val logoScale = remember { Animatable(1f) }
+    val logoOffsetY = remember { Animatable(0f) }
+    val overallAlpha = remember { Animatable(1f) }
 
     LaunchedEffect(Unit) {
-        // Staggered bounce scale & fade in
-        scale.animateTo(
-            targetValue = 1f,
-            animationSpec = spring(
-                dampingRatio = Spring.DampingRatioMediumBouncy,
-                stiffness = Spring.StiffnessLow
+        // Stage 1: 0.0s à 0.3s -> Golden wing appearance with progressive light sweep
+        launch {
+            wingAlpha.animateTo(1f, animationSpec = tween(300, easing = LinearEasing))
+        }
+        launch {
+            sweepProgress.animateTo(1f, animationSpec = tween(300, easing = LinearEasing))
+        }
+
+        delay(300)
+
+        // Stage 2: 0.3s à 0.6s -> Base navy & bounce drop of center amber dot
+        launch {
+            baseAlpha.animateTo(1f, animationSpec = tween(300, easing = FastOutSlowInEasing))
+        }
+        launch {
+            dotScale.animateTo(
+                targetValue = 1f,
+                animationSpec = spring(
+                    dampingRatio = Spring.DampingRatioMediumBouncy,
+                    stiffness = Spring.StiffnessLow
+                )
             )
-        )
-    }
-
-    LaunchedEffect(Unit) {
-        alpha.animateTo(
-            targetValue = 1f,
-            animationSpec = tween(durationMillis = 600, easing = FastOutSlowInEasing)
-        )
-    }
-
-    LaunchedEffect(Unit) {
-        glowPulse.animateTo(
-            targetValue = 1.15f,
-            animationSpec = infiniteRepeatable(
-                animation = tween(durationMillis = 1200, easing = LinearEasing),
-                repeatMode = RepeatMode.Reverse
+        }
+        launch {
+            dotDropOffsetY.animateTo(
+                targetValue = 0f,
+                animationSpec = spring(
+                    dampingRatio = Spring.DampingRatioMediumBouncy,
+                    stiffness = Spring.StiffnessLow
+                )
             )
-        )
-    }
+        }
 
-    LaunchedEffect(Unit) {
-        // Animate smooth progress bar to 100% over 1.8s
-        progress.animateTo(
-            targetValue = 1f,
-            animationSpec = tween(durationMillis = 1800, easing = FastOutSlowInEasing)
-        )
-        delay(150)
+        delay(300) // now at 600ms
+
+        // Stage 3: 0.6s à 1.0s -> Slogan appearance
+        launch {
+            sloganAlpha.animateTo(1f, animationSpec = tween(400, easing = FastOutSlowInEasing))
+        }
+
+        delay(400) // now at 1000ms
+
+        // Stage 4: 1.0s à 1.2s -> Reduction towards header
+        launch {
+            logoScale.animateTo(0.68f, animationSpec = tween(200, easing = FastOutSlowInEasing))
+        }
+        launch {
+            logoOffsetY.animateTo(-160f, animationSpec = tween(200, easing = FastOutSlowInEasing))
+        }
+        launch {
+            overallAlpha.animateTo(0.95f, animationSpec = tween(200, easing = LinearEasing))
+        }
+
+        delay(200) // now at 1200ms
         onSplashComplete()
     }
 
     Box(
         modifier = modifier
             .fillMaxSize()
-            .background(
-                Brush.verticalGradient(
-                    colors = listOf(
-                        FixoNavy950,
-                        FixoNavy900,
-                        Color(0xFF080F1E)
-                    )
-                )
-            )
+            .background(FixoBgCanvas) // Pure dark ink #080C15
             .clickable(
                 interactionSource = remember { MutableInteractionSource() },
                 indication = null
             ) {
-                // Tap anywhere to skip immediately
+                // Tap to skip
                 onSplashComplete()
-            },
+            }
+            .testTag("fixo_splash_screen"),
         contentAlignment = Alignment.Center
     ) {
         // Subtle ambient gold radial background glow
         Box(
             modifier = Modifier
-                .size(280.dp)
-                .scale(glowPulse.value)
+                .size(320.dp)
                 .background(
                     Brush.radialGradient(
                         colors = listOf(
-                            FixoGold500.copy(alpha = 0.18f),
-                            FixoGold600.copy(alpha = 0.08f),
+                            FixoGold500.copy(alpha = 0.18f * wingAlpha.value),
+                            FixoNavy900.copy(alpha = 0.10f * baseAlpha.value),
                             Color.Transparent
                         )
                     ),
@@ -151,19 +184,20 @@ fun FixoSplashScreen(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center,
             modifier = Modifier
-                .padding(horizontal = 32.dp)
-                .scale(scale.value)
-                .alpha(alpha.value)
+                .padding(horizontal = 24.dp)
+                .offset { IntOffset(0, logoOffsetY.value.toInt()) }
+                .scale(logoScale.value)
+                .alpha(overallAlpha.value)
         ) {
-            // Elevated White Squircle Logo Card — directly from the official fixo logo design
+            // Elevated Logo Card
             Surface(
                 modifier = Modifier
                     .size(136.dp)
                     .shadow(
                         elevation = 16.dp,
                         shape = RoundedCornerShape(32.dp),
-                        ambientColor = FixoGold500.copy(alpha = 0.25f),
-                        spotColor = FixoGold500.copy(alpha = 0.4f)
+                        ambientColor = FixoGold500.copy(alpha = 0.35f),
+                        spotColor = FixoGold500.copy(alpha = 0.6f)
                     )
                     .clip(RoundedCornerShape(32.dp))
                     .testTag("splash_logo_card"),
@@ -177,16 +211,39 @@ fun FixoSplashScreen(
                         painter = painterResource(id = R.drawable.fixo_logo),
                         contentDescription = "FIXO Brand Logo",
                         modifier = Modifier
-                            .size(126.dp)
-                            .padding(4.dp),
+                            .size(124.dp)
+                            .padding(4.dp)
+                            .alpha(wingAlpha.value.coerceAtLeast(0.3f)),
                         contentScale = ContentScale.Fit
                     )
+
+                    // Stage 1: Light sweep line animation across logo
+                    if (sweepProgress.value in 0.01f..0.99f) {
+                        Canvas(modifier = Modifier.fillMaxSize()) {
+                            val sweepX = size.width * sweepProgress.value
+                            drawLine(
+                                brush = Brush.horizontalGradient(
+                                    colors = listOf(
+                                        Color.Transparent,
+                                        FixoGold100.copy(alpha = 0.7f),
+                                        Color.White,
+                                        Color.Transparent
+                                    ),
+                                    startX = sweepX - 40f,
+                                    endX = sweepX + 40f
+                                ),
+                                start = Offset(sweepX, 0f),
+                                end = Offset(sweepX + 30f, size.height),
+                                strokeWidth = 18f
+                            )
+                        }
+                    }
                 }
             }
 
-            Spacer(modifier = Modifier.height(28.dp))
+            Spacer(modifier = Modifier.height(24.dp))
 
-            // Brand Typography
+            // FIXO Brand Title & Golden Center Accent Dot
             Row(
                 verticalAlignment = Alignment.CenterVertically
             ) {
@@ -198,9 +255,12 @@ fun FixoSplashScreen(
                     color = FixoWhite
                 )
                 Spacer(modifier = Modifier.width(6.dp))
-                // Golden accent dot echoing the logo's gold sphere
+
+                // Amber central dot with elastic bounce
                 Box(
                     modifier = Modifier
+                        .offset { IntOffset(0, dotDropOffsetY.value.toInt()) }
+                        .scale(dotScale.value)
                         .size(10.dp)
                         .background(FixoGold500, shape = CircleShape)
                 )
@@ -208,61 +268,47 @@ fun FixoSplashScreen(
 
             Spacer(modifier = Modifier.height(8.dp))
 
+            // Signature Bilingue : L'Excellence à votre Porte / Craftsmanship on Demand
             Text(
-                text = if (language == AppLanguage.FR)
-                    "L'excellence des métiers & réparations au Cameroun"
-                else
-                    "Master Crafts & Verified Services in Cameroon",
-                fontSize = 13.sp,
-                fontWeight = FontWeight.Medium,
-                color = FixoGold100.copy(alpha = 0.85f),
-                letterSpacing = 0.4.sp
+                text = "L'Excellence à votre Porte / Craftsmanship on Demand",
+                fontSize = 12.sp,
+                fontWeight = FontWeight.SemiBold,
+                color = FixoGold100.copy(alpha = 0.90f),
+                letterSpacing = 0.3.sp,
+                modifier = Modifier.alpha(sloganAlpha.value)
             )
 
-            Spacer(modifier = Modifier.height(48.dp))
+            Spacer(modifier = Modifier.height(36.dp))
 
-            // Refined Golden Progress Bar
+            // Micro progress indicator
             Box(
                 modifier = Modifier
-                    .width(160.dp)
-                    .clip(RoundedCornerShape(6.dp))
+                    .width(140.dp)
+                    .clip(RoundedCornerShape(4.dp))
+                    .alpha(baseAlpha.value)
             ) {
                 LinearProgressIndicator(
-                    progress = { progress.value },
                     modifier = Modifier
                         .fillMaxSize()
-                        .height(4.dp),
+                        .height(3.dp),
                     color = FixoGold500,
                     trackColor = FixoNavy800
                 )
             }
-
-            Spacer(modifier = Modifier.height(14.dp))
-
-            // Trust & Escrow Micro-copy
-            Text(
-                text = if (language == AppLanguage.FR)
-                    "Sécurisation Escrow & Réseau d'Artisans..."
-                else
-                    "Securing Escrow & Verified Artisans...",
-                fontSize = 11.sp,
-                color = FixoGold400.copy(alpha = 0.7f),
-                letterSpacing = 0.2.sp
-            )
         }
 
-        // Bottom Brand Security Footnote
+        // Bottom Trust Mention
         Box(
             modifier = Modifier
                 .align(Alignment.BottomCenter)
-                .padding(bottom = 32.dp)
-                .alpha(alpha.value)
+                .padding(bottom = 28.dp)
+                .alpha(sloganAlpha.value * 0.7f)
         ) {
             Text(
                 text = "Douala • Yaoundé • Bafoussam • Garoua",
                 fontSize = 11.sp,
                 fontWeight = FontWeight.Medium,
-                color = Color.White.copy(alpha = 0.4f),
+                color = Color.White.copy(alpha = 0.45f),
                 letterSpacing = 1.sp
             )
         }

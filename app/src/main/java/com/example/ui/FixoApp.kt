@@ -54,6 +54,7 @@ import com.example.ui.screens.chat.ConversationsScreen
 import com.example.ui.screens.customer.CustomerActivityScreen
 import com.example.ui.screens.customer.CustomerHomeScreen
 import com.example.ui.screens.customer.CustomerServicesScreen
+import com.example.ui.screens.customer.ExplorerMapScreen
 import com.example.ui.screens.customer.JobTrackingScreen
 import com.example.ui.screens.customer.WorkerProfileScreen
 import com.example.ui.screens.enterprise.EnterpriseScreen
@@ -89,6 +90,7 @@ fun FixoApp(
     var isViewingHelpCenter by remember { mutableStateOf(false) }
     var isViewingLocationPicker by remember { mutableStateOf(false) }
     var isViewingWorkforceRecruitment by remember { mutableStateOf(false) }
+    var isViewingPatrolMap by remember { mutableStateOf(false) }
     var selectedOrganization by remember { mutableStateOf<Organization?>(null) }
 
     // When role changes, reset tab to 0
@@ -120,7 +122,10 @@ fun FixoApp(
     ) {
         FixoSplashScreen(
             language = uiState.currentLanguage,
-            onSplashComplete = { showSplashScreen = false },
+            onSplashComplete = {
+                showSplashScreen = false
+                viewModel.checkSessionOnSplashComplete()
+            },
             modifier = modifier
         )
     }
@@ -129,27 +134,54 @@ fun FixoApp(
         if (!uiState.isAuthenticated) {
             com.example.ui.screens.AuthScreen(
                 currentLanguage = uiState.currentLanguage,
-                onLogin = { email, role ->
-                    viewModel.login(email, role)
+                onToggleLanguage = { viewModel.toggleLanguage() },
+                onPhoneOtpValidated = { phone, isCustomer ->
+                    viewModel.loginWithPhoneOtp(phone, isCustomer)
                 },
-                onQuickLogin = { user ->
-                    viewModel.quickLoginAs(user)
+                onGoogleSignIn = {
+                    viewModel.signInWithGoogle()
                 },
-                onGoogleSignIn = { role ->
-                    viewModel.signInWithGoogle(role)
+                onQuickLoginCustomer = {
+                    viewModel.quickLoginCustomer()
                 },
-                isDevEnvironment = uiState.isDevEnvironment,
-                onToggleEnvironment = {
-                    viewModel.toggleDevEnvironment()
+                onQuickLoginArtisan = { status ->
+                    viewModel.quickLoginArtisan(status)
                 },
-                onRegisterCustomer = { name, username, phone, email, region, city, quarter ->
-                    viewModel.registerCustomer(name, username, phone, email, region, city, quarter)
+                onOpenArtisanKycFunnel = {
+                    viewModel.quickLoginArtisan(com.example.data.model.ArtisanKycStatus.NOT_STARTED)
                 },
-                onRegisterWorker = { name, username, phone, email, category, hourlyRate, bio, serviceArea ->
-                    viewModel.registerWorker(name, username, phone, email, category, hourlyRate, bio, serviceArea)
+                modifier = modifier
+            )
+        } else if (uiState.currentRole == UserRole.WORKER && (uiState.isViewingKycFunnel || uiState.effectiveArtisanKycStatus == com.example.data.model.ArtisanKycStatus.NOT_STARTED)) {
+            com.example.ui.screens.worker.ArtisanKycFunnelScreen(
+                user = uiState.currentUser,
+                language = uiState.currentLanguage,
+                onKycSubmitted = {
+                    viewModel.submitArtisanKycDossier()
                 },
-                onRegisterOrg = { name, type, description, phone, email, address, city, region, regNumber, repName, repTitle ->
-                    viewModel.registerOrganization(name, type, description, phone, email, address, city, region, regNumber, repName, repTitle)
+                onBack = {
+                    viewModel.closeArtisanKycFunnel()
+                    if (uiState.effectiveArtisanKycStatus == com.example.data.model.ArtisanKycStatus.NOT_STARTED) {
+                        viewModel.logout()
+                    }
+                },
+                modifier = modifier
+            )
+        } else if (uiState.currentRole == UserRole.WORKER && uiState.effectiveArtisanKycStatus == com.example.data.model.ArtisanKycStatus.IN_REVIEW) {
+            com.example.ui.screens.worker.KycPendingScreen(
+                user = uiState.currentUser,
+                language = uiState.currentLanguage,
+                onUpdateDocuments = {
+                    viewModel.openArtisanKycFunnel()
+                },
+                onContactSupportWhatsapp = {
+                    viewModel.showToast("Ouverture de l'assistance FIXO via WhatsApp (+237 670 000 000)...")
+                },
+                onSimulateInstantApproval = {
+                    viewModel.simulateApproveWorkerKyc()
+                },
+                onLogout = {
+                    viewModel.logout()
                 },
                 modifier = modifier
             )
@@ -347,6 +379,33 @@ fun FixoApp(
                         val activeBooking = uiState.selectedBooking
 
                         when {
+                            // Sub-screen: Fullscreen Explorer Patrol Map
+                            isViewingPatrolMap -> {
+                                ExplorerMapScreen(
+                                    workers = uiState.allWorkers,
+                                    currentQuarterName = uiState.selectedQuarter.name,
+                                    language = uiState.currentLanguage,
+                                    onBack = { isViewingPatrolMap = false },
+                                    onWorkerSelected = { worker ->
+                                        viewModel.selectWorker(worker)
+                                        isViewingPatrolMap = false
+                                    },
+                                    onBookWorker = { worker, isFlash, price ->
+                                        isViewingPatrolMap = false
+                                        val service = com.example.data.model.ServiceItem(
+                                            id = "srv_fixo_${if (isFlash) "flash" else "std"}_${worker.id}",
+                                            workerId = worker.id,
+                                            name = if (isFlash) "Fixo Flash ⚡ Dépannage Immédiat (< 30 min)" else "Fixo Standard Intervention",
+                                            category = worker.category,
+                                            description = "Intervention professionnelle forfaitaire avec garantie Fixo Shield.",
+                                            price = price,
+                                            durationEstimateMinutes = if (isFlash) 30 else 90
+                                        )
+                                        viewModel.openBookingDialog(service, worker)
+                                    }
+                                )
+                            }
+
                             // Sub-screen: Worker profile
                             selectedWorker != null && viewingJobId == null -> {
                                 WorkerProfileScreen(
@@ -447,7 +506,27 @@ fun FixoApp(
                                         viewingJobId = booking.id
                                     },
                                     onWatchReelsClicked = { selectedTab = 3 },
-                                    onNavigateToServices = { selectedTab = 1 }
+                                    onWatchSpecificReel = { reel ->
+                                        selectedTab = 3
+                                    },
+                                    onToggleLanguage = { viewModel.toggleLanguage() },
+                                    onOpenQuarterPicker = { isViewingLocationPicker = true },
+                                    onOpenNotifications = { viewModel.openNotificationsDialog() },
+                                    onOpenPatrolMap = { isViewingPatrolMap = true },
+                                    onConfirmPassportBooking = { worker, isFlash, price ->
+                                        val service = com.example.data.model.ServiceItem(
+                                            id = "srv_fixo_${if (isFlash) "flash" else "std"}_${worker.id}",
+                                            workerId = worker.id,
+                                            name = if (isFlash) "Fixo Flash ⚡ Dépannage Immédiat (< 30 min)" else "Fixo Standard Intervention",
+                                            category = worker.category,
+                                            description = "Intervention professionnelle forfaitaire avec garantie Fixo Shield.",
+                                            price = price,
+                                            durationEstimateMinutes = if (isFlash) 30 else 90
+                                        )
+                                        viewModel.openBookingDialog(service, worker)
+                                    },
+                                    currentQuarterName = uiState.selectedQuarter.name,
+                                    unreadNotificationCount = uiState.unreadNotificationCount
                                 )
 
                                 1 -> CustomerServicesScreen(

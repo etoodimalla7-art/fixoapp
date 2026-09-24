@@ -13,7 +13,8 @@ import kotlinx.coroutines.flow.asStateFlow
 enum class ThemeMode {
     SYSTEM,
     LIGHT,
-    DARK
+    DARK,
+    AUTO_LUX
 }
 
 class SessionManager(context: Context) {

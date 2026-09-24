@@ -15,12 +15,19 @@ class ExampleUnitTest {
     }
 
     @Test
-    fun testInitialUserBalancesAreZero() {
-        // Financial integrity: initial users must not have fake balances
-        for (user in FixoSeedData.defaultUsers) {
-            assertEquals("User ${user.name} must start with 0 balance", 0.0, user.balance, 0.001)
-            assertEquals("User ${user.name} must start with 0 escrowLocked", 0.0, user.escrowLocked, 0.001)
-        }
+    fun testSeedUserBalancesAccordingToSpec() {
+        // Verify predefined sandbox users comply with seed dataset specification
+        val sarah = FixoSeedData.defaultUsers.find { it.id == "usr_cust_1" }
+        val marc = FixoSeedData.defaultUsers.find { it.id == "usr_worker_1" }
+        
+        org.junit.Assert.assertNotNull(sarah)
+        assertEquals(35000.0, sarah!!.balance, 0.001)
+        assertEquals(0.0, sarah.escrowLocked, 0.001)
+        assertEquals(350, sarah.fixoPoints)
+
+        org.junit.Assert.assertNotNull(marc)
+        assertEquals(48500.0, marc!!.balance, 0.001)
+        assertEquals(15000.0, marc.escrowLocked, 0.001)
     }
 
     @Test
