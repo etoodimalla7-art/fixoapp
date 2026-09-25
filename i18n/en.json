@@ -93,6 +93,46 @@
     "pro_nav_missions": "Missions",
     "pro_nav_profile": "Pro Profile"
   },
+  "worker": {
+    "topbar": {
+      "online": "ONLINE",
+      "offline": "PAUSED",
+      "master_craftsman": "Master Craftsman",
+      "simulate_alert": "⚡ Simulate Flash Alert"
+    },
+    "earnings": {
+      "available_title": "Available Balance",
+      "available_subtitle": "Ready for instant MTN / Orange MoMo payout",
+      "escrow_title": "Funds in Escrow",
+      "escrow_subtitle": "Guaranteed by FIXO. Released upon customer QR scan.",
+      "cashout_button": "⚡ Withdraw my earnings (Cash-Out)"
+    },
+    "stats": {
+      "rating": "Average Rating",
+      "rating_sub": "124 verified reviews",
+      "punctuality": "Punctuality / Flash",
+      "punctuality_sub": "on-time for emergencies < 30 min",
+      "tier_master": "Master Craftsman (8%)",
+      "tier_progress": "3 jobs remaining to retain algorithmic privileges"
+    },
+    "alert": {
+      "title": "🚨 INCOMING FLASH EXPRESS CALLOUT",
+      "net_earning": "Guaranteed Net Payout",
+      "slide_label": ">>> SLIDE TO ACCEPT ({amount}) >>>",
+      "decline": "✕ Decline mission",
+      "requirement_sub": "On-site arrival required under 30 minutes",
+      "secured_escrow": "100% pre-funded and held in escrow vault"
+    },
+    "reels_prompt": {
+      "title": "📹 Boost your craftsmanship bookings",
+      "subtitle": "Artisans active on Reels receive up to 4x more customer calls.",
+      "cta": "+ Record a 30s demonstration"
+    },
+    "planning": {
+      "next_job_title": "Upcoming Intervention",
+      "queue_empty": "No further jobs scheduled for today"
+    }
+  },
   "trust_seals": {
     "cni": "Biometric Identity Verified (National ID / Passport)",
     "record": "Clean Criminal Record (Bulletin #3 Verified)",

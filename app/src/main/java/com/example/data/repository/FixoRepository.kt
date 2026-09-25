@@ -9,6 +9,10 @@ import com.example.data.model.DisputeReport
 import com.example.data.model.EnterpriseProject
 import com.example.data.model.EscrowStatus
 import com.example.data.model.JobStatus
+import com.example.data.model.isEnRoute
+import com.example.data.model.isOnSite
+import com.example.data.model.isWorking
+import com.example.data.model.isCompletionPending
 import com.example.data.model.LoyaltyTier
 import com.example.data.model.PaymentMethod
 import com.example.data.model.Reel
@@ -38,7 +42,7 @@ import kotlin.math.roundToInt
 
 class FixoRepository(context: Context) {
     private val database = FixoDatabase.getDatabase(context)
-    private val dao = database.fixoDao()
+    val dao = database.fixoDao()
     private val scope = CoroutineScope(Dispatchers.IO)
     private val api = com.example.data.remote.NetworkClient.getApiService()
 
@@ -319,6 +323,14 @@ class FixoRepository(context: Context) {
         return booking
     }
 
+    suspend fun updateBooking(booking: Booking) {
+        dao.updateBooking(booking)
+    }
+
+    suspend fun getBookingByIdDirect(bookingId: String): Booking? {
+        return dao.getBookingByIdDirect(bookingId)
+    }
+
     fun calculateHaversineDistanceKm(lat1: Double, lon1: Double, lat2: Double, lon2: Double): Double {
         val r = 6371.0 // Earth radius in km
         val dLat = Math.toRadians(lat2 - lat1)
@@ -337,10 +349,11 @@ class FixoRepository(context: Context) {
         return Math.max(1, (hours * 60.0).roundToInt())
     }
 
-    suspend fun startWorkerTrip(bookingId: String, currentLat: Double, currentLng: Double) {
+    suspend fun startWorkerTrip(bookingId: String, currentLat: Double, currentLng: Double, statusToSet: JobStatus = JobStatus.ARTISAN_EN_ROUTE) {
         val booking = dao.getBookingByIdDirect(bookingId) ?: return
         // State Machine validation
-        if (booking.status != JobStatus.ACCEPTED && booking.status != JobStatus.SCHEDULED && booking.status != JobStatus.REQUESTED) {
+        if (booking.status != JobStatus.ACCEPTED && booking.status != JobStatus.SCHEDULED && 
+            booking.status != JobStatus.REQUESTED && booking.status != JobStatus.DISPATCHED) {
             return
         }
 
@@ -348,7 +361,7 @@ class FixoRepository(context: Context) {
         val eta = calculateEtaMinutes(distance, 26.5)
 
         val updated = booking.copy(
-            status = JobStatus.ON_THE_WAY,
+            status = statusToSet,
             workerLat = currentLat,
             workerLng = currentLng,
             trackingActive = true,
@@ -401,7 +414,7 @@ class FixoRepository(context: Context) {
         dao.insertChatMessage(chatMsg)
 
         try {
-            api.updateJobStatus(bookingId, JobStatus.ON_THE_WAY.name)
+            api.updateJobStatus(bookingId, statusToSet.name)
         } catch (_: Exception) {}
     }
 
@@ -439,12 +452,13 @@ class FixoRepository(context: Context) {
         dao.insertWorkerLocation(loc)
     }
 
-    suspend fun markWorkerArrived(bookingId: String) {
+    suspend fun markWorkerArrived(bookingId: String, statusToSet: JobStatus = JobStatus.ON_SITE) {
         val booking = dao.getBookingByIdDirect(bookingId) ?: return
-        if (booking.status != JobStatus.ON_THE_WAY) return
+        if (!booking.status.isEnRoute && booking.status != JobStatus.ACCEPTED && booking.status != JobStatus.REQUESTED && booking.status != JobStatus.DISPATCHED) return
 
+        val targetStatus = if (statusToSet == JobStatus.ARRIVED) JobStatus.ARRIVED else JobStatus.ON_SITE
         val updated = booking.copy(
-            status = JobStatus.ARRIVED,
+            status = targetStatus,
             trackingActive = false,
             distanceKm = 0.0,
             etaMinutes = 0,
@@ -479,15 +493,71 @@ class FixoRepository(context: Context) {
         dao.insertChatMessage(chatMsg)
 
         try {
-            api.updateJobStatus(bookingId, JobStatus.ARRIVED.name)
+            api.updateJobStatus(bookingId, targetStatus.name)
         } catch (_: Exception) {}
     }
 
-    suspend fun startWork(bookingId: String) {
-        val booking = dao.getBookingByIdDirect(bookingId) ?: return
-        if (booking.status != JobStatus.ARRIVED) return
+    suspend fun submitInitialPhoto(bookingId: String, photoUrl: String, lat: Double = 4.0505, lng: Double = 9.6950): Boolean {
+        val booking = dao.getBookingByIdDirect(bookingId) ?: return false
+        val updated = booking.copy(
+            beforePhotoUrl = photoUrl,
+            beforePhotoTimestamp = System.currentTimeMillis(),
+            beforePhotoLat = lat,
+            beforePhotoLng = lng
+        )
+        dao.updateBooking(updated)
 
-        val updated = booking.copy(status = JobStatus.IN_PROGRESS)
+        val chatMsg = ChatMessage(
+            id = "msg_photo_before_" + UUID.randomUUID().toString().take(8),
+            bookingId = booking.id,
+            senderId = booking.workerId,
+            senderName = booking.workerName,
+            senderRole = UserRole.WORKER,
+            message = "📷 Photo d'état initial (avant travaux) certifiée Fixo Shield.",
+            attachmentUrl = photoUrl,
+            attachmentType = "IMAGE"
+        )
+        dao.insertChatMessage(chatMsg)
+        return true
+    }
+
+    suspend fun submitFinalPhoto(bookingId: String, photoUrl: String, lat: Double = 4.0505, lng: Double = 9.6950): Boolean {
+        val booking = dao.getBookingByIdDirect(bookingId) ?: return false
+        val updated = booking.copy(
+            afterPhotoUrl = photoUrl,
+            afterPhotoTimestamp = System.currentTimeMillis(),
+            afterPhotoLat = lat,
+            afterPhotoLng = lng,
+            workCompletedTimestamp = System.currentTimeMillis()
+        )
+        dao.updateBooking(updated)
+
+        val chatMsg = ChatMessage(
+            id = "msg_photo_after_" + UUID.randomUUID().toString().take(8),
+            bookingId = booking.id,
+            senderId = booking.workerId,
+            senderName = booking.workerName,
+            senderRole = UserRole.WORKER,
+            message = "📷 Photo d'état final (après réparation) certifiée Fixo Shield.",
+            attachmentUrl = photoUrl,
+            attachmentType = "IMAGE"
+        )
+        dao.insertChatMessage(chatMsg)
+        return true
+    }
+
+    suspend fun startWork(bookingId: String, requireBeforePhoto: Boolean = false, statusToSet: JobStatus = JobStatus.WORK_IN_PROGRESS): Boolean {
+        val booking = dao.getBookingByIdDirect(bookingId) ?: return false
+        if (!booking.status.isOnSite) return false
+        if (requireBeforePhoto && booking.beforePhotoUrl.isNullOrBlank()) {
+            return false // Chronomètre bloqué tant que photo avant non fournie
+        }
+
+        val targetStatus = if (statusToSet == JobStatus.IN_PROGRESS) JobStatus.IN_PROGRESS else JobStatus.WORK_IN_PROGRESS
+        val updated = booking.copy(
+            status = targetStatus,
+            workStartedTimestamp = System.currentTimeMillis()
+        )
         dao.updateBooking(updated)
 
         val chatMsg = ChatMessage(
@@ -501,15 +571,23 @@ class FixoRepository(context: Context) {
         dao.insertChatMessage(chatMsg)
 
         try {
-            api.updateJobStatus(bookingId, JobStatus.IN_PROGRESS.name)
+            api.updateJobStatus(bookingId, targetStatus.name)
         } catch (_: Exception) {}
+        return true
     }
 
-    suspend fun requestJobCompletion(bookingId: String) {
-        val booking = dao.getBookingByIdDirect(bookingId) ?: return
-        if (booking.status != JobStatus.IN_PROGRESS) return
+    suspend fun requestJobCompletion(bookingId: String, requireAfterPhoto: Boolean = false, statusToSet: JobStatus = JobStatus.COMPLETED_PENDING_HANDSHAKE): Boolean {
+        val booking = dao.getBookingByIdDirect(bookingId) ?: return false
+        if (!booking.status.isWorking) return false
+        if (requireAfterPhoto && booking.afterPhotoUrl.isNullOrBlank()) {
+            return false // Clôture bloquée sans photo après réparation
+        }
 
-        val updated = booking.copy(status = JobStatus.COMPLETION_REQUESTED)
+        val targetStatus = if (statusToSet == JobStatus.COMPLETION_REQUESTED) JobStatus.COMPLETION_REQUESTED else JobStatus.COMPLETED_PENDING_HANDSHAKE
+        val updated = booking.copy(
+            status = targetStatus,
+            workCompletedTimestamp = System.currentTimeMillis()
+        )
         dao.updateBooking(updated)
 
         val notif = FixoNotification(
@@ -535,8 +613,57 @@ class FixoRepository(context: Context) {
         dao.insertChatMessage(chatMsg)
 
         try {
-            api.updateJobStatus(bookingId, JobStatus.COMPLETION_REQUESTED.name)
+            api.updateJobStatus(bookingId, targetStatus.name)
         } catch (_: Exception) {}
+        return true
+    }
+
+    suspend fun simulateArrivalAndPhotos(bookingId: String) {
+        val booking = dao.getBookingByIdDirect(bookingId) ?: return
+
+        // 1. Mark arrived / ON_SITE
+        val onSiteBooking = booking.copy(
+            status = JobStatus.ON_SITE,
+            trackingActive = false,
+            distanceKm = 0.0,
+            etaMinutes = 0
+        )
+        dao.updateBooking(onSiteBooking)
+
+        // 2. Submit initial photo
+        val beforePhotoUrl = "https://images.unsplash.com/photo-1585704032915-c3400ca199e7?w=600&auto=format&fit=crop"
+        submitInitialPhoto(bookingId, beforePhotoUrl)
+
+        // 3. Start work / WORK_IN_PROGRESS
+        startWork(bookingId, requireBeforePhoto = true, statusToSet = JobStatus.WORK_IN_PROGRESS)
+
+        // 4. Submit final photo
+        val afterPhotoUrl = "https://images.unsplash.com/photo-1584622650111-993a426fbf0a?w=600&auto=format&fit=crop"
+        submitFinalPhoto(bookingId, afterPhotoUrl)
+    }
+
+    suspend fun sendWorkroomChatMessage(
+        bookingId: String,
+        senderId: String,
+        senderName: String,
+        senderRole: UserRole,
+        text: String,
+        attachmentUrl: String? = null,
+        attachmentType: String? = null,
+        voiceDurationSeconds: Int? = null
+    ) {
+        val chatMsg = ChatMessage(
+            id = "msg_wr_" + UUID.randomUUID().toString().take(8),
+            bookingId = bookingId,
+            senderId = senderId,
+            senderName = senderName,
+            senderRole = senderRole,
+            message = text,
+            attachmentUrl = attachmentUrl,
+            attachmentType = attachmentType,
+            voiceDurationSeconds = voiceDurationSeconds
+        )
+        dao.insertChatMessage(chatMsg)
     }
 
     suspend fun updateJobStatus(bookingId: String, newStatus: JobStatus) {
@@ -545,19 +672,35 @@ class FixoRepository(context: Context) {
         // Route to specialized lifecycle transitions
         when (newStatus) {
             JobStatus.ON_THE_WAY -> {
-                startWorkerTrip(bookingId, booking.workerLat, booking.workerLng)
+                startWorkerTrip(bookingId, booking.workerLat, booking.workerLng, JobStatus.ON_THE_WAY)
+                return
+            }
+            JobStatus.ARTISAN_EN_ROUTE -> {
+                startWorkerTrip(bookingId, booking.workerLat, booking.workerLng, JobStatus.ARTISAN_EN_ROUTE)
                 return
             }
             JobStatus.ARRIVED -> {
-                markWorkerArrived(bookingId)
+                markWorkerArrived(bookingId, JobStatus.ARRIVED)
+                return
+            }
+            JobStatus.ON_SITE -> {
+                markWorkerArrived(bookingId, JobStatus.ON_SITE)
                 return
             }
             JobStatus.IN_PROGRESS -> {
-                startWork(bookingId)
+                startWork(bookingId, false, JobStatus.IN_PROGRESS)
+                return
+            }
+            JobStatus.WORK_IN_PROGRESS -> {
+                startWork(bookingId, false, JobStatus.WORK_IN_PROGRESS)
                 return
             }
             JobStatus.COMPLETION_REQUESTED -> {
-                requestJobCompletion(bookingId)
+                requestJobCompletion(bookingId, false, JobStatus.COMPLETION_REQUESTED)
+                return
+            }
+            JobStatus.COMPLETED_PENDING_HANDSHAKE -> {
+                requestJobCompletion(bookingId, false, JobStatus.COMPLETED_PENDING_HANDSHAKE)
                 return
             }
             else -> {}

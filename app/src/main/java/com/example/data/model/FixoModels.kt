@@ -82,12 +82,17 @@ enum class ServiceCategory(val displayName: String, val iconKey: String) {
 
 enum class JobStatus(val displayName: String) {
     REQUESTED("Requested"),
+    DISPATCHED("Dispatched"),
     ACCEPTED("Accepted"),
     SCHEDULED("Scheduled"),
     ON_THE_WAY("On The Way"),
+    ARTISAN_EN_ROUTE("Artisan En Route"),
     ARRIVED("Arrived"),
+    ON_SITE("On Site"),
     IN_PROGRESS("In Progress"),
+    WORK_IN_PROGRESS("Work In Progress"),
     COMPLETION_REQUESTED("Completion Requested"),
+    COMPLETED_PENDING_HANDSHAKE("Completed Pending Handshake"),
     COMPLETED("Completed"),
     CANCELLED("Cancelled"),
     DISPUTED("Disputed");
@@ -96,6 +101,21 @@ enum class JobStatus(val displayName: String) {
         val EN_ROUTE = ON_THE_WAY
     }
 }
+
+val JobStatus.isDispatched: Boolean
+    get() = this == JobStatus.REQUESTED || this == JobStatus.DISPATCHED
+
+val JobStatus.isEnRoute: Boolean
+    get() = this == JobStatus.ON_THE_WAY || this == JobStatus.ARTISAN_EN_ROUTE
+
+val JobStatus.isOnSite: Boolean
+    get() = this == JobStatus.ARRIVED || this == JobStatus.ON_SITE
+
+val JobStatus.isWorking: Boolean
+    get() = this == JobStatus.IN_PROGRESS || this == JobStatus.WORK_IN_PROGRESS
+
+val JobStatus.isCompletionPending: Boolean
+    get() = this == JobStatus.COMPLETION_REQUESTED || this == JobStatus.COMPLETED_PENDING_HANDSHAKE
 
 enum class EscrowStatus {
     HOLDING,
@@ -236,7 +256,18 @@ data class Booking(
     val workerSpeedKmh: Float = 25.0f,
     val workerHeading: Float = 45.0f,
     val lastLocationUpdate: Long = System.currentTimeMillis(),
-    val createdAt: Long = System.currentTimeMillis()
+    val createdAt: Long = System.currentTimeMillis(),
+    val beforePhotoUrl: String? = null,
+    val beforePhotoTimestamp: Long? = null,
+    val beforePhotoLat: Double? = null,
+    val beforePhotoLng: Double? = null,
+    val afterPhotoUrl: String? = null,
+    val afterPhotoTimestamp: Long? = null,
+    val afterPhotoLat: Double? = null,
+    val afterPhotoLng: Double? = null,
+    val workStartedTimestamp: Long? = null,
+    val workCompletedTimestamp: Long? = null,
+    val packageTier: String = "FLASH"
 )
 
 @Entity(tableName = "worker_locations")
@@ -289,8 +320,10 @@ data class ChatMessage(
     val timestamp: Long = System.currentTimeMillis(),
     val isRead: Boolean = true,
     val attachmentUrl: String? = null,
-    val attachmentType: String? = null, // IMAGE, DOCUMENT
-    val deliveryState: String = "DELIVERED" // SENDING, SENT, DELIVERED, READ, FAILED
+    val attachmentType: String? = null, // IMAGE, DOCUMENT, VOICE, ANNOTATED_IMAGE
+    val deliveryState: String = "DELIVERED", // SENDING, SENT, DELIVERED, READ, FAILED
+    val voiceDurationSeconds: Int? = null,
+    val annotationPathsJson: String? = null
 )
 
 data class ConversationItem(

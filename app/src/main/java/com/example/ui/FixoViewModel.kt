@@ -490,6 +490,101 @@ class FixoViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
+    fun confirmBookingEscrow(
+        packageOption: com.example.ui.screens.customer.BookingPackageOption,
+        operator: com.example.data.model.CameroonMobileOperator,
+        phone: String,
+        address: String,
+        notes: String
+    ) {
+        val worker = _uiState.value.selectedWorker ?: _uiState.value.allWorkers.firstOrNull() ?: return
+        val service = _uiState.value.selectedServiceForBooking ?: com.example.data.model.ServiceItem(
+            id = "srv_flash_plumb",
+            workerId = worker.id,
+            name = "Plomberie sanitaire (Fuite d'eau standard)",
+            category = com.example.data.model.ServiceCategory.PLUMBING,
+            description = "Réparation immédiate de fuite sous évier, tuyauterie cuivre / PVC",
+            price = packageOption.price
+        )
+        val customer = _uiState.value.currentUser ?: return
+
+        val paymentMethod = if (operator == com.example.data.model.CameroonMobileOperator.ORANGE_MONEY) {
+            PaymentMethod.ORANGE_MONEY
+        } else {
+            PaymentMethod.MTN_MOMO
+        }
+
+        viewModelScope.launch {
+            val booking = repository.createBooking(
+                customerId = customer.id,
+                customerName = customer.name,
+                worker = worker,
+                service = service.copy(price = packageOption.price),
+                date = "Aujourd'hui",
+                timeSlot = if (packageOption == com.example.ui.screens.customer.BookingPackageOption.FLASH) "Immédiat (< 30 min)" else "Standard (1-2h)",
+                address = address,
+                notes = notes,
+                paymentMethod = paymentMethod
+            )
+
+            // Update to DISPATCHED
+            val dispatchedBooking = booking.copy(
+                status = com.example.data.model.JobStatus.DISPATCHED,
+                packageTier = packageOption.name
+            )
+            repository.updateBooking(dispatchedBooking)
+
+            _uiState.value = _uiState.value.copy(
+                isBookingDialogVisible = false,
+                selectedBooking = dispatchedBooking
+            )
+            showToast("Séquestre verrouillé : ${com.example.data.model.formatFixoCurrency(packageOption.price)} sécurisés dans le coffre Fixo.")
+        }
+    }
+
+    fun submitInitialPhoto(bookingId: String, photoUrl: String) {
+        viewModelScope.launch {
+            repository.submitInitialPhoto(bookingId, photoUrl)
+            showToast("📷 Photo avant travaux enregistrée et certifiée.")
+        }
+    }
+
+    fun submitFinalPhoto(bookingId: String, photoUrl: String) {
+        viewModelScope.launch {
+            repository.submitFinalPhoto(bookingId, photoUrl)
+            showToast("📷 Photo après réparation enregistrée et certifiée.")
+        }
+    }
+
+    fun simulateArrivalAndPhotos(bookingId: String) {
+        viewModelScope.launch {
+            repository.simulateArrivalAndPhotos(bookingId)
+            showToast("⚡ Simulation exécutée : Arrivée sur site et photos certifiées !")
+        }
+    }
+
+    fun sendWorkroomChatMessage(
+        bookingId: String,
+        text: String,
+        attachmentUrl: String?,
+        attachmentType: String?,
+        durationSec: Int?
+    ) {
+        val user = _uiState.value.currentUser ?: return
+        viewModelScope.launch {
+            repository.sendWorkroomChatMessage(
+                bookingId = bookingId,
+                senderId = user.id,
+                senderName = user.name,
+                senderRole = user.role,
+                text = text,
+                attachmentUrl = attachmentUrl,
+                attachmentType = attachmentType,
+                voiceDurationSeconds = durationSec
+            )
+        }
+    }
+
     fun advanceJobStatus(bookingId: String, newStatus: com.example.data.model.JobStatus) {
         viewModelScope.launch {
             repository.updateJobStatus(bookingId, newStatus)

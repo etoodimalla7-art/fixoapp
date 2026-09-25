@@ -51,6 +51,8 @@ import com.example.ui.components.WithdrawDialog
 import com.example.ui.screens.admin.AdminPortalScreen
 import com.example.ui.screens.chat.ChatDetailScreen
 import com.example.ui.screens.chat.ConversationsScreen
+import com.example.ui.screens.chat.LiveWorkroomChat
+import com.example.ui.screens.customer.BookingCheckoutModal
 import com.example.ui.screens.customer.CustomerActivityScreen
 import com.example.ui.screens.customer.CustomerHomeScreen
 import com.example.ui.screens.customer.CustomerServicesScreen
@@ -67,9 +69,11 @@ import com.example.ui.screens.profile.VerificationCenterScreen
 import com.example.ui.screens.reels.ReelsFeedScreen
 import com.example.ui.screens.splash.FixoSplashScreen
 import com.example.ui.screens.wallet.WalletRewardsScreen
+import com.example.ui.screens.worker.JobNavigationScreen
 import com.example.ui.screens.worker.WorkerDashboardScreen
 import com.example.ui.theme.FixoNavy900
 
+@OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
 @Composable
 fun FixoApp(
     viewModel: FixoViewModel = viewModel(),
@@ -92,6 +96,7 @@ fun FixoApp(
     var isViewingWorkforceRecruitment by remember { mutableStateOf(false) }
     var isViewingPatrolMap by remember { mutableStateOf(false) }
     var selectedOrganization by remember { mutableStateOf<Organization?>(null) }
+    var activeReelId by remember { mutableStateOf<String?>(null) }
 
     // When role changes, reset tab to 0
     LaunchedEffect(uiState.currentRole) {
@@ -317,22 +322,17 @@ fun FixoApp(
                         ?: uiState.workerBookings.find { it.id == activeChatBookingId }
                         ?: uiState.selectedBooking
                     if (chatBooking != null) {
-                        ChatDetailScreen(
+                        LiveWorkroomChat(
                             booking = chatBooking,
                             messages = uiState.chatMessages.ifEmpty { uiState.allMessages.filter { it.bookingId == chatBooking.id } },
-                            currentUserId = uiState.currentUser?.id ?: "usr_cust_1",
                             currentUserRole = uiState.currentRole,
-                            onSendMessage = { text, attachmentUrl, attachmentType ->
-                                viewModel.sendChatMessageWithAttachment(chatBooking.id, text, attachmentUrl, attachmentType)
-                            },
-                            onBackClicked = {
+                            currentUserId = uiState.currentUser?.id ?: "usr_cust_1",
+                            language = uiState.currentLanguage,
+                            onBack = {
                                 activeChatBookingId = null
                             },
-                            onViewJobClicked = {
-                                activeChatBookingId = null
-                                isViewingConversations = false
-                                viewModel.selectBooking(chatBooking)
-                                viewingJobId = chatBooking.id
+                            onSendMessage = { text, attachmentUrl, attachmentType, durationSec ->
+                                viewModel.sendWorkroomChatMessage(chatBooking.id, text, attachmentUrl, attachmentType, durationSec)
                             }
                         )
                     } else {
@@ -478,7 +478,17 @@ fun FixoApp(
                                 },
                                 onOpenFullChat = {
                                     activeChatBookingId = activeBooking.id
-                                }
+                                },
+                                onTakeBeforePhoto = { photoUrl ->
+                                    viewModel.submitInitialPhoto(activeBooking.id, photoUrl)
+                                },
+                                onTakeAfterPhoto = { photoUrl ->
+                                    viewModel.submitFinalPhoto(activeBooking.id, photoUrl)
+                                },
+                                onSimulateArrivalAndPhotos = {
+                                    viewModel.simulateArrivalAndPhotos(activeBooking.id)
+                                },
+                                language = uiState.currentLanguage
                             )
                         }
 
@@ -505,8 +515,12 @@ fun FixoApp(
                                         viewModel.selectBooking(booking)
                                         viewingJobId = booking.id
                                     },
-                                    onWatchReelsClicked = { selectedTab = 3 },
+                                    onWatchReelsClicked = {
+                                        activeReelId = null
+                                        selectedTab = 3
+                                    },
                                     onWatchSpecificReel = { reel ->
+                                        activeReelId = reel.id
                                         selectedTab = 3
                                     },
                                     onToggleLanguage = { viewModel.toggleLanguage() },
@@ -558,6 +572,12 @@ fun FixoApp(
                                 3 -> ReelsFeedScreen(
                                     reels = uiState.reels,
                                     allWorkers = uiState.allWorkers,
+                                    initialReelId = activeReelId,
+                                    language = uiState.currentLanguage,
+                                    savedWorkerIds = uiState.savedWorkerIds,
+                                    onToggleSaveWorker = { workerId ->
+                                        viewModel.toggleSaveWorker(workerId)
+                                    },
                                     onLikeReel = { viewModel.likeReel(it) },
                                     onBookFromReel = { reel, worker ->
                                         val service = uiState.workerServices.firstOrNull() ?: com.example.data.model.ServiceItem(
@@ -617,6 +637,7 @@ fun FixoApp(
                             workerProfile = uiState.allWorkers.firstOrNull(),
                             bookings = uiState.workerBookings,
                             reels = uiState.reels,
+                            language = uiState.currentLanguage,
                             onSelectBooking = { booking ->
                                 viewModel.selectBooking(booking)
                                 viewingJobId = booking.id
@@ -636,6 +657,7 @@ fun FixoApp(
                             workerProfile = uiState.allWorkers.firstOrNull(),
                             bookings = uiState.workerBookings,
                             reels = uiState.reels,
+                            language = uiState.currentLanguage,
                             onSelectBooking = { booking ->
                                 viewModel.selectBooking(booking)
                                 viewingJobId = booking.id
@@ -662,32 +684,31 @@ fun FixoApp(
                         3 -> {
                             val activeJob = uiState.selectedBooking ?: uiState.workerBookings.firstOrNull() ?: uiState.customerBookings.firstOrNull()
                             if (activeJob != null) {
-                                JobTrackingScreen(
+                                JobNavigationScreen(
                                     booking = activeJob,
-                                    chatMessages = uiState.chatMessages,
-                                    activeLocation = uiState.activeWorkerLocation,
-                                    currentRole = uiState.currentRole,
+                                    language = uiState.currentLanguage,
                                     onBack = { selectedTab = 0 },
-                                    onStartTrip = {
-                                        viewModel.openStartTripConfirmation(activeJob)
-                                    },
                                     onMarkArrived = {
                                         viewModel.markWorkerArrived(activeJob.id)
+                                    },
+                                    onTakeBeforePhoto = { photoUrl ->
+                                        viewModel.submitInitialPhoto(activeJob.id, photoUrl)
                                     },
                                     onStartWork = {
                                         viewModel.startWork(activeJob.id)
                                     },
-                                    onRequestCompletion = {
+                                    onTakeAfterPhoto = { photoUrl ->
+                                        viewModel.submitFinalPhoto(activeJob.id, photoUrl)
+                                    },
+                                    onGeneratePaymentQr = {
                                         viewModel.requestJobCompletion(activeJob.id)
                                     },
-                                    onAdvanceStatus = { status ->
-                                        viewModel.advanceJobStatus(activeJob.id, status)
+                                    onOpenWorkroomChat = {
+                                        activeChatBookingId = activeJob.id
                                     },
-                                    onOpenReview = { viewModel.openReviewDialog(activeJob) },
-                                    onSendMessage = { msg -> viewModel.sendChatMessage(msg) },
-                                    onOpenDispute = { viewModel.openDisputeDialog() },
-                                    onCancelBooking = { viewModel.cancelBooking(activeJob.id) },
-                                    onOpenFullChat = { activeChatBookingId = activeJob.id }
+                                    onSimulateArrivalAndPhotos = {
+                                        viewModel.simulateArrivalAndPhotos(activeJob.id)
+                                    }
                                 )
                             } else {
                                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
@@ -744,14 +765,24 @@ fun FixoApp(
 }
 }
 
-    // Interactive Dialogs
-    if (uiState.isBookingDialogVisible && uiState.selectedServiceForBooking != null && uiState.selectedWorker != null) {
-        BookingDialog(
-            worker = uiState.selectedWorker!!,
-            service = uiState.selectedServiceForBooking!!,
+    // Interactive Dialogs & Modals
+    if (uiState.isBookingDialogVisible && uiState.selectedWorker != null) {
+        val worker = uiState.selectedWorker!!
+        val service = uiState.selectedServiceForBooking ?: com.example.data.model.ServiceItem(
+            id = "srv_flash_plumb",
+            workerId = worker.id,
+            name = "Plomberie sanitaire (Fuite d'eau standard)",
+            category = com.example.data.model.ServiceCategory.PLUMBING,
+            description = "Réparation immédiate de fuite sous évier, tuyauterie cuivre / PVC",
+            price = 15000.0
+        )
+        BookingCheckoutModal(
+            worker = worker,
+            service = service,
+            language = uiState.currentLanguage,
             onDismiss = { viewModel.closeBookingDialog() },
-            onConfirm = { date, slot, address, notes, payment ->
-                viewModel.confirmBooking(date, slot, address, notes, payment)
+            onConfirmEscrowLock = { packageOption, operator, phone, address, notes ->
+                viewModel.confirmBookingEscrow(packageOption, operator, phone, address, notes)
             }
         )
     }

@@ -99,6 +99,7 @@ import com.example.ui.theme.FixoEmerald50
 import com.example.ui.theme.FixoEmerald500
 import com.example.ui.theme.FixoEmerald600
 import com.example.ui.theme.FixoGold500
+import com.example.ui.theme.FixoGold600
 import com.example.ui.theme.FixoNavy800
 import com.example.ui.theme.FixoNavy900
 import com.example.ui.theme.FixoRed500
@@ -112,6 +113,15 @@ import com.example.ui.theme.FixoSlate800
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+
+import com.example.localization.AppLanguage
+import com.example.localization.FixoStrings
+import com.example.ui.screens.chat.MaskedVoipCallDialog
+import com.example.ui.screens.chat.ZeroCashOmnipresentBanner
+import com.example.ui.screens.worker.PhotoInspectionProtocolCard
+import androidx.compose.material.icons.filled.Bolt
+import androidx.compose.material.icons.filled.DirectionsCar
+import androidx.compose.material.icons.filled.Chat
 
 @Composable
 fun JobTrackingScreen(
@@ -130,11 +140,16 @@ fun JobTrackingScreen(
     onOpenDispute: () -> Unit,
     onCancelBooking: () -> Unit,
     onOpenFullChat: () -> Unit = {},
+    onTakeBeforePhoto: (String) -> Unit = {},
+    onTakeAfterPhoto: (String) -> Unit = {},
+    onSimulateArrivalAndPhotos: () -> Unit = {},
+    language: AppLanguage = AppLanguage.FR,
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
     var messageInput by remember { mutableStateOf("") }
     var showCancelDialog by remember { mutableStateOf(false) }
+    var showMaskedCall by remember { mutableStateOf(false) }
 
     // Dynamic coordinates resolution
     val workerLat = activeLocation?.latitude ?: (if (booking.workerLat != 0.0) booking.workerLat else 4.0380)
@@ -206,10 +221,102 @@ fun JobTrackingScreen(
                                 modifier = Modifier.size(16.dp)
                             )
                             Spacer(modifier = Modifier.width(4.dp))
-                            Text("Dispute", color = FixoRed500, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                            Text("🛡️ Centre de litige & assistance", color = FixoRed500, fontSize = 11.sp, fontWeight = FontWeight.Bold)
                         }
                     }
                 }
+            }
+        }
+
+        // Zero-Cash Contract Mandatory Banner
+        item {
+            ZeroCashOmnipresentBanner(language = language)
+        }
+
+        // Sandbox Simulation Button
+        item {
+            OutlinedButton(
+                onClick = onSimulateArrivalAndPhotos,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 4.dp)
+                    .height(42.dp)
+                    .testTag("simulate_arrival_photos_button"),
+                shape = RoundedCornerShape(10.dp),
+                colors = ButtonDefaults.outlinedButtonColors(contentColor = FixoGold600)
+            ) {
+                Icon(imageVector = Icons.Default.Bolt, contentDescription = null, tint = FixoGold600, modifier = Modifier.size(18.dp))
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(
+                    text = "⚡ Simuler Arrivée & Photos (Test Sandbox)",
+                    style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold)
+                )
+            }
+        }
+
+        // Shortcut to Live Workroom Chat
+        item {
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 4.dp)
+                    .clickable { onOpenFullChat() }
+                    .testTag("open_workroom_chat_card"),
+                shape = RoundedCornerShape(14.dp),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+            ) {
+                Row(
+                    modifier = Modifier.padding(14.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(40.dp)
+                            .clip(CircleShape)
+                            .background(FixoGold500.copy(alpha = 0.2f)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(imageVector = Icons.Default.Chat, contentDescription = null, tint = FixoNavy900)
+                    }
+                    Spacer(modifier = Modifier.width(12.dp))
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = "Salon de Chantier en Direct",
+                            style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold)
+                        )
+                        Text(
+                            text = "Notes vocales PTT, annotations photo & VoIP masqué",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                    Surface(
+                        color = FixoEmerald500.copy(alpha = 0.15f),
+                        shape = RoundedCornerShape(12.dp)
+                    ) {
+                        Text(
+                            text = "Accéder 🟢",
+                            style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
+                            color = FixoEmerald600,
+                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                        )
+                    }
+                }
+            }
+        }
+
+        // Photo Inspection Protocol Card
+        item {
+            Box(modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)) {
+                PhotoInspectionProtocolCard(
+                    booking = booking,
+                    isArtisan = currentRole == UserRole.WORKER,
+                    language = language,
+                    onTakeBeforePhoto = onTakeBeforePhoto,
+                    onTakeAfterPhoto = onTakeAfterPhoto,
+                    onStartWork = onStartWork,
+                    onGeneratePaymentQr = onRequestCompletion
+                )
             }
         }
 
@@ -302,20 +409,50 @@ fun JobTrackingScreen(
 
                 Spacer(modifier = Modifier.height(10.dp))
 
-                // High-performance Live Vector Tracking Canvas
-                LiveTrackingMap(
-                    workerLat = workerLat,
-                    workerLng = workerLng,
-                    customerLat = customerLat,
-                    customerLng = customerLng,
-                    workerName = booking.workerName,
-                    destinationAddress = booking.address,
-                    isTrackingActive = isTrackingLive,
-                    workerSpeedKmh = booking.workerSpeedKmh,
-                    workerHeading = booking.workerHeading,
-                    etaMinutes = etaMinutes,
-                    distanceKm = distanceKm
-                )
+                // High-performance Live Vector Tracking Canvas with Floating Telemetry Banner
+                Box(modifier = Modifier.fillMaxWidth()) {
+                    LiveTrackingMap(
+                        workerLat = workerLat,
+                        workerLng = workerLng,
+                        customerLat = customerLat,
+                        customerLng = customerLng,
+                        workerName = booking.workerName,
+                        destinationAddress = booking.address,
+                        isTrackingActive = isTrackingLive,
+                        workerSpeedKmh = booking.workerSpeedKmh,
+                        workerHeading = booking.workerHeading,
+                        etaMinutes = etaMinutes,
+                        distanceKm = distanceKm
+                    )
+
+                    // Floating Telemetric Banner
+                    Surface(
+                        modifier = Modifier
+                            .padding(12.dp)
+                            .align(Alignment.TopStart)
+                            .testTag("floating_telemetry_banner"),
+                        shape = RoundedCornerShape(20.dp),
+                        color = FixoNavy900.copy(alpha = 0.88f)
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.DirectionsCar,
+                                contentDescription = null,
+                                tint = FixoGold500,
+                                modifier = Modifier.size(15.dp)
+                            )
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text(
+                                text = "Arrivée dans ~8 min (2.1 km) • En moto • 26 km/h",
+                                style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
+                                color = Color.White
+                            )
+                        }
+                    }
+                }
 
                 // Location privacy notice (Phase 8 Requirement)
                 Spacer(modifier = Modifier.height(6.dp))
@@ -404,30 +541,51 @@ fun JobTrackingScreen(
                             }
                         }
 
-                        // Direct Call Action
-                        Surface(
-                            shape = CircleShape,
-                            color = FixoEmerald50,
-                            modifier = Modifier
-                                .size(44.dp)
-                                .clip(CircleShape)
-                                .clickable {
-                                    val dialIntent = Intent(Intent.ACTION_DIAL).apply {
-                                        data = Uri.parse("tel:${booking.workerPhone}")
-                                    }
-                                    try {
-                                        context.startActivity(dialIntent)
-                                    } catch (_: Exception) {}
+                        // Direct Call Action & Masked VoIP Call Action
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+                            Surface(
+                                shape = CircleShape,
+                                color = FixoEmerald50,
+                                modifier = Modifier
+                                    .size(44.dp)
+                                    .clip(CircleShape)
+                                    .clickable { showMaskedCall = true }
+                                    .testTag("masked_call_button")
+                            ) {
+                                Box(contentAlignment = Alignment.Center) {
+                                    Icon(
+                                        imageVector = Icons.Default.Call,
+                                        contentDescription = "Appel Masqué VoIP",
+                                        tint = FixoEmerald600,
+                                        modifier = Modifier.size(20.dp)
+                                    )
                                 }
-                                .testTag("call_worker_button")
-                        ) {
-                            Box(contentAlignment = Alignment.Center) {
-                                Icon(
-                                    imageVector = Icons.Default.Phone,
-                                    contentDescription = "Call Artisan",
-                                    tint = FixoEmerald600,
-                                    modifier = Modifier.size(20.dp)
-                                )
+                            }
+
+                            Surface(
+                                shape = CircleShape,
+                                color = FixoEmerald50,
+                                modifier = Modifier
+                                    .size(44.dp)
+                                    .clip(CircleShape)
+                                    .clickable {
+                                        val dialIntent = Intent(Intent.ACTION_DIAL).apply {
+                                            data = Uri.parse("tel:${booking.workerPhone}")
+                                        }
+                                        try {
+                                            context.startActivity(dialIntent)
+                                        } catch (_: Exception) {}
+                                    }
+                                    .testTag("call_worker_button")
+                            ) {
+                                Box(contentAlignment = Alignment.Center) {
+                                    Icon(
+                                        imageVector = Icons.Default.Phone,
+                                        contentDescription = "Call Artisan",
+                                        tint = FixoEmerald600,
+                                        modifier = Modifier.size(20.dp)
+                                    )
+                                }
                             }
                         }
                     }
@@ -1032,6 +1190,14 @@ fun JobTrackingScreen(
                     Text("Keep Appointment")
                 }
             }
+        )
+    }
+
+    if (showMaskedCall) {
+        MaskedVoipCallDialog(
+            otherPartyName = booking.workerName,
+            otherPartyAvatar = booking.workerAvatar,
+            onDismiss = { showMaskedCall = false }
         )
     }
 }

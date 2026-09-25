@@ -93,6 +93,46 @@
     "pro_nav_missions": "Missions",
     "pro_nav_profile": "Profil Pro"
   },
+  "worker": {
+    "topbar": {
+      "online": "EN LIGNE",
+      "offline": "PAUSE",
+      "master_craftsman": "Maître Artisan",
+      "simulate_alert": "⚡ Simuler Alerte Flash"
+    },
+    "earnings": {
+      "available_title": "Solde disponible",
+      "available_subtitle": "Prêt pour virement MTN / Orange MoMo",
+      "escrow_title": "Fonds sous séquestre",
+      "escrow_subtitle": "Garanti par FIXO. Débloqué dès scan du client.",
+      "cashout_button": "⚡ Retirer mes gains (Cash-Out)"
+    },
+    "stats": {
+      "rating": "Note Moyenne",
+      "rating_sub": "124 avis vérifiés",
+      "punctuality": "Ponctualité / Flash",
+      "punctuality_sub": "à l'heure sur les urgences < 30 min",
+      "tier_master": "Maître Artisan (8%)",
+      "tier_progress": "3 chantiers restants pour conserver les privilèges"
+    },
+    "alert": {
+      "title": "🚨 NOUVELLE MISSION FLASH EXPRESS",
+      "net_earning": "Rémunération Nette Garantie",
+      "slide_label": ">>> GLISSER POUR ACCEPTER ({amount}) >>>",
+      "decline": "✕ Refuser la mission",
+      "requirement_sub": "Arrivée sur site sous 30 minutes requise",
+      "secured_escrow": "Paiement intégralement provisionné sous séquestre"
+    },
+    "reels_prompt": {
+      "title": "📹 Boostez vos commandes chantiers",
+      "subtitle": "Les artisans actifs sur les Reels reçoivent jusqu'à 4x plus d'interventions directes.",
+      "cta": "+ Filmer une réparation de 30s"
+    },
+    "planning": {
+      "next_job_title": "Prochaine intervention",
+      "queue_empty": "Aucune autre intervention planifiée pour le moment"
+    }
+  },
   "trust_seals": {
     "cni": "Identité Biométrique Validée (CNI / Passeport vérifié)",
     "record": "Casier Judiciaire Vierge (Bulletin n°3 vérifié)",
