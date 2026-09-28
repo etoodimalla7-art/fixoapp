@@ -45,6 +45,9 @@ import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.ThumbUp
 import androidx.compose.material.icons.filled.Verified
 import androidx.compose.material.icons.filled.Warning
+import androidx.compose.material.icons.filled.QrCodeScanner
+import com.example.data.model.isClosed
+import com.example.ui.theme.FixoSuccessGreen
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -143,6 +146,8 @@ fun JobTrackingScreen(
     onTakeBeforePhoto: (String) -> Unit = {},
     onTakeAfterPhoto: (String) -> Unit = {},
     onSimulateArrivalAndPhotos: () -> Unit = {},
+    onScanClosingQr: () -> Unit = {},
+    onOpenWarrantyClaim: () -> Unit = {},
     language: AppLanguage = AppLanguage.FR,
     modifier: Modifier = Modifier
 ) {
@@ -925,18 +930,56 @@ fun JobTrackingScreen(
                     if (booking.escrowStatus == EscrowStatus.HOLDING) {
                         Spacer(modifier = Modifier.height(12.dp))
                         Button(
+                            onClick = onScanClosingQr,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(50.dp)
+                                .testTag("scan_closing_qr_cta"),
+                            shape = RoundedCornerShape(12.dp),
+                            colors = ButtonDefaults.buttonColors(containerColor = FixoGold500)
+                        ) {
+                            Icon(imageVector = Icons.Default.QrCodeScanner, contentDescription = null, tint = Color.Black)
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(
+                                text = "📷 SCANNER LE QR CODE DE CLÔTURE",
+                                fontWeight = FontWeight.Bold,
+                                color = Color.Black
+                            )
+                        }
+
+                        Spacer(modifier = Modifier.height(8.dp))
+
+                        OutlinedButton(
                             onClick = onOpenReview,
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .height(46.dp)
+                                .height(44.dp)
                                 .testTag("release_escrow_cta"),
-                            shape = RoundedCornerShape(10.dp),
-                            colors = ButtonDefaults.buttonColors(containerColor = FixoEmerald600)
+                            shape = RoundedCornerShape(10.dp)
                         ) {
                             Text(
-                                text = "Inspect, Release Escrow & Review (+50 Points)",
+                                text = "Inspect, Release Escrow & Review",
+                                fontWeight = FontWeight.SemiBold
+                            )
+                        }
+                    } else if (booking.status.isClosed || booking.escrowStatus == EscrowStatus.RELEASED) {
+                        Spacer(modifier = Modifier.height(12.dp))
+                        Button(
+                            onClick = onOpenWarrantyClaim,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(48.dp)
+                                .testTag("open_warranty_claim_cta"),
+                            shape = RoundedCornerShape(12.dp),
+                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF14241B)),
+                            border = androidx.compose.foundation.BorderStroke(1.dp, FixoSuccessGreen)
+                        ) {
+                            Icon(imageVector = Icons.Default.Shield, contentDescription = null, tint = FixoSuccessGreen)
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(
+                                text = "🛡️ Garantie Active 14 Jours (Signaler Récidive)",
                                 fontWeight = FontWeight.Bold,
-                                color = Color.White
+                                color = FixoSuccessGreen
                             )
                         }
                     }

@@ -126,10 +126,15 @@ class SecureTokenStorage(private val context: Context) {
         }
     }
 
+    private fun getFallbackKey(): SecretKeySpec {
+        val digest = java.security.MessageDigest.getInstance("SHA-256")
+        val keyBytes = digest.digest((context.packageName + "FixoSecureSalt2026!").toByteArray(Charsets.UTF_8))
+        return SecretKeySpec(keyBytes, "AES")
+    }
+
     // JVM/Test fallback encryption using AES-256
     private fun fallbackEncrypt(plaintext: String): String {
-        val rawKey = (context.packageName + "FixoSecureSalt2026!").take(32).toByteArray(Charsets.UTF_8)
-        val keySpec = SecretKeySpec(rawKey, "AES")
+        val keySpec = getFallbackKey()
         val cipher = Cipher.getInstance("AES")
         cipher.init(Cipher.ENCRYPT_MODE, keySpec)
         val encrypted = cipher.doFinal(plaintext.toByteArray(Charsets.UTF_8))
@@ -140,8 +145,7 @@ class SecureTokenStorage(private val context: Context) {
         if (data == null) return null
         if (!data.startsWith("FALLBACK:")) return null
         val payload = data.removePrefix("FALLBACK:")
-        val rawKey = (context.packageName + "FixoSecureSalt2026!").take(32).toByteArray(Charsets.UTF_8)
-        val keySpec = SecretKeySpec(rawKey, "AES")
+        val keySpec = getFallbackKey()
         val cipher = Cipher.getInstance("AES")
         cipher.init(Cipher.DECRYPT_MODE, keySpec)
         val decrypted = cipher.doFinal(Base64.decode(payload, Base64.NO_WRAP))

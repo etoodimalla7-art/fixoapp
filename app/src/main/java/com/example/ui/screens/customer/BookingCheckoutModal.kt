@@ -20,6 +20,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Bolt
 import androidx.compose.material.icons.filled.CheckCircle
@@ -110,6 +111,7 @@ fun BookingCheckoutModal(
         notes: String
     ) -> Unit,
     modifier: Modifier = Modifier,
+    customerPoints: Int = 350,
     sheetState: SheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
 ) {
     var selectedPackage by remember { mutableStateOf(BookingPackageOption.FLASH) }
@@ -119,6 +121,7 @@ fun BookingCheckoutModal(
     var clientAddress by remember { mutableStateOf("Rue Drouot, Akwa, Douala") }
     var clientNotes by remember { mutableStateOf("Fuite importante sous évier cuisine, accès par portail noir") }
     var isProcessingUssd by remember { mutableStateOf(false) }
+    var usePoints by remember { mutableStateOf(false) }
 
     val coroutineScope = rememberCoroutineScope()
     val scrollState = rememberScrollState()
@@ -469,10 +472,53 @@ fun BookingCheckoutModal(
                 }
             }
 
-            Spacer(modifier = Modifier.height(24.dp))
+            Spacer(modifier = Modifier.height(14.dp))
+
+            // FIXO Rewards & Points Deduction Switch
+            if (customerPoints > 0) {
+                val discountAmount = customerPoints.toDouble()
+                Card(
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)),
+                    shape = RoundedCornerShape(12.dp),
+                    border = CardDefaults.outlinedCardBorder().copy(brush = Brush.horizontalGradient(listOf(FixoGold500.copy(alpha = 0.6f), FixoGold500.copy(alpha = 0.6f)))),
+                    modifier = Modifier.fillMaxWidth().testTag("rewards_points_switch_card")
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 14.dp, vertical = 10.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = "🏆 FIXO Rewards & Points",
+                                style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold, color = FixoGold500)
+                            )
+                            Spacer(modifier = Modifier.height(2.dp))
+                            Text(
+                                text = "Utiliser mon solde ($customerPoints PTS = -${formatFixoCurrency(discountAmount)})",
+                                style = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.Medium)
+                            )
+                        }
+                        androidx.compose.material3.Switch(
+                            checked = usePoints,
+                            onCheckedChange = { usePoints = it },
+                            colors = androidx.compose.material3.SwitchDefaults.colors(
+                                checkedThumbColor = FixoGold500,
+                                checkedTrackColor = Color(0xFF2C2413)
+                            ),
+                            modifier = Modifier.testTag("use_points_switch")
+                        )
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(20.dp))
 
             // 5. Locking Action Button (52 dp height, Gold)
-            val lockedAmount = formatFixoCurrency(selectedPackage.price)
+            val effectivePrice = if (usePoints) (selectedPackage.price - customerPoints).coerceAtLeast(0.0) else selectedPackage.price
+            val lockedAmount = formatFixoCurrency(effectivePrice)
             Button(
                 onClick = {
                     isProcessingUssd = true

@@ -71,6 +71,13 @@ import com.example.ui.screens.splash.FixoSplashScreen
 import com.example.ui.screens.wallet.WalletRewardsScreen
 import com.example.ui.screens.worker.JobNavigationScreen
 import com.example.ui.screens.worker.WorkerDashboardScreen
+import com.example.ui.screens.worker.InvoiceQrHandshakeScreen
+import com.example.ui.screens.worker.WorkerWalletScreen
+import com.example.ui.screens.worker.WorkerSettingsScreen
+import com.example.ui.screens.customer.QrScannerScreen
+import com.example.ui.screens.customer.WarrantyClaimScreen
+import com.example.ui.screens.customer.CustomerSettingsScreen
+import com.example.ui.screens.dispute.DisputeMediationScreen
 import com.example.ui.theme.FixoNavy900
 
 @OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
@@ -97,6 +104,12 @@ fun FixoApp(
     var isViewingPatrolMap by remember { mutableStateOf(false) }
     var selectedOrganization by remember { mutableStateOf<Organization?>(null) }
     var activeReelId by remember { mutableStateOf<String?>(null) }
+    var isViewingInvoiceQr by remember { mutableStateOf(false) }
+    var isViewingQrScanner by remember { mutableStateOf(false) }
+    var activeDisputeBookingId by remember { mutableStateOf<String?>(null) }
+    var activeWarrantyBookingId by remember { mutableStateOf<String?>(null) }
+    var isViewingCustomerSettings by remember { mutableStateOf(false) }
+    var isViewingWorkerSettings by remember { mutableStateOf(false) }
 
     // When role changes, reset tab to 0
     LaunchedEffect(uiState.currentRole) {
@@ -109,6 +122,12 @@ fun FixoApp(
         isViewingHelpCenter = false
         isViewingWorkforceRecruitment = false
         selectedOrganization = null
+        isViewingInvoiceQr = false
+        isViewingQrScanner = false
+        activeDisputeBookingId = null
+        activeWarrantyBookingId = null
+        isViewingCustomerSettings = false
+        isViewingWorkerSettings = false
     }
 
     // Show toast message when triggered
@@ -359,17 +378,126 @@ fun FixoApp(
                         }
                     )
                 }
-                isViewingWallet -> {
-                    WalletRewardsScreen(
+                isViewingInvoiceQr -> {
+                    val targetBooking = uiState.selectedBooking ?: uiState.workerBookings.firstOrNull() ?: uiState.customerBookings.firstOrNull()
+                    if (targetBooking != null) {
+                        InvoiceQrHandshakeScreen(
+                            booking = targetBooking,
+                            language = uiState.currentLanguage,
+                            onBack = { isViewingInvoiceQr = false },
+                            onSimulateCustomerScan = {
+                                viewModel.completeJobWithHandshake(targetBooking.id, targetBooking.handshakePin)
+                            }
+                        )
+                    } else {
+                        isViewingInvoiceQr = false
+                    }
+                }
+                isViewingQrScanner -> {
+                    val targetBooking = uiState.selectedBooking ?: uiState.customerBookings.firstOrNull()
+                    if (targetBooking != null) {
+                        QrScannerScreen(
+                            booking = targetBooking,
+                            language = uiState.currentLanguage,
+                            onBack = { isViewingQrScanner = false },
+                            onConfirmRelease = { pinOrPayload ->
+                                viewModel.completeJobWithHandshake(targetBooking.id, pinOrPayload)
+                                isViewingQrScanner = false
+                            },
+                            onOpenDispute = {
+                                isViewingQrScanner = false
+                                activeDisputeBookingId = targetBooking.id
+                            }
+                        )
+                    } else {
+                        isViewingQrScanner = false
+                    }
+                }
+                activeDisputeBookingId != null -> {
+                    val targetBooking = uiState.allBookings.find { it.id == activeDisputeBookingId }
+                        ?: uiState.customerBookings.find { it.id == activeDisputeBookingId }
+                        ?: uiState.workerBookings.find { it.id == activeDisputeBookingId }
+                        ?: uiState.selectedBooking
+                    if (targetBooking != null) {
+                        DisputeMediationScreen(
+                            booking = targetBooking,
+                            language = uiState.currentLanguage,
+                            onBack = { activeDisputeBookingId = null },
+                            onSubmitDispute = { reason, photos, notes ->
+                                viewModel.freezeDispute(targetBooking.id, reason, photos, notes)
+                                activeDisputeBookingId = null
+                            }
+                        )
+                    } else {
+                        activeDisputeBookingId = null
+                    }
+                }
+                activeWarrantyBookingId != null -> {
+                    val targetBooking = uiState.allBookings.find { it.id == activeWarrantyBookingId }
+                        ?: uiState.customerBookings.find { it.id == activeWarrantyBookingId }
+                        ?: uiState.selectedBooking
+                    if (targetBooking != null) {
+                        WarrantyClaimScreen(
+                            booking = targetBooking,
+                            language = uiState.currentLanguage,
+                            onBack = { activeWarrantyBookingId = null },
+                            onSubmitClaim = { desc ->
+                                viewModel.claimWarranty(targetBooking.id, desc)
+                                activeWarrantyBookingId = null
+                            }
+                        )
+                    } else {
+                        activeWarrantyBookingId = null
+                    }
+                }
+                isViewingCustomerSettings -> {
+                    CustomerSettingsScreen(
                         user = uiState.currentUser,
-                        transactions = uiState.transactions,
-                        rewards = uiState.rewards,
-                        userRole = uiState.currentRole,
-                        onOpenDeposit = { viewModel.openDepositDialog() },
-                        onOpenWithdraw = { viewModel.openWithdrawDialog() },
-                        onRedeemReward = { viewModel.redeemReward(it) },
-                        onBack = { isViewingWallet = false }
+                        language = uiState.currentLanguage,
+                        onBack = { isViewingCustomerSettings = false },
+                        onUpdateProfile = { name, email, phone, altPhone ->
+                            viewModel.updateUserProfile(name, email, phone, uiState.currentUser?.city ?: "Douala", uiState.currentUser?.avatarUrl ?: "")
+                            isViewingCustomerSettings = false
+                        },
+                        onToggleLanguage = { viewModel.toggleLanguage() },
+                        onDeleteAccount = { viewModel.deleteAccount() }
                     )
+                }
+                isViewingWorkerSettings -> {
+                    WorkerSettingsScreen(
+                        user = uiState.currentUser,
+                        workerProfile = uiState.allWorkers.firstOrNull(),
+                        language = uiState.currentLanguage,
+                        onBack = { isViewingWorkerSettings = false },
+                        onSaveRadius = { radius ->
+                            viewModel.updateWorkerSettings(radius)
+                            isViewingWorkerSettings = false
+                        }
+                    )
+                }
+                isViewingWallet -> {
+                    if (uiState.currentRole == UserRole.WORKER) {
+                        WorkerWalletScreen(
+                            user = uiState.currentUser,
+                            transactions = uiState.transactions,
+                            language = uiState.currentLanguage,
+                            onBack = { isViewingWallet = false },
+                            onCashOut = { amount, op, phone ->
+                                viewModel.processCashOut(amount, op, phone)
+                            }
+                        )
+                    } else {
+                        WalletRewardsScreen(
+                            user = uiState.currentUser,
+                            transactions = uiState.transactions,
+                            rewards = uiState.rewards,
+                            userRole = uiState.currentRole,
+                            onOpenDeposit = { viewModel.openDepositDialog() },
+                            onOpenWithdraw = { viewModel.openWithdrawDialog() },
+                            onRedeemReward = { viewModel.redeemReward(it) },
+                            onBack = { isViewingWallet = false }
+                        )
+                    }
                 }
                 else -> {
                     when (uiState.currentRole) {
@@ -471,7 +599,7 @@ fun FixoApp(
                                     viewModel.sendChatMessage(msg)
                                 },
                                 onOpenDispute = {
-                                    viewModel.openDisputeDialog()
+                                    activeDisputeBookingId = activeBooking.id
                                 },
                                 onCancelBooking = {
                                     viewModel.cancelBooking(activeBooking.id)
@@ -487,6 +615,12 @@ fun FixoApp(
                                 },
                                 onSimulateArrivalAndPhotos = {
                                     viewModel.simulateArrivalAndPhotos(activeBooking.id)
+                                },
+                                onScanClosingQr = {
+                                    isViewingQrScanner = true
+                                },
+                                onOpenWarrantyClaim = {
+                                    activeWarrantyBookingId = activeBooking.id
                                 },
                                 language = uiState.currentLanguage
                             )
@@ -702,6 +836,7 @@ fun FixoApp(
                                     },
                                     onGeneratePaymentQr = {
                                         viewModel.requestJobCompletion(activeJob.id)
+                                        isViewingInvoiceQr = true
                                     },
                                     onOpenWorkroomChat = {
                                         activeChatBookingId = activeJob.id
@@ -780,6 +915,7 @@ fun FixoApp(
             worker = worker,
             service = service,
             language = uiState.currentLanguage,
+            customerPoints = uiState.currentUser?.fixoPoints ?: 350,
             onDismiss = { viewModel.closeBookingDialog() },
             onConfirmEscrowLock = { packageOption, operator, phone, address, notes ->
                 viewModel.confirmBookingEscrow(packageOption, operator, phone, address, notes)

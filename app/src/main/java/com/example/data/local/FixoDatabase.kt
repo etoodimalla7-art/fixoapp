@@ -99,7 +99,7 @@ class FixoTypeConverters {
         com.example.data.model.Organization::class,
         com.example.data.model.WorkforceRequest::class
     ],
-    version = 5,
+    version = 6,
     exportSchema = false
 )
 @TypeConverters(FixoTypeConverters::class)

@@ -94,8 +94,10 @@ enum class JobStatus(val displayName: String) {
     COMPLETION_REQUESTED("Completion Requested"),
     COMPLETED_PENDING_HANDSHAKE("Completed Pending Handshake"),
     COMPLETED("Completed"),
+    CLOSED_CONFIRMED("Closed Confirmed"),
     CANCELLED("Cancelled"),
-    DISPUTED("Disputed");
+    DISPUTED("Disputed"),
+    DISPUTE_FROZEN("Dispute Frozen");
 
     companion object {
         val EN_ROUTE = ON_THE_WAY
@@ -117,10 +119,17 @@ val JobStatus.isWorking: Boolean
 val JobStatus.isCompletionPending: Boolean
     get() = this == JobStatus.COMPLETION_REQUESTED || this == JobStatus.COMPLETED_PENDING_HANDSHAKE
 
+val JobStatus.isClosed: Boolean
+    get() = this == JobStatus.COMPLETED || this == JobStatus.CLOSED_CONFIRMED
+
+val JobStatus.isDisputed: Boolean
+    get() = this == JobStatus.DISPUTED || this == JobStatus.DISPUTE_FROZEN
+
 enum class EscrowStatus {
     HOLDING,
     RELEASED,
-    REFUNDED
+    REFUNDED,
+    DISPUTED
 }
 
 enum class PaymentMethod(val label: String) {
@@ -137,9 +146,9 @@ enum class SubscriptionTier(val title: String, val priceMonthly: Double) {
 }
 
 enum class LoyaltyTier(val title: String, val minPoints: Int, val discountPercent: Int) {
-    BRONZE("Bronze Artisan Club", 0, 0),
-    SILVER("Silver Guild", 250, 5),
-    GOLD("Gold Guild Master", 750, 10),
+    BRONZE("Bronze Client", 0, 0),
+    SILVER("Silver Client", 250, 5),
+    GOLD("Gold Client", 750, 10),
     PLATINUM("Platinum Patron", 1500, 15)
 }
 
@@ -163,7 +172,11 @@ data class User(
     val quarter: String = "Akwa",
     val isPhoneVerified: Boolean = true,
     val isEmailVerified: Boolean = false,
-    val organizationId: String? = null
+    val organizationId: String? = null,
+    val favoriteAddressesJson: String = "",
+    val interventionRadiusKm: Int = 15,
+    val kycCniExpiry: String = "2028-12-31",
+    val secondaryPhone: String = ""
 )
 
 @Entity(tableName = "workers")
@@ -267,7 +280,12 @@ data class Booking(
     val afterPhotoLng: Double? = null,
     val workStartedTimestamp: Long? = null,
     val workCompletedTimestamp: Long? = null,
-    val packageTier: String = "FLASH"
+    val packageTier: String = "FLASH",
+    val handshakePin: String = "8429",
+    val completionTimestamp: Long? = null,
+    val warrantyExpiryTimestamp: Long? = null,
+    val disputeReason: String? = null,
+    val disputePhotosJson: String? = null
 )
 
 @Entity(tableName = "worker_locations")

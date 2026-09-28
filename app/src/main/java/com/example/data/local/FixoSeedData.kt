@@ -76,6 +76,38 @@ object FixoSeedData {
             quarter = "Deido"
         ),
         User(
+            id = "usr_worker_eric",
+            role = UserRole.WORKER,
+            name = "Eric Kamga",
+            email = "eric.cooling@fixo.pro",
+            phone = "+237 671 998 877",
+            avatarUrl = "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=300",
+            rating = 4.9,
+            balance = 28000.0,
+            escrowLocked = 0.0,
+            fixoPoints = 50,
+            verificationStatus = VerificationStatus.VERIFIED_PRO,
+            loyaltyTier = LoyaltyTier.SILVER,
+            city = "Douala",
+            quarter = "Bonanjo"
+        ),
+        User(
+            id = "usr_worker_4",
+            role = UserRole.WORKER,
+            name = "Kofi Mensah",
+            email = "kofi.carpentry@fixo.pro",
+            phone = "+237 677 334 455",
+            avatarUrl = "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=400",
+            rating = 4.94,
+            balance = 42000.0,
+            escrowLocked = 0.0,
+            fixoPoints = 180,
+            verificationStatus = VerificationStatus.MASTER_CRAFTSMAN,
+            loyaltyTier = LoyaltyTier.GOLD,
+            city = "Douala",
+            quarter = "Bonapriso"
+        ),
+        User(
             id = "usr_corp_1",
             role = UserRole.ENTERPRISE,
             name = "Apex Metro Contracting Ltd",

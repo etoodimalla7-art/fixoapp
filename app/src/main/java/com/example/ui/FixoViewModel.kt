@@ -585,6 +585,65 @@ class FixoViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
+    fun completeJobWithHandshake(bookingId: String, pinOrPayload: String) {
+        viewModelScope.launch {
+            val success = repository.completeJobWithHandshake(bookingId, pinOrPayload)
+            if (success) {
+                showToast("🤝 Clôture validée ! Paiement débloqué et garantie 14 jours activée.")
+                val updatedBooking = repository.getBookingByIdDirect(bookingId)
+                if (updatedBooking != null) {
+                    _uiState.value = _uiState.value.copy(selectedBooking = updatedBooking)
+                }
+            } else {
+                showToast("❌ Échec de validation du QR/PIN. Vérifiez le code.")
+            }
+        }
+    }
+
+    fun freezeDispute(bookingId: String, reason: String, photos: List<String> = emptyList(), notes: String = "") {
+        viewModelScope.launch {
+            val success = repository.freezeDispute(bookingId, reason, photos, notes)
+            if (success) {
+                showToast("🛡️ Séquestre gelé. Arbitrage officiel FIXO enclenché sous 2 heures.")
+                val updatedBooking = repository.getBookingByIdDirect(bookingId)
+                if (updatedBooking != null) {
+                    _uiState.value = _uiState.value.copy(selectedBooking = updatedBooking)
+                }
+            }
+        }
+    }
+
+    fun claimWarranty(bookingId: String, issueDescription: String, photos: List<String> = emptyList()) {
+        viewModelScope.launch {
+            val success = repository.claimWarranty(bookingId, issueDescription, photos)
+            if (success) {
+                showToast("🛡️ Réclamation sous garantie enregistrée. Réintervention prioritaire prise en charge.")
+            } else {
+                showToast("⚠️ La période de garantie 14 jours a expiré.")
+            }
+        }
+    }
+
+    fun processCashOut(amount: Double, operator: com.example.data.model.CameroonMobileOperator, phoneNumber: String) {
+        val user = _uiState.value.currentUser ?: return
+        viewModelScope.launch {
+            val result = repository.processCashOut(user.id, amount, operator, phoneNumber)
+            result.onSuccess {
+                showToast("✓ Décaissement réussi vers ${operator.label} : ${com.example.data.model.formatFixoCurrency(amount)}")
+            }.onFailure { err ->
+                showToast("❌ Erreur de retrait : ${err.message}")
+            }
+        }
+    }
+
+    fun updateWorkerSettings(radiusKm: Int) {
+        val user = _uiState.value.currentUser ?: return
+        viewModelScope.launch {
+            repository.updateWorkerSettings(user.id, radiusKm)
+            showToast("✓ Rayon d'intervention mis à jour à $radiusKm km.")
+        }
+    }
+
     fun advanceJobStatus(bookingId: String, newStatus: com.example.data.model.JobStatus) {
         viewModelScope.launch {
             repository.updateJobStatus(bookingId, newStatus)

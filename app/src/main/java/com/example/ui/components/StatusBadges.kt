@@ -98,9 +98,9 @@ fun JobStatusBadge(
         JobStatus.ARRIVED, JobStatus.ON_SITE -> Triple(FixoEmerald100, FixoEmerald600, "Arrived on Site")
         JobStatus.IN_PROGRESS, JobStatus.WORK_IN_PROGRESS -> Triple(FixoAmber100, FixoAmber600, "Work In Progress")
         JobStatus.COMPLETION_REQUESTED, JobStatus.COMPLETED_PENDING_HANDSHAKE -> Triple(FixoAmber100, FixoAmber600, "Handshake Pending")
-        JobStatus.COMPLETED -> Triple(FixoEmerald100, FixoEmerald600, "Completed & Released")
+        JobStatus.COMPLETED, JobStatus.CLOSED_CONFIRMED -> Triple(FixoEmerald100, FixoEmerald600, "Closed & Confirmed ✓")
         JobStatus.CANCELLED -> Triple(FixoSlate100, FixoSlate500, "Cancelled")
-        JobStatus.DISPUTED -> Triple(FixoRed50, FixoRed500, "Under Review")
+        JobStatus.DISPUTED, JobStatus.DISPUTE_FROZEN -> Triple(FixoRed50, FixoRed500, "Dispute Frozen 🛡️")
     }
 
     Box(
@@ -130,6 +130,7 @@ fun EscrowBadge(
         EscrowStatus.HOLDING -> Triple(FixoEmerald100, FixoEmerald600, "Escrow Secured")
         EscrowStatus.RELEASED -> Triple(FixoBlue100, FixoBlue600, "Escrow Released")
         EscrowStatus.REFUNDED -> Triple(FixoSlate100, FixoSlate500, "Refunded")
+        EscrowStatus.DISPUTED -> Triple(FixoRed50, FixoRed500, "Escrow Frozen")
     }
 
     Box(
