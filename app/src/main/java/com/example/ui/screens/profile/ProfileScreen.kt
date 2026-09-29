@@ -646,8 +646,8 @@ fun ProfileScreen(
                     )
                     Text(
                         text = if (language == AppLanguage.FR)
-                            "Mode Sombre WCAG AAA (#080C15, #1A2232, Ambre #FFB800) ou Clair Plein Soleil (#F8FAFC, #FFFFFF)"
-                            else "WCAG AAA Dark Mode (#080C15, #1A2232, Amber #FFB800) or Bright Sunlight (#F8FAFC, #FFFFFF)",
+                            "Thème Sombre Automatique ou Plein Soleil"
+                            else "Automatic Dark Theme or Sunlight",
                         fontSize = 11.sp,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -707,14 +707,14 @@ fun ProfileScreen(
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Text(
-                                text = if (ambientLux >= com.example.ui.theme.AmbientLightManager.SUNLIGHT_LUX_THRESHOLD) "☀️ Plein Soleil" else "🌑 Pénombre / Délestage",
+                                text = if (ambientLux >= com.example.ui.theme.AmbientLightManager.SUNLIGHT_LUX_THRESHOLD) "☀️ Plein Soleil" else "🌑 Pénombre / Confort",
                                 fontSize = 11.sp,
                                 fontWeight = FontWeight.Bold,
                                 color = MaterialTheme.colorScheme.primary
                             )
                             Spacer(modifier = Modifier.width(6.dp))
                             Text(
-                                text = "Capteur: ${ambientLux.toInt()} lx • ${if (ambientLux >= com.example.ui.theme.AmbientLightManager.SUNLIGHT_LUX_THRESHOLD) "Clair actif" else "Sombre AAA actif"}",
+                                text = if (language == AppLanguage.FR) "Ajustement automatique du contraste" else "Auto-contrast adaptation",
                                 fontSize = 11.sp,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )

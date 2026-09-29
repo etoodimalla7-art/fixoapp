@@ -75,6 +75,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.StrokeCap
@@ -520,62 +521,219 @@ fun WorkroomMessageBubble(
     isFromMe: Boolean,
     onOpenAnnotation: () -> Unit
 ) {
-    val bubbleColor = if (isFromMe) FixoGold500 else MaterialTheme.colorScheme.surfaceVariant
-    val textColor = if (isFromMe) FixoNavy900 else MaterialTheme.colorScheme.onSurfaceVariant
-    val alignment = if (isFromMe) Alignment.End else Alignment.Start
+    val isSystemAction = message.senderRole == UserRole.ADMIN ||
+        message.senderId == "sys" ||
+        message.senderId == "system" ||
+        message.message.startsWith("🚀") ||
+        message.message.startsWith("📍") ||
+        message.message.startsWith("⏱️") ||
+        message.message.startsWith("🔒") ||
+        message.message.startsWith("✅") ||
+        message.message.contains("Départ de l'artisan", ignoreCase = true) ||
+        message.message.contains("Arrivée sur site", ignoreCase = true) ||
+        message.message.contains("Chronomètre démarré", ignoreCase = true) ||
+        message.message.contains("Clôture", ignoreCase = true)
 
-    Column(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalAlignment = alignment
-    ) {
-        Text(
-            text = "${message.senderName} • ${SimpleDateFormat("HH:mm", Locale.FRANCE).format(Date(message.timestamp))}",
-            style = MaterialTheme.typography.labelSmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
-            modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp)
-        )
+    val timeFormatted = SimpleDateFormat("HH:mm", Locale.FRANCE).format(Date(message.timestamp))
 
-        Surface(
-            shape = RoundedCornerShape(
-                topStart = 14.dp,
-                topEnd = 14.dp,
-                bottomStart = if (isFromMe) 14.dp else 2.dp,
-                bottomEnd = if (isFromMe) 2.dp else 14.dp
-            ),
-            color = bubbleColor,
-            modifier = Modifier.widthIn(max = 300.dp)
+    if (isSystemAction) {
+        // Bannière Pleine Largeur au Design Carte Bancaire Sombre Haut de Gamme
+        Card(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(vertical = 4.dp),
+            shape = RoundedCornerShape(14.dp),
+            colors = CardDefaults.cardColors(containerColor = Color(0xFF131B2A)),
+            border = androidx.compose.foundation.BorderStroke(1.dp, FixoGold500.copy(alpha = 0.35f))
         ) {
-            Column(modifier = Modifier.padding(10.dp)) {
-                // Voice note item
-                if (message.attachmentType == "VOICE") {
-                    VoiceNotePlayerRow(
-                        durationSec = message.voiceDurationSeconds ?: 14,
-                        isFromMe = isFromMe
-                    )
-                } else if (message.attachmentType == "IMAGE" || message.attachmentType == "ANNOTATED_IMAGE") {
-                    // Image attachment with annotation button
-                    AsyncImage(
-                        model = message.attachmentUrl,
-                        contentDescription = "Inspection Photo",
-                        contentScale = ContentScale.Crop,
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 14.dp, vertical = 10.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.weight(1f)
+                ) {
+                    Box(
                         modifier = Modifier
-                            .fillMaxWidth()
-                            .height(140.dp)
-                            .clip(RoundedCornerShape(8.dp))
-                            .clickable { onOpenAnnotation() }
-                    )
-                    Spacer(modifier = Modifier.height(4.dp))
+                            .size(36.dp)
+                            .clip(CircleShape)
+                            .background(FixoGold500.copy(alpha = 0.15f)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        val iconVector = when {
+                            message.message.contains("Départ", ignoreCase = true) || message.message.startsWith("🚀") -> Icons.Default.PlayArrow
+                            message.message.contains("Arrivée", ignoreCase = true) || message.message.startsWith("📍") -> Icons.Default.Check
+                            message.message.contains("Chrono", ignoreCase = true) || message.message.startsWith("⏱️") -> Icons.Default.Timer
+                            message.message.contains("Clôture", ignoreCase = true) || message.message.startsWith("✅") -> Icons.Default.Shield
+                            else -> Icons.Default.Shield
+                        }
+                        Icon(
+                            imageVector = iconVector,
+                            contentDescription = null,
+                            tint = FixoGold500,
+                            modifier = Modifier.size(18.dp)
+                        )
+                    }
+                    Spacer(modifier = Modifier.width(10.dp))
                     Text(
                         text = message.message,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = textColor
+                        style = MaterialTheme.typography.bodySmall.copy(
+                            fontWeight = FontWeight.SemiBold,
+                            color = Color.White
+                        )
                     )
-                } else {
+                }
+
+                Surface(
+                    shape = RoundedCornerShape(8.dp),
+                    color = Color(0xFF090E17),
+                    border = androidx.compose.foundation.BorderStroke(1.dp, Color(0x33FFFFFF))
+                ) {
                     Text(
-                        text = message.message,
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = textColor
+                        text = timeFormatted,
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = FixoGold500,
+                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
                     )
+                }
+            }
+        }
+    } else {
+        val isArtisan = message.senderRole == UserRole.WORKER
+        val alignment = if (isArtisan) Alignment.Start else Alignment.End
+
+        Column(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalAlignment = alignment
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+            ) {
+                Text(
+                    text = "${message.senderName} • $timeFormatted",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = Color(0xFF94A3B8)
+                )
+                if (isArtisan) {
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Surface(
+                        shape = RoundedCornerShape(6.dp),
+                        color = FixoGold500.copy(alpha = 0.18f)
+                    ) {
+                        Text(
+                            text = "Artisan Pro 🛠️",
+                            fontSize = 9.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = FixoGold500,
+                            modifier = Modifier.padding(horizontal = 5.dp, vertical = 1.dp)
+                        )
+                    }
+                }
+            }
+
+            if (isArtisan) {
+                // Artisan : Carte sombre avec liseré or
+                Card(
+                    shape = RoundedCornerShape(
+                        topStart = 4.dp,
+                        topEnd = 16.dp,
+                        bottomStart = 16.dp,
+                        bottomEnd = 16.dp
+                    ),
+                    colors = CardDefaults.cardColors(containerColor = Color(0xFF1A2232)),
+                    border = androidx.compose.foundation.BorderStroke(1.5.dp, FixoGold500.copy(alpha = 0.65f)),
+                    modifier = Modifier.widthIn(max = 300.dp)
+                ) {
+                    Column(modifier = Modifier.padding(12.dp)) {
+                        if (message.attachmentType == "VOICE") {
+                            VoiceNotePlayerRow(
+                                durationSec = message.voiceDurationSeconds ?: 14,
+                                isFromMe = isFromMe
+                            )
+                        } else if (message.attachmentType == "IMAGE" || message.attachmentType == "ANNOTATED_IMAGE") {
+                            AsyncImage(
+                                model = message.attachmentUrl,
+                                contentDescription = "Photo Inspection",
+                                contentScale = ContentScale.Crop,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(140.dp)
+                                    .clip(RoundedCornerShape(8.dp))
+                                    .clickable { onOpenAnnotation() }
+                            )
+                            Spacer(modifier = Modifier.height(6.dp))
+                            Text(
+                                text = message.message,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = Color.White
+                            )
+                        } else {
+                            Text(
+                                text = message.message,
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = Color.White
+                            )
+                        }
+                    }
+                }
+            } else {
+                // Client : Conteneur Or Ambre FIXO (#F59E0B -> #D97706) avec texte contrasté
+                Box(
+                    modifier = Modifier
+                        .widthIn(max = 300.dp)
+                        .clip(
+                            RoundedCornerShape(
+                                topStart = 16.dp,
+                                topEnd = 4.dp,
+                                bottomStart = 16.dp,
+                                bottomEnd = 16.dp
+                            )
+                        )
+                        .background(
+                            Brush.linearGradient(
+                                colors = listOf(Color(0xFFF59E0B), Color(0xFFD97706))
+                            )
+                        )
+                        .padding(12.dp)
+                ) {
+                    Column {
+                        if (message.attachmentType == "VOICE") {
+                            VoiceNotePlayerRow(
+                                durationSec = message.voiceDurationSeconds ?: 14,
+                                isFromMe = isFromMe
+                            )
+                        } else if (message.attachmentType == "IMAGE" || message.attachmentType == "ANNOTATED_IMAGE") {
+                            AsyncImage(
+                                model = message.attachmentUrl,
+                                contentDescription = "Photo Client",
+                                contentScale = ContentScale.Crop,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(140.dp)
+                                    .clip(RoundedCornerShape(8.dp))
+                                    .clickable { onOpenAnnotation() }
+                            )
+                            Spacer(modifier = Modifier.height(6.dp))
+                            Text(
+                                text = message.message,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = Color(0xFF080C15),
+                                fontWeight = FontWeight.Bold
+                            )
+                        } else {
+                            Text(
+                                text = message.message,
+                                style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.SemiBold),
+                                color = Color(0xFF080C15)
+                            )
+                        }
+                    }
                 }
             }
         }

@@ -29,12 +29,11 @@ val FixoTextPrimary = Color(0xFFFFFFFF) // Blanc pur
 val FixoTextSecondary = Color(0xFFE2E8F0) // Blanc bleuté haute visibilité
 val FixoTextMuted = Color(0xFFCBD5E1) // Blanc bleuté doux (jamais de gris terne)
 
-// Or Ambre Électrique : Ambre saturé (#FFB800 vers #FF9100) pour boutons primaires,
-// garantissant un contraste supérieur à 7:1 face au fond sombre
+// Or Ambre Chaud Signature FIXO (#F59E0B vers #D97706)
 val FixoElectricAmber = Color(0xFFFFB800)
 val FixoElectricAmberDark = Color(0xFFFF9100)
 val FixoGoldGradient = Brush.linearGradient(
-    colors = listOf(Color(0xFFFFB800), Color(0xFFFF9100))
+    colors = listOf(Color(0xFFF59E0B), Color(0xFFD97706))
 )
 
 // --- Architecture Double Thème : Thème Clair Adaptatif (Plein Soleil Chantier) ---
@@ -61,11 +60,11 @@ val FixoNavy200 = Color(0xFFCBD5E1)
 val FixoNavy100 = Color(0xFFE2E8F0)
 val FixoNavy50  = Color(0xFFF1F5F9)
 
-// Gold / Electric Amber
-val FixoGold400 = Color(0xFFFFC72C)
-val FixoGold500 = Color(0xFFFFB800) // Ambre saturé électrique
-val FixoGold600 = Color(0xFFFF9100) // Ambre profond saturé
-val FixoGold700 = Color(0xFFD97706)
+// Gold / Warm Amber FIXO Signature
+val FixoGold400 = Color(0xFFFBBF24)
+val FixoGold500 = Color(0xFFF59E0B) // Or ambre FIXO chaud signature
+val FixoGold600 = Color(0xFFD97706) // Or ambre profond
+val FixoGold700 = Color(0xFFB45309)
 val FixoGold200 = Color(0xFFFDE68A)
 val FixoGold100 = Color(0xFFFEF3C7)
 val FixoGold50  = Color(0xFFFFFBEB)

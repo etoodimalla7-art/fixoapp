@@ -259,21 +259,59 @@ fun WorkerWalletScreen(
                         )
                         Spacer(modifier = Modifier.height(14.dp))
 
-                        // Amount Input
-                        Text(
-                            text = "Montant à retirer (FCFA)",
-                            style = MaterialTheme.typography.labelSmall.copy(color = FixoTextSecondary)
-                        )
+                        val isDark = MaterialTheme.colorScheme.surface.let {
+                            (0.299 * it.red + 0.587 * it.green + 0.114 * it.blue) < 0.5
+                        }
+                        val inputContainerBg = if (isDark) Color(0xFF1E293B) else Color(0xFFF1F5F9)
+                        val inputTextColor = if (isDark) Color(0xFFFFFFFF) else Color(0xFF0F172A)
+                        val labelTextColor = Color(0xFFCBD5E1)
+
+                        // Amount Input Header & Quick Button
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = "Montant à retirer (FCFA)",
+                                style = MaterialTheme.typography.labelSmall.copy(
+                                    color = labelTextColor,
+                                    fontWeight = FontWeight.SemiBold
+                                )
+                            )
+                            Box(
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(8.dp))
+                                    .background(FixoGold500.copy(alpha = 0.15f))
+                                    .border(1.dp, FixoGold500, RoundedCornerShape(8.dp))
+                                    .clickable { withdrawAmountText = availableBalance.toInt().toString() }
+                                    .padding(horizontal = 8.dp, vertical = 4.dp)
+                            ) {
+                                Text(
+                                    text = "Tout retirer (${formatFixoCurrency(availableBalance)})",
+                                    fontSize = 11.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = FixoGold500
+                                )
+                            }
+                        }
                         Spacer(modifier = Modifier.height(6.dp))
                         OutlinedTextField(
                             value = withdrawAmountText,
                             onValueChange = { withdrawAmountText = it.filter { c -> c.isDigit() } },
                             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                            textStyle = androidx.compose.ui.text.TextStyle(
+                                fontSize = 18.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = inputTextColor
+                            ),
                             colors = OutlinedTextFieldDefaults.colors(
-                                focusedBorderColor = FixoSuccessGreen,
+                                focusedBorderColor = FixoGold500,
                                 unfocusedBorderColor = FixoBorderSubtle,
-                                focusedTextColor = FixoWhite,
-                                unfocusedTextColor = FixoWhite
+                                focusedContainerColor = inputContainerBg,
+                                unfocusedContainerColor = inputContainerBg,
+                                focusedTextColor = inputTextColor,
+                                unfocusedTextColor = inputTextColor
                             ),
                             shape = RoundedCornerShape(12.dp),
                             modifier = Modifier
@@ -281,12 +319,46 @@ fun WorkerWalletScreen(
                                 .testTag("cashout_amount_input")
                         )
 
+                        Spacer(modifier = Modifier.height(14.dp))
+
+                        // Phone Input
+                        Text(
+                            text = "Numéro Mobile Money (+237)",
+                            style = MaterialTheme.typography.labelSmall.copy(
+                                color = labelTextColor,
+                                fontWeight = FontWeight.SemiBold
+                            )
+                        )
+                        Spacer(modifier = Modifier.height(6.dp))
+                        OutlinedTextField(
+                            value = phoneInput,
+                            onValueChange = { phoneInput = it },
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
+                            textStyle = androidx.compose.ui.text.TextStyle(
+                                fontSize = 18.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = inputTextColor
+                            ),
+                            colors = OutlinedTextFieldDefaults.colors(
+                                focusedBorderColor = FixoGold500,
+                                unfocusedBorderColor = FixoBorderSubtle,
+                                focusedContainerColor = inputContainerBg,
+                                unfocusedContainerColor = inputContainerBg,
+                                focusedTextColor = inputTextColor,
+                                unfocusedTextColor = inputTextColor
+                            ),
+                            shape = RoundedCornerShape(12.dp),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .testTag("cashout_phone_input")
+                        )
+
                         Spacer(modifier = Modifier.height(16.dp))
 
                         // Destination selection registered in KYC
                         Text(
                             text = "Destination enregistrée (KYC Certifié)",
-                            style = MaterialTheme.typography.labelSmall.copy(color = FixoTextSecondary)
+                            style = MaterialTheme.typography.labelSmall.copy(color = labelTextColor)
                         )
                         Spacer(modifier = Modifier.height(8.dp))
 

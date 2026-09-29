@@ -124,6 +124,10 @@ fun AuthScreen(
     // 0 = Se Connecter, 1 = Créer un Compte
     var mainTab by remember { mutableIntStateOf(0) }
 
+    // Register Fields
+    var fullName by remember { mutableStateOf("") }
+    var cityQuarter by remember { mutableStateOf("Akwa, Douala") }
+
     // Phone Input (defaults to Cameroon phone)
     var phoneInput by remember { mutableStateOf("671234567") }
     var showOtpBottomSheet by remember { mutableStateOf(false) }
@@ -133,6 +137,7 @@ fun AuthScreen(
 
     // Artisan sandbox status selection (for Marc Dubois)
     var testArtisanKycStatus by remember { mutableStateOf(ArtisanKycStatus.IN_REVIEW) }
+    var isSandboxExpanded by remember { mutableStateOf(false) }
 
     Surface(
         modifier = modifier
@@ -311,6 +316,81 @@ fun AuthScreen(
                 Column(
                     modifier = Modifier.padding(18.dp)
                 ) {
+                    // Register Fields (Full Name and City & Quarter) with smooth expand animation
+                    androidx.compose.animation.AnimatedVisibility(
+                        visible = mainTab == 1,
+                        enter = androidx.compose.animation.expandVertically() + fadeIn(),
+                        exit = androidx.compose.animation.shrinkVertically() + fadeOut()
+                    ) {
+                        Column {
+                            Text(
+                                text = if (currentLanguage == AppLanguage.FR) "Nom complet" else "Full Name",
+                                fontSize = 13.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = FixoGold500
+                            )
+                            Spacer(modifier = Modifier.height(6.dp))
+                            OutlinedTextField(
+                                value = fullName,
+                                onValueChange = { fullName = it },
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .testTag("input_full_name"),
+                                colors = OutlinedTextFieldDefaults.colors(
+                                    focusedBorderColor = FixoGold500,
+                                    unfocusedBorderColor = FixoBorderSubtle,
+                                    focusedTextColor = FixoWhite,
+                                    unfocusedTextColor = FixoWhite,
+                                    focusedContainerColor = FixoNavy950,
+                                    unfocusedContainerColor = FixoNavy950
+                                ),
+                                shape = RoundedCornerShape(14.dp),
+                                placeholder = {
+                                    Text(
+                                        if (currentLanguage == AppLanguage.FR) "Ex. Emmanuel Njoya" else "e.g. John Doe",
+                                        color = FixoTextSecondary
+                                    )
+                                },
+                                leadingIcon = {
+                                    Icon(
+                                        imageVector = Icons.Default.Person,
+                                        contentDescription = null,
+                                        tint = FixoGold500,
+                                        modifier = Modifier.size(18.dp)
+                                    )
+                                }
+                            )
+                            Spacer(modifier = Modifier.height(14.dp))
+                            Text(
+                                text = if (currentLanguage == AppLanguage.FR) "Ville & Quartier principal" else "City & Primary Neighborhood",
+                                fontSize = 13.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = FixoGold500
+                            )
+                            Spacer(modifier = Modifier.height(6.dp))
+                            OutlinedTextField(
+                                value = cityQuarter,
+                                onValueChange = { cityQuarter = it },
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .testTag("input_city_quarter"),
+                                colors = OutlinedTextFieldDefaults.colors(
+                                    focusedBorderColor = FixoGold500,
+                                    unfocusedBorderColor = FixoBorderSubtle,
+                                    focusedTextColor = FixoWhite,
+                                    unfocusedTextColor = FixoWhite,
+                                    focusedContainerColor = FixoNavy950,
+                                    unfocusedContainerColor = FixoNavy950
+                                ),
+                                shape = RoundedCornerShape(14.dp),
+                                placeholder = {
+                                    Text("Akwa, Douala", color = FixoTextSecondary)
+                                }
+                            )
+                            Spacer(modifier = Modifier.height(16.dp))
+                        }
+                    }
+
                     Text(
                         text = if (currentLanguage == AppLanguage.FR)
                             "Numéro de téléphone (+237)"
@@ -323,7 +403,7 @@ fun AuthScreen(
 
                     Spacer(modifier = Modifier.height(10.dp))
 
-                    // Phone input field with 🇨🇲 +237 prefix and [Valider] action
+                    // Phone input field with 🇨🇲 +237 prefix (clean without parasite inline button)
                     OutlinedTextField(
                         value = phoneInput,
                         onValueChange = { input ->
@@ -354,26 +434,7 @@ fun AuthScreen(
                                 )
                             }
                         },
-                        trailingIcon = {
-                            if (phoneInput.length >= 8) {
-                                Surface(
-                                    modifier = Modifier
-                                        .padding(end = 8.dp)
-                                        .clickable { showOtpBottomSheet = true }
-                                        .testTag("btn_validate_phone_inline"),
-                                    color = FixoGold500,
-                                    shape = RoundedCornerShape(8.dp)
-                                ) {
-                                    Text(
-                                        text = "Valider",
-                                        fontWeight = FontWeight.Bold,
-                                        fontSize = 12.sp,
-                                        color = FixoNavy950,
-                                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp)
-                                    )
-                                }
-                            }
-                        },
+                        trailingIcon = null,
                         colors = OutlinedTextFieldDefaults.colors(
                             focusedBorderColor = FixoGold500,
                             unfocusedBorderColor = FixoBorderSubtle,
@@ -430,10 +491,17 @@ fun AuthScreen(
 
                     Spacer(modifier = Modifier.height(18.dp))
 
-                    // Primary Button: [ RECEVOIR MON CODE DE SÉCURITÉ SMS ]
+                    val isFormValid = phoneInput.length >= 8 && (mainTab == 0 || fullName.isNotBlank())
+                    val buttonCtaText = if (mainTab == 1) {
+                        if (currentLanguage == AppLanguage.FR) "CRÉER MON COMPTE & RECEVOIR L'OTP" else "CREATE ACCOUNT & RECEIVE OTP"
+                    } else {
+                        if (currentLanguage == AppLanguage.FR) "RECEVOIR MON CODE DE SÉCURITÉ SMS" else "RECEIVE SMS SECURITY CODE"
+                    }
+
+                    // Primary Button
                     Button(
                         onClick = { showOtpBottomSheet = true },
-                        enabled = phoneInput.length >= 8,
+                        enabled = isFormValid,
                         modifier = Modifier
                             .fillMaxWidth()
                             .height(52.dp)
@@ -447,18 +515,15 @@ fun AuthScreen(
                         Icon(
                             imageVector = Icons.Default.Phone,
                             contentDescription = null,
-                            tint = if (phoneInput.length >= 8) FixoNavy950 else FixoTextSecondary,
+                            tint = if (isFormValid) FixoNavy950 else FixoTextSecondary,
                             modifier = Modifier.size(18.dp)
                         )
                         Spacer(modifier = Modifier.width(8.dp))
                         Text(
-                            text = if (currentLanguage == AppLanguage.FR)
-                                "RECEVOIR MON CODE DE SÉCURITÉ SMS"
-                            else
-                                "RECEIVE SMS SECURITY CODE",
+                            text = buttonCtaText,
                             fontSize = 13.sp,
                             fontWeight = FontWeight.Bold,
-                            color = if (phoneInput.length >= 8) FixoNavy950 else FixoTextSecondary
+                            color = if (isFormValid) FixoNavy950 else FixoTextSecondary
                         )
                     }
                 }
@@ -596,16 +661,21 @@ fun AuthScreen(
                     .testTag("sandbox_auth_card"),
                 shape = RoundedCornerShape(18.dp),
                 colors = CardDefaults.cardColors(containerColor = Color(0xFF0F1626)),
-                border = androidx.compose.foundation.BorderStroke(1.dp, FixoAmber500.copy(alpha = 0.5f))
+                border = androidx.compose.foundation.BorderStroke(1.dp, FixoAmber500.copy(alpha = 0.35f))
             ) {
                 Column(
-                    modifier = Modifier.padding(16.dp)
+                    modifier = Modifier.padding(14.dp)
                 ) {
                     Row(
-                        verticalAlignment = Alignment.CenterVertically
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { isSandboxExpanded = !isSandboxExpanded }
+                            .padding(vertical = 4.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
                     ) {
                         Surface(
-                            color = FixoAmber500.copy(alpha = 0.2f),
+                            color = FixoAmber500.copy(alpha = 0.15f),
                             shape = RoundedCornerShape(6.dp)
                         ) {
                             Text(
@@ -613,136 +683,151 @@ fun AuthScreen(
                                 fontSize = 10.sp,
                                 fontWeight = FontWeight.Bold,
                                 color = FixoAmber500,
-                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
+                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
                             )
                         }
-                    }
 
-                    Spacer(modifier = Modifier.height(6.dp))
-
-                    Text(
-                        text = if (currentLanguage == AppLanguage.FR)
-                            "Accès direct bipolaire pour tester les 2 rôles étanches de l'application :"
-                        else
-                            "Strictly bipolar instant access to test both roles:",
-                        fontSize = 11.sp,
-                        color = FixoTextSecondary
-                    )
-
-                    Spacer(modifier = Modifier.height(14.dp))
-
-                    // 1. Bouton Sarah Jenkins (Cliente - Bonapriso)
-                    Button(
-                        onClick = onQuickLoginCustomer,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(48.dp)
-                            .testTag("btn_sandbox_sarah_client"),
-                        shape = RoundedCornerShape(12.dp),
-                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF1E293B)),
-                        border = androidx.compose.foundation.BorderStroke(1.dp, FixoBorderSubtle)
-                    ) {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.Start
-                        ) {
-                            Text(text = "👤", fontSize = 16.sp)
-                            Spacer(modifier = Modifier.width(10.dp))
-                            Column {
-                                Text(
-                                    text = "Connexion : Sarah Jenkins (Cliente - Bonapriso)",
-                                    fontSize = 12.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = FixoWhite
-                                )
-                                Text(
-                                    text = "Portefeuille Séquestre initialisé ➔ Home C1",
-                                    fontSize = 10.sp,
-                                    color = FixoSuccessGreen
-                                )
-                            }
-                        }
-                    }
-
-                    Spacer(modifier = Modifier.height(12.dp))
-
-                    // 2. Bouton Marc Dubois (Plombier Pro - Akwa)
-                    Button(
-                        onClick = { onQuickLoginArtisan(testArtisanKycStatus) },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(52.dp)
-                            .testTag("btn_sandbox_marc_artisan"),
-                        shape = RoundedCornerShape(12.dp),
-                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF1E293B)),
-                        border = androidx.compose.foundation.BorderStroke(1.dp, FixoGold500.copy(alpha = 0.6f))
-                    ) {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.Start
-                        ) {
-                            Text(text = "👨🏾‍🔧", fontSize = 16.sp)
-                            Spacer(modifier = Modifier.width(10.dp))
-                            Column(modifier = Modifier.weight(1f)) {
-                                Text(
-                                    text = "Connexion : Marc Dubois (Plombier Pro - Akwa)",
-                                    fontSize = 12.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = FixoGold500
-                                )
-                                Text(
-                                    text = when (testArtisanKycStatus) {
-                                        ArtisanKycStatus.NOT_STARTED -> "Statut : NON COMMENCÉ ➔ Formulaire KYC"
-                                        ArtisanKycStatus.IN_REVIEW -> "Statut : EN REVUE ➔ Écran d'attente"
-                                        ArtisanKycStatus.APPROVED -> "Statut : APPROUVÉ ➔ Cockpit Pro A1"
-                                    },
-                                    fontSize = 10.sp,
-                                    color = FixoWhite.copy(alpha = 0.8f)
-                                )
-                            }
-                        }
-                    }
-
-                    Spacer(modifier = Modifier.height(8.dp))
-
-                    // Micro Selector for Marc's KYC Status (to test the 3 states easily)
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(6.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
                         Text(
-                            text = "Statut KYC :",
-                            fontSize = 10.sp,
-                            color = FixoTextSecondary
+                            text = if (isSandboxExpanded) "Masquer ▲" else "Afficher ▼",
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = FixoAmber500
                         )
+                    }
 
-                        listOf(
-                            ArtisanKycStatus.NOT_STARTED to "Non commencé",
-                            ArtisanKycStatus.IN_REVIEW to "En revue",
-                            ArtisanKycStatus.APPROVED to "Approuvé"
-                        ).forEach { (status, label) ->
-                            val isSelected = testArtisanKycStatus == status
-                            Surface(
+                    androidx.compose.animation.AnimatedVisibility(
+                        visible = isSandboxExpanded,
+                        enter = androidx.compose.animation.expandVertically() + fadeIn(),
+                        exit = androidx.compose.animation.shrinkVertically() + fadeOut()
+                    ) {
+                        Column {
+                            Spacer(modifier = Modifier.height(10.dp))
+
+                            Text(
+                                text = if (currentLanguage == AppLanguage.FR)
+                                    "Accès direct bipolaire pour tester les 2 rôles étanches de l'application :"
+                                else
+                                    "Strictly bipolar instant access to test both roles:",
+                                fontSize = 11.sp,
+                                color = FixoTextSecondary
+                            )
+
+                            Spacer(modifier = Modifier.height(14.dp))
+
+                            // 1. Bouton Sarah Jenkins (Cliente - Bonapriso)
+                            Button(
+                                onClick = onQuickLoginCustomer,
                                 modifier = Modifier
-                                    .clickable { testArtisanKycStatus = status }
-                                    .testTag("sandbox_kyc_toggle_${status.name.lowercase()}"),
-                                shape = RoundedCornerShape(8.dp),
-                                color = if (isSelected) FixoGold500 else FixoNavy800,
-                                border = androidx.compose.foundation.BorderStroke(
-                                    1.dp,
-                                    if (isSelected) FixoGold500 else FixoBorderSubtle
-                                )
+                                    .fillMaxWidth()
+                                    .height(48.dp)
+                                    .testTag("btn_sandbox_sarah_client"),
+                                shape = RoundedCornerShape(12.dp),
+                                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF1E293B)),
+                                border = androidx.compose.foundation.BorderStroke(1.dp, FixoBorderSubtle)
+                            ) {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.Start
+                                ) {
+                                    Text(text = "👤", fontSize = 16.sp)
+                                    Spacer(modifier = Modifier.width(10.dp))
+                                    Column {
+                                        Text(
+                                            text = "Connexion : Sarah Jenkins (Cliente - Bonapriso)",
+                                            fontSize = 12.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            color = FixoWhite
+                                        )
+                                        Text(
+                                            text = "Portefeuille Séquestre initialisé ➔ Home C1",
+                                            fontSize = 10.sp,
+                                            color = FixoSuccessGreen
+                                        )
+                                    }
+                                }
+                            }
+
+                            Spacer(modifier = Modifier.height(12.dp))
+
+                            // 2. Bouton Marc Dubois (Plombier Pro - Akwa)
+                            Button(
+                                onClick = { onQuickLoginArtisan(testArtisanKycStatus) },
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(52.dp)
+                                    .testTag("btn_sandbox_marc_artisan"),
+                                shape = RoundedCornerShape(12.dp),
+                                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF1E293B)),
+                                border = androidx.compose.foundation.BorderStroke(1.dp, FixoGold500.copy(alpha = 0.6f))
+                            ) {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.Start
+                                ) {
+                                    Text(text = "👨🏾‍🔧", fontSize = 16.sp)
+                                    Spacer(modifier = Modifier.width(10.dp))
+                                    Column(modifier = Modifier.weight(1f)) {
+                                        Text(
+                                            text = "Connexion : Marc Dubois (Plombier Pro - Akwa)",
+                                            fontSize = 12.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            color = FixoGold500
+                                        )
+                                        Text(
+                                            text = when (testArtisanKycStatus) {
+                                                ArtisanKycStatus.NOT_STARTED -> "Statut : NON COMMENCÉ ➔ Formulaire KYC"
+                                                ArtisanKycStatus.IN_REVIEW -> "Statut : EN REVUE ➔ Écran d'attente"
+                                                ArtisanKycStatus.APPROVED -> "Statut : APPROUVÉ ➔ Cockpit Pro A1"
+                                            },
+                                            fontSize = 10.sp,
+                                            color = FixoWhite.copy(alpha = 0.8f)
+                                        )
+                                    }
+                                }
+                            }
+
+                            Spacer(modifier = Modifier.height(8.dp))
+
+                            // Micro Selector for Marc's KYC Status
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                                verticalAlignment = Alignment.CenterVertically
                             ) {
                                 Text(
-                                    text = label,
-                                    fontSize = 9.sp,
-                                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
-                                    color = if (isSelected) FixoNavy950 else FixoWhite,
-                                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 3.dp)
+                                    text = "Statut KYC :",
+                                    fontSize = 10.sp,
+                                    color = FixoTextSecondary
                                 )
+
+                                listOf(
+                                    ArtisanKycStatus.NOT_STARTED to "Non commencé",
+                                    ArtisanKycStatus.IN_REVIEW to "En revue",
+                                    ArtisanKycStatus.APPROVED to "Approuvé"
+                                ).forEach { (status, label) ->
+                                    val isSelected = testArtisanKycStatus == status
+                                    Surface(
+                                        modifier = Modifier
+                                            .clickable { testArtisanKycStatus = status }
+                                            .testTag("sandbox_kyc_toggle_${status.name.lowercase()}"),
+                                        shape = RoundedCornerShape(8.dp),
+                                        color = if (isSelected) FixoGold500 else FixoNavy800,
+                                        border = androidx.compose.foundation.BorderStroke(
+                                            1.dp,
+                                            if (isSelected) FixoGold500 else FixoBorderSubtle
+                                        )
+                                    ) {
+                                        Text(
+                                            text = label,
+                                            fontSize = 9.sp,
+                                            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
+                                            color = if (isSelected) FixoNavy950 else FixoWhite,
+                                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 3.dp)
+                                        )
+                                    }
+                                }
                             }
                         }
                     }

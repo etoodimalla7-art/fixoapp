@@ -87,19 +87,13 @@ fun ExplorerMapScreen(
             .background(FixoBgCanvas)
             .testTag("explorer_map_screen")
     ) {
-        // Fullscreen Live Tracking Map Canvas
-        LiveTrackingMap(
-            workerLat = 4.0505,
-            workerLng = 9.7025,
-            customerLat = 4.0480,
-            customerLng = 9.6990,
-            workerName = hoveredWorker?.name ?: "Patrouille FIXO",
-            destinationAddress = "$currentQuarterName, Douala",
-            isTrackingActive = true,
-            workerSpeedKmh = 28f,
-            workerHeading = 45f,
-            etaMinutes = 12,
-            distanceKm = 1.2,
+        // Fullscreen Real Douala Geographic Vector Map
+        com.example.ui.components.DoualaGeographicMap(
+            workers = workers,
+            selectedWorker = hoveredWorker,
+            onSelectWorker = { worker ->
+                hoveredWorker = worker
+            },
             modifier = Modifier.fillMaxSize()
         )
 
@@ -236,20 +230,22 @@ fun ExplorerMapScreen(
                                 )
                             }
                             Text(
-                                text = "${worker.category.displayName} • ⭐ 4.9 (124 chantiers)",
-                                fontSize = 11.sp,
-                                color = FixoTextSecondary
+                                text = "${worker.category.displayName} • ⭐ 4.9 • 15 000 FCFA",
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                color = FixoElectricAmber
                             )
                         }
                     }
 
-                    Spacer(modifier = Modifier.height(10.dp))
+                    Spacer(modifier = Modifier.height(12.dp))
 
                     Button(
                         onClick = { selectedWorkerForPassport = worker },
                         modifier = Modifier
                             .fillMaxWidth()
-                            .height(48.dp),
+                            .height(48.dp)
+                            .testTag("btn_view_passport_book"),
                         shape = RoundedCornerShape(12.dp),
                         colors = ButtonDefaults.buttonColors(
                             containerColor = FixoElectricAmber,
@@ -258,7 +254,7 @@ fun ExplorerMapScreen(
                     ) {
                         Text(
                             text = if (language == AppLanguage.FR)
-                                "Consulter le Passeport & Réserver (15 000 FCFA)"
+                                "Voir le Passeport & Réserver (15 000 FCFA)"
                             else
                                 "View Passport & Book (15,000 FCFA)",
                             fontSize = 13.sp,

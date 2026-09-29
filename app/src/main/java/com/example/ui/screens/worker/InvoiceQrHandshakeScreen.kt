@@ -164,38 +164,38 @@ fun InvoiceQrHandshakeScreen(
 
                 Spacer(modifier = Modifier.height(16.dp))
 
-                // Matrice QR Code Dynamique (220 x 220 dp)
+                val qrPayload = "fixo://handshake?jobId=${booking.id}&pin=$pin&amount=${totalAmount.toInt()}&sig=FIXO_AUTH"
+                val qrBitmap = remember(qrPayload) {
+                    com.example.ui.util.QrCodeGenerator.generateQrBitmap(qrPayload, 512)
+                }
+
+                // Matrice QR Code Dynamique ZXing Vectorielle (220 x 220 dp)
                 Surface(
-                    shape = RoundedCornerShape(20.dp),
+                    shape = RoundedCornerShape(16.dp),
                     color = Color.White,
                     shadowElevation = 8.dp,
                     modifier = Modifier
-                        .size(240.dp)
-                        .border(3.dp, FixoGold500, RoundedCornerShape(20.dp))
-                        .padding(10.dp)
+                        .size(220.dp)
                         .testTag("dynamic_qr_matrix")
                 ) {
                     Box(
-                        modifier = Modifier.fillMaxSize(),
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(12.dp), // Zone de sécurité (Quiet zone)
                         contentAlignment = Alignment.Center
                     ) {
-                        Column(
-                            horizontalAlignment = Alignment.CenterHorizontally,
-                            verticalArrangement = Arrangement.Center
-                        ) {
+                        if (qrBitmap != null) {
+                            androidx.compose.foundation.Image(
+                                bitmap = qrBitmap,
+                                contentDescription = "Dynamic Handshake QR Code",
+                                modifier = Modifier.fillMaxSize()
+                            )
+                        } else {
                             Icon(
                                 imageVector = Icons.Default.QrCode,
                                 contentDescription = "Dynamic Handshake QR Code",
                                 tint = Color.Black,
                                 modifier = Modifier.size(175.dp)
-                            )
-                            Spacer(modifier = Modifier.height(4.dp))
-                            Text(
-                                text = "FIXO-ESCROW-${booking.id.takeLast(6).uppercase()}",
-                                fontSize = 9.sp,
-                                fontWeight = FontWeight.Bold,
-                                fontFamily = FontFamily.Monospace,
-                                color = Color.Black
                             )
                         }
                     }

@@ -73,6 +73,13 @@ import com.example.ui.theme.FixoSlate200
 import com.example.ui.theme.FixoSlate500
 import com.example.ui.theme.FixoSlate700
 
+import com.example.ui.components.HowPointsWorkModal
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.material.icons.filled.Info
+
 @Composable
 fun WalletRewardsScreen(
     user: User?,
@@ -85,6 +92,14 @@ fun WalletRewardsScreen(
     onBack: (() -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
+    var showHowPointsModal by remember { mutableStateOf(false) }
+
+    if (showHowPointsModal) {
+        HowPointsWorkModal(
+            onDismiss = { showHowPointsModal = false }
+        )
+    }
+
     LazyColumn(
         modifier = modifier
             .fillMaxSize()
@@ -257,15 +272,25 @@ fun WalletRewardsScreen(
                             modifier = Modifier
                                 .clip(RoundedCornerShape(8.dp))
                                 .background(FixoAmber500.copy(alpha = 0.15f))
+                                .clickable { showHowPointsModal = true }
                                 .padding(horizontal = 10.dp, vertical = 6.dp)
                         ) {
-                            Text(
-                                text = "${user?.fixoPoints ?: 0} Points",
-                                style = MaterialTheme.typography.labelMedium.copy(
-                                    fontWeight = FontWeight.Black,
-                                    color = FixoAmber600
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Text(
+                                    text = "${user?.fixoPoints ?: 0} Points",
+                                    style = MaterialTheme.typography.labelMedium.copy(
+                                        fontWeight = FontWeight.Black,
+                                        color = FixoAmber600
+                                    )
                                 )
-                            )
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Icon(
+                                    imageVector = Icons.Default.Info,
+                                    contentDescription = "Points info",
+                                    tint = FixoAmber600,
+                                    modifier = Modifier.size(14.dp)
+                                )
+                            }
                         }
                     }
 

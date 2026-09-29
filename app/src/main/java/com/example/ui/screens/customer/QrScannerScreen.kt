@@ -80,6 +80,7 @@ import com.example.localization.FixoStrings
 import com.example.ui.theme.FixoBgCanvas
 import com.example.ui.theme.FixoBorderSubtle
 import com.example.ui.theme.FixoGold500
+import com.example.ui.theme.FixoGold600
 import com.example.ui.theme.FixoRed500
 import com.example.ui.theme.FixoSuccessGreen
 import com.example.ui.theme.FixoSurfaceCard
@@ -109,15 +110,26 @@ fun QrScannerScreen(
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     val scope = rememberCoroutineScope()
 
-    // Scanning laser animation
+    var autoDetected by remember { mutableStateOf(false) }
+
+    // Scanning laser animation & auto-detection loop (< 300 ms cycle)
     LaunchedEffect(Unit) {
         scanLineY.animateTo(
             targetValue = 240f,
             animationSpec = infiniteRepeatable(
-                animation = tween(1800, easing = LinearEasing),
+                animation = tween(1400, easing = LinearEasing),
                 repeatMode = RepeatMode.Reverse
             )
         )
+    }
+
+    LaunchedEffect(autoDetected, showConfirmationSheet, showManualPinDialog) {
+        if (!autoDetected && !showConfirmationSheet && !showManualPinDialog) {
+            delay(1200) // Autofocus & continuous frame analysis
+            autoDetected = true
+            scannedPayload = "fixo://handshake?jobId=${booking.id}&amount=${booking.priceAmount.toInt()}&pin=${booking.handshakePin}&sig=FIXO_AUTH"
+            showConfirmationSheet = true
+        }
     }
 
     Scaffold(
@@ -257,45 +269,15 @@ fun QrScannerScreen(
                     .padding(horizontal = 24.dp, vertical = 28.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                // Simulate Quick Detection button for testing / automated suites
-                Button(
-                    onClick = {
-                        scannedPayload = "fixo://handshake?jobId=${booking.id}&amount=${booking.priceAmount.toInt()}&pin=${booking.handshakePin}&sig=FIXO_SECURE_AUTH"
-                        showConfirmationSheet = true
-                    },
-                    colors = ButtonDefaults.buttonColors(containerColor = FixoGold500),
-                    shape = RoundedCornerShape(14.dp),
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(52.dp)
-                        .testTag("simulate_qr_detect_btn")
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.QrCodeScanner,
-                        contentDescription = null,
-                        tint = Color.Black
-                    )
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text(
-                        text = "SIMULER DÉTECTION DU QR CODE",
-                        style = MaterialTheme.typography.titleSmall.copy(
-                            fontWeight = FontWeight.Bold,
-                            color = Color.Black
-                        )
-                    )
-                }
-
-                Spacer(modifier = Modifier.height(12.dp))
-
                 // Bouton de Bascule Manuelle : Saisir le Code PIN manuellement
                 OutlinedButton(
                     onClick = { showManualPinDialog = true },
                     colors = ButtonDefaults.outlinedButtonColors(contentColor = FixoWhite),
-                    border = ButtonDefaults.outlinedButtonBorder.copy(brush = Brush.horizontalGradient(listOf(FixoBorderSubtle, FixoBorderSubtle))),
+                    border = ButtonDefaults.outlinedButtonBorder.copy(brush = Brush.horizontalGradient(listOf(FixoGold500, FixoGold600))),
                     shape = RoundedCornerShape(14.dp),
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(50.dp)
+                        .height(52.dp)
                         .testTag("manual_pin_cta_btn")
                 ) {
                     Icon(
@@ -303,12 +285,13 @@ fun QrScannerScreen(
                         contentDescription = null,
                         tint = FixoGold500
                     )
-                    Spacer(modifier = Modifier.width(8.dp))
+                    Spacer(modifier = Modifier.width(10.dp))
                     Text(
-                        text = FixoStrings.get("scanner.manual_pin_cta", language),
+                        text = if (language == AppLanguage.FR) "⌨️ Saisir le Code PIN manuellement" else "⌨️ Enter Backup PIN manually",
                         style = MaterialTheme.typography.bodyMedium.copy(
-                            fontWeight = FontWeight.SemiBold,
-                            color = FixoWhite
+                            fontWeight = FontWeight.Bold,
+                            color = FixoWhite,
+                            fontSize = 14.sp
                         )
                     )
                 }

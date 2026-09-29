@@ -58,6 +58,7 @@ import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import com.example.data.model.Booking
 import com.example.data.model.JobStatus
+import com.example.ui.theme.FixoGold500
 import com.example.data.model.Reel
 import com.example.data.model.ServiceCategory
 import com.example.data.model.WorkerProfile
@@ -423,12 +424,24 @@ fun CustomerHomeScreen(
                                     color = FixoTextPrimary
                                 )
                                 Spacer(modifier = Modifier.height(10.dp))
-                                OutlinedButton(onClick = {
-                                    onSearchChanged("")
-                                    selectedProblemPillId = null
-                                    onCategorySelected(null)
-                                }) {
-                                    Text(if (language == AppLanguage.FR) "Réinitialiser les filtres" else "Reset Filters")
+                                Button(
+                                    onClick = {
+                                        onSearchChanged("")
+                                        selectedProblemPillId = null
+                                        onCategorySelected(null)
+                                    },
+                                    shape = RoundedCornerShape(24.dp),
+                                    colors = ButtonDefaults.buttonColors(
+                                        containerColor = FixoGold500,
+                                        contentColor = Color(0xFF080C15)
+                                    ),
+                                    modifier = Modifier.testTag("reset_filters_pill_btn")
+                                ) {
+                                    Text(
+                                        text = if (language == AppLanguage.FR) "↺ Réinitialiser les filtres" else "↺ Reset Filters",
+                                        fontWeight = FontWeight.Bold,
+                                        fontSize = 13.sp
+                                    )
                                 }
                             }
                         }

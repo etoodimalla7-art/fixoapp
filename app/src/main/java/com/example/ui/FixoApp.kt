@@ -210,67 +210,50 @@ fun FixoApp(
                 modifier = modifier
             )
         } else {
+            val isSubScreenActive = isViewingOnboarding ||
+                isViewingHelpCenter ||
+                isViewingVerificationCenter ||
+                isViewingWorkforceRecruitment ||
+                selectedOrganization != null ||
+                activeChatBookingId != null ||
+                isViewingConversations ||
+                isViewingInvoiceQr ||
+                isViewingQrScanner ||
+                activeDisputeBookingId != null ||
+                activeWarrantyBookingId != null ||
+                isViewingCustomerSettings ||
+                isViewingWorkerSettings ||
+                isViewingWallet ||
+                uiState.isBookingDialogVisible ||
+                uiState.selectedWorker != null ||
+                viewingJobId != null ||
+                isViewingPatrolMap
+
             Scaffold(
                 modifier = modifier.fillMaxSize(),
-                topBar = {
-                    FixoTopBar(
-                        currentRole = uiState.currentRole,
-                        currentLanguage = uiState.currentLanguage,
-                        currentUser = uiState.currentUser,
-                        onRoleSelected = { role ->
-                            viewModel.switchRole(role)
-                        },
-                        onLanguageToggle = {
-                            viewModel.toggleLanguage()
-                        },
-                        onWalletClick = {
-                            isViewingWallet = true
-                        },
-                        onLogout = {
-                            viewModel.logout()
-                        },
-                        isDevEnvironment = uiState.isDevEnvironment,
-                        onToggleEnvironment = {
-                            viewModel.toggleDevEnvironment()
-                        },
-                        unreadNotificationCount = uiState.unreadNotificationCount,
-                        onNotificationsClick = {
-                            viewModel.openNotificationsDialog()
-                        },
-                        unreadMessageCount = uiState.unreadMessageCount,
-                        onMessagesClick = {
-                            isViewingConversations = true
-                            isViewingWallet = false
-                            activeChatBookingId = null
-                        },
-                        selectedQuarter = uiState.selectedQuarter.name,
-                        onLocationClick = {
-                            isViewingLocationPicker = true
-                        },
-                        onHelpClick = {
-                            isViewingHelpCenter = true
-                        }
-                    )
-                },
-        bottomBar = {
-            FixoBottomNav(
-                currentRole = uiState.currentRole,
-                selectedTabIndex = selectedTab,
-                onTabSelected = { tabIndex ->
-                    selectedTab = tabIndex
-                    isViewingWallet = false
-                    isViewingConversations = false
-                    activeChatBookingId = null
-                    // If switching tabs, clear selected worker view
-                    if (uiState.selectedWorker != null) {
-                        viewModel.clearSelectedWorker()
+                topBar = {},
+                bottomBar = {
+                    if (!isSubScreenActive) {
+                        FixoBottomNav(
+                            currentRole = uiState.currentRole,
+                            selectedTabIndex = selectedTab,
+                            language = uiState.currentLanguage,
+                            onTabSelected = { tabIndex ->
+                                selectedTab = tabIndex
+                                isViewingWallet = false
+                                isViewingConversations = false
+                                activeChatBookingId = null
+                                // If switching tabs, clear selected worker view
+                                if (uiState.selectedWorker != null) {
+                                    viewModel.clearSelectedWorker()
+                                }
+                                viewingJobId = null
+                            }
+                        )
                     }
-                    viewingJobId = null
-                }
-            )
-        },
-        snackbarHost = { SnackbarHost(snackbarHostState) }
-    ) { innerPadding ->
+                },
+                snackbarHost = { SnackbarHost(snackbarHostState) }
+            ) { innerPadding ->
         Box(
             modifier = Modifier
                 .fillMaxSize()
@@ -651,11 +634,11 @@ fun FixoApp(
                                     },
                                     onWatchReelsClicked = {
                                         activeReelId = null
-                                        selectedTab = 3
+                                        selectedTab = 2
                                     },
                                     onWatchSpecificReel = { reel ->
                                         activeReelId = reel.id
-                                        selectedTab = 3
+                                        selectedTab = 2
                                     },
                                     onToggleLanguage = { viewModel.toggleLanguage() },
                                     onOpenQuarterPicker = { isViewingLocationPicker = true },
@@ -688,22 +671,7 @@ fun FixoApp(
                                     }
                                 )
 
-                                2 -> CustomerActivityScreen(
-                                    bookings = uiState.customerBookings,
-                                    language = uiState.currentLanguage,
-                                    onSelectBooking = { booking ->
-                                        viewModel.selectBooking(booking)
-                                        viewingJobId = booking.id
-                                    },
-                                    onOpenReview = { booking ->
-                                        viewModel.openReviewDialog(booking)
-                                    },
-                                    onOpenDispute = {
-                                        viewModel.openDisputeDialog()
-                                    }
-                                )
-
-                                3 -> ReelsFeedScreen(
+                                2 -> ReelsFeedScreen(
                                     reels = uiState.reels,
                                     allWorkers = uiState.allWorkers,
                                     initialReelId = activeReelId,
@@ -733,6 +701,21 @@ fun FixoApp(
                                     }
                                 )
 
+                                3 -> CustomerActivityScreen(
+                                    bookings = uiState.customerBookings,
+                                    language = uiState.currentLanguage,
+                                    onSelectBooking = { booking ->
+                                        viewModel.selectBooking(booking)
+                                        viewingJobId = booking.id
+                                    },
+                                    onOpenReview = { booking ->
+                                        viewModel.openReviewDialog(booking)
+                                    },
+                                    onOpenDispute = {
+                                        viewModel.openDisputeDialog()
+                                    }
+                                )
+
                                 4 -> ProfileScreen(
                                     user = uiState.currentUser,
                                     customerBookings = uiState.customerBookings,
@@ -742,7 +725,7 @@ fun FixoApp(
                                         viewModel.updateUserProfile(name, email, phone, city, avatarUrl)
                                     },
                                     onToggleLanguage = { viewModel.toggleLanguage() },
-                                    onNavigateToJobs = { selectedTab = 2 },
+                                    onNavigateToJobs = { selectedTab = 3 },
                                     onNavigateToWallet = { isViewingWallet = true },
                                     onWorkerClicked = { worker -> viewModel.selectWorker(worker) },
                                     onOpenDispute = { viewModel.openDisputeDialog() },
@@ -786,24 +769,13 @@ fun FixoApp(
                             onDeleteReel = { viewModel.deleteReel(it) }
                         )
 
-                        1 -> WorkerDashboardScreen(
-                            user = uiState.currentUser,
-                            workerProfile = uiState.allWorkers.firstOrNull(),
+                        1 -> com.example.ui.screens.worker.WorkerScheduleScreen(
                             bookings = uiState.workerBookings,
-                            reels = uiState.reels,
                             language = uiState.currentLanguage,
                             onSelectBooking = { booking ->
                                 viewModel.selectBooking(booking)
                                 viewingJobId = booking.id
-                            },
-                            onAdvanceJobStatus = { id, status ->
-                                viewModel.advanceJobStatus(id, status)
-                            },
-                            onOpenUploadReel = { viewModel.openUploadReelDialog() },
-                            onOpenAvailability = { viewModel.openAvailabilityDialog() },
-                            onOpenSubscription = { viewModel.openSubscriptionDialog() },
-                            onOpenWithdraw = { viewModel.openWithdrawDialog() },
-                            onDeleteReel = { viewModel.deleteReel(it) }
+                            }
                         )
 
                         2 -> ReelsFeedScreen(
@@ -852,23 +824,12 @@ fun FixoApp(
                             }
                         }
 
-                        4 -> ProfileScreen(
+                        4 -> com.example.ui.screens.worker.WorkerProfileScreen(
                             user = uiState.currentUser,
-                            customerBookings = uiState.workerBookings,
-                            savedWorkers = emptyList(),
+                            workerProfile = uiState.allWorkers.firstOrNull(),
                             language = uiState.currentLanguage,
-                            onUpdateProfile = { name, email, phone, city, avatarUrl ->
-                                viewModel.updateUserProfile(name, email, phone, city, avatarUrl)
-                            },
-                            onToggleLanguage = { viewModel.toggleLanguage() },
-                            onNavigateToJobs = { selectedTab = 3 },
                             onNavigateToWallet = { isViewingWallet = true },
-                            onWorkerClicked = {},
-                            onOpenDispute = { viewModel.openDisputeDialog() },
-                            onLogout = { viewModel.logout() },
-                            onDeleteAccount = { viewModel.deleteAccount() },
-                            onOpenVerificationCenter = { isViewingVerificationCenter = true },
-                            onOpenHelpCenter = { isViewingHelpCenter = true }
+                            onLogout = { viewModel.logout() }
                         )
                     }
                 }

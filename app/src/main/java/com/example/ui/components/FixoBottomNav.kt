@@ -1,6 +1,7 @@
 package com.example.ui.components
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
@@ -100,12 +101,24 @@ fun FixoBottomNav(
         )
     }
 
+    val isDark = MaterialTheme.colorScheme.surface.let {
+        (0.299 * it.red + 0.587 * it.green + 0.114 * it.blue) < 0.5
+    }
+    val navBg = if (isDark) Color(0xFF080C15) else Color(0xFFFFFFFF)
+    val borderTopColor = if (isDark) Color(0x1FFFFFFF) else Color(0xFFE2E8F0)
+    val activeColor = if (isDark) FixoGold500 else Color(0xFFD97706)
+    val inactiveColor = Color(0xFF64748B)
+
     NavigationBar(
         modifier = modifier
             .height(64.dp)
+            .border(
+                width = 1.dp,
+                color = borderTopColor
+            )
             .windowInsetsPadding(WindowInsets.navigationBars),
-        containerColor = FixoSurfaceCard,
-        tonalElevation = 8.dp
+        containerColor = navBg,
+        tonalElevation = if (isDark) 8.dp else 0.dp
     ) {
         items.forEachIndexed { index, item ->
             val isSelected = selectedTabIndex == index
@@ -119,7 +132,7 @@ fun FixoBottomNav(
                         Icon(
                             imageVector = if (isSelected) item.selectedIcon else item.icon,
                             contentDescription = labelText,
-                            tint = if (isSelected) FixoGold500 else FixoTextSecondary,
+                            tint = if (isSelected) activeColor else inactiveColor,
                             modifier = Modifier.size(22.dp)
                         )
                         if (isSelected) {
@@ -129,7 +142,7 @@ fun FixoBottomNav(
                                 modifier = Modifier
                                     .size(3.dp)
                                     .clip(CircleShape)
-                                    .background(FixoGold500)
+                                    .background(activeColor)
                             )
                         } else {
                             Spacer(modifier = Modifier.height(3.dp))
@@ -141,16 +154,16 @@ fun FixoBottomNav(
                         text = labelText,
                         fontSize = 10.sp,
                         fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
-                        color = if (isSelected) FixoGold500 else FixoTextSecondary,
+                        color = if (isSelected) activeColor else inactiveColor,
                         maxLines = 1
                     )
                 },
                 colors = NavigationBarItemDefaults.colors(
-                    selectedIconColor = FixoGold500,
-                    selectedTextColor = FixoGold500,
+                    selectedIconColor = activeColor,
+                    selectedTextColor = activeColor,
                     indicatorColor = Color.Transparent, // No bulky pill indicator
-                    unselectedIconColor = FixoTextSecondary,
-                    unselectedTextColor = FixoTextSecondary
+                    unselectedIconColor = inactiveColor,
+                    unselectedTextColor = inactiveColor
                 ),
                 modifier = Modifier.testTag(item.testTag)
             )
