@@ -41,7 +41,12 @@ import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Phone
+import androidx.compose.material.icons.filled.PhotoCamera
 import androidx.compose.material.icons.filled.Policy
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.activity.result.PickVisualMediaRequest
+import com.example.ui.components.HowPointsWorkModal
 import androidx.compose.material.icons.filled.ReportProblem
 import androidx.compose.material.icons.filled.Security
 import androidx.compose.material.icons.filled.Star
@@ -135,9 +140,12 @@ fun ProfileScreen(
     onShareLocationChanged: (Boolean) -> Unit = {},
     onOpenVerificationCenter: () -> Unit = {},
     onOpenHelpCenter: () -> Unit = {},
+    onOpenAboutFixo: () -> Unit = {},
+    onOpenLegalDocs: (Int) -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     var showEditProfileDialog by remember { mutableStateOf(false) }
+    var showAvatarPickerSheet by remember { mutableStateOf(false) }
     var showPointsExplanationDialog by remember { mutableStateOf(false) }
     var showAboutDialog by remember { mutableStateOf(false) }
     var showSupportDialog by remember { mutableStateOf(false) }
@@ -146,6 +154,20 @@ fun ProfileScreen(
     var showPrivacyDialog by remember { mutableStateOf(false) }
     var showLogoutConfirm by remember { mutableStateOf(false) }
     var showDeleteAccountConfirm by remember { mutableStateOf(false) }
+
+    val photoPickerLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.PickVisualMedia()
+    ) { uri ->
+        uri?.let {
+            onUpdateProfile(
+                user?.name ?: "Sarah Jenkins",
+                user?.email ?: "sarah.jenkins@gmail.com",
+                user?.phone ?: "+237 677 889 900",
+                user?.city ?: "Douala",
+                it.toString()
+            )
+        }
+    }
 
     // User preferences state
     var pushNotificationsEnabled by remember { mutableStateOf(true) }
@@ -183,8 +205,11 @@ fun ProfileScreen(
                         modifier = Modifier.fillMaxWidth(),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        // User Avatar
-                        Box(contentAlignment = Alignment.BottomEnd) {
+                        // User Avatar (Cliquer pour changer la photo)
+                        Box(
+                            contentAlignment = Alignment.BottomEnd,
+                            modifier = Modifier.clickable { showAvatarPickerSheet = true }
+                        ) {
                             AsyncImage(
                                 model = user?.avatarUrl ?: "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=400",
                                 contentDescription = "Profile Avatar",
@@ -196,18 +221,17 @@ fun ProfileScreen(
                             )
                             Box(
                                 modifier = Modifier
-                                    .size(24.dp)
+                                    .size(26.dp)
                                     .clip(CircleShape)
                                     .background(FixoGold500)
-                                    .clickable { showEditProfileDialog = true }
                                     .border(1.5.dp, MaterialTheme.colorScheme.surface, CircleShape),
                                 contentAlignment = Alignment.Center
                             ) {
                                 Icon(
-                                    imageVector = Icons.Default.Edit,
-                                    contentDescription = "Edit photo",
-                                    tint = FixoNavy900,
-                                    modifier = Modifier.size(13.dp)
+                                    imageVector = Icons.Default.PhotoCamera,
+                                    contentDescription = "Changer la photo",
+                                    tint = Color(0xFF0A0E17),
+                                    modifier = Modifier.size(14.dp)
                                 )
                             }
                         }
@@ -351,14 +375,15 @@ fun ProfileScreen(
             }
         }
 
-        // 3. FIXO POINTS & LOYALTY CARD
+        // 3. FIXO POINTS & LOYALTY CARD (HIGH CONTRAST OBSIDIAN & GOLD)
         item {
             Card(
                 modifier = Modifier
                     .fillMaxWidth()
                     .testTag("fixo_points_card"),
                 shape = RoundedCornerShape(16.dp),
-                colors = CardDefaults.cardColors(containerColor = FixoNavy900)
+                colors = CardDefaults.cardColors(containerColor = Color(0xFF111827)),
+                border = androidx.compose.foundation.BorderStroke(1.dp, FixoGold500.copy(alpha = 0.35f))
             ) {
                 Column(modifier = Modifier.padding(18.dp)) {
                     Row(
@@ -369,7 +394,7 @@ fun ProfileScreen(
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Box(
                                 modifier = Modifier
-                                    .size(32.dp)
+                                    .size(36.dp)
                                     .clip(CircleShape)
                                     .background(FixoGold500),
                                 contentAlignment = Alignment.Center
@@ -377,37 +402,44 @@ fun ProfileScreen(
                                 Icon(
                                     imageVector = Icons.Default.Star,
                                     contentDescription = null,
-                                    tint = FixoNavy900,
-                                    modifier = Modifier.size(18.dp)
+                                    tint = Color(0xFF080C15),
+                                    modifier = Modifier.size(20.dp)
                                 )
                             }
-                            Spacer(modifier = Modifier.width(10.dp))
+                            Spacer(modifier = Modifier.width(12.dp))
                             Column {
                                 Text(
-                                    text = "FIXO Rewards & Points",
-                                    fontSize = 15.sp,
+                                    text = if (language == AppLanguage.FR) "Points & Récompenses FIXO" else "FIXO Rewards & Points",
+                                    fontSize = 16.sp,
                                     fontWeight = FontWeight.Bold,
-                                    color = FixoWhite
+                                    color = Color.White
                                 )
                                 Text(
-                                    text = "Tier: Gold Client • 30% back on jobs",
-                                    fontSize = 11.sp,
-                                    color = FixoGold100
+                                    text = if (language == AppLanguage.FR) "Statut : Client Or • 30% cagnottés" else "Tier: Gold Client • 30% back on jobs",
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.Medium,
+                                    color = Color(0xFFCBD5E1)
                                 )
                             }
                         }
 
-                        TextButton(onClick = { showPointsExplanationDialog = true }) {
+                        Surface(
+                            shape = RoundedCornerShape(8.dp),
+                            color = FixoGold500.copy(alpha = 0.15f),
+                            border = androidx.compose.foundation.BorderStroke(1.dp, FixoGold500.copy(alpha = 0.4f)),
+                            modifier = Modifier.clickable { showPointsExplanationDialog = true }
+                        ) {
                             Text(
-                                text = "How it works",
-                                fontSize = 12.sp,
+                                text = if (language == AppLanguage.FR) "Règles ?" else "How it works",
+                                fontSize = 11.sp,
                                 color = FixoGold500,
-                                fontWeight = FontWeight.SemiBold
+                                fontWeight = FontWeight.Bold,
+                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
                             )
                         }
                     }
 
-                    Spacer(modifier = Modifier.height(14.dp))
+                    Spacer(modifier = Modifier.height(16.dp))
 
                     Row(
                         modifier = Modifier.fillMaxWidth(),
@@ -416,30 +448,41 @@ fun ProfileScreen(
                     ) {
                         Column {
                             Text(
-                                text = "Current Points Balance",
+                                text = if (language == AppLanguage.FR) "Solde Disponible" else "Current Points Balance",
                                 fontSize = 12.sp,
-                                color = FixoNeutral400
+                                fontWeight = FontWeight.Medium,
+                                color = Color(0xFF94A3B8)
                             )
+                            Spacer(modifier = Modifier.height(2.dp))
                             Text(
                                 text = "$pointsBalance PTS",
                                 fontSize = 28.sp,
-                                fontWeight = FontWeight.ExtraBold,
+                                fontWeight = FontWeight.Black,
                                 color = FixoGold500
                             )
+                            Spacer(modifier = Modifier.height(2.dp))
                             Text(
-                                text = "Equivalent to $pointsBalance XAF discount",
+                                text = if (language == AppLanguage.FR) "Équivalent à $pointsBalance FCFA de réduction" else "Equivalent to $pointsBalance XAF discount",
                                 fontSize = 11.sp,
-                                color = FixoNeutral400
+                                color = Color(0xFFCBD5E1)
                             )
                         }
 
-                        OutlinedButton(
+                        Button(
                             onClick = onNavigateToWallet,
                             shape = RoundedCornerShape(10.dp),
                             border = androidx.compose.foundation.BorderStroke(1.dp, FixoGold500),
-                            colors = ButtonDefaults.outlinedButtonColors(contentColor = FixoGold500)
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = Color(0xFF1E293B),
+                                contentColor = FixoGold500
+                            )
                         ) {
-                            Text("Redeem in Wallet", fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                            Text(
+                                text = if (language == AppLanguage.FR) "Convertir" else "Redeem",
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = FixoGold500
+                            )
                         }
                     }
                 }
@@ -903,27 +946,27 @@ fun ProfileScreen(
 
                     ActionRow(
                         icon = Icons.Default.Info,
-                        title = "About FIXO Platform",
-                        subtitle = "Version 2.0.0 Production • Cameroon Skilled Trades",
-                        onClick = { showAboutDialog = true }
+                        title = if (language == AppLanguage.FR) "À Propos de la Plateforme FIXO" else "About FIXO Platform",
+                        subtitle = "Version 2.0.0 Commercial • Métiers Certifiés au Cameroun",
+                        onClick = onOpenAboutFixo
                     )
 
                     HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp), color = FixoNeutral200)
 
                     ActionRow(
                         icon = Icons.Default.Policy,
-                        title = if (language == AppLanguage.FR) "Conditions d'Utilisation" else "Terms of Service",
-                        subtitle = "Escrow terms, artisan code of conduct",
-                        onClick = { showTermsDialog = true }
+                        title = if (language == AppLanguage.FR) "Conditions d'Utilisation (CGU & Séquestre)" else "Terms of Service & Escrow",
+                        subtitle = "Statut de courtier, zéro cash, clôture par double clé",
+                        onClick = { onOpenLegalDocs(0) }
                     )
 
                     HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp), color = FixoNeutral200)
 
                     ActionRow(
                         icon = Icons.Default.Security,
-                        title = if (language == AppLanguage.FR) "Politique de Confidentialité" else "Privacy Policy",
-                        subtitle = "Data protection & payment confidentiality",
-                        onClick = { showPrivacyDialog = true }
+                        title = if (language == AppLanguage.FR) "Protection des Données (Conformité CEMAC)" else "Data Privacy (CEMAC)",
+                        subtitle = "Chiffrement GPS, coffre-fort ISO 27001, passerelle masquée",
+                        onClick = { onOpenLegalDocs(1) }
                     )
                 }
             }
@@ -1066,16 +1109,6 @@ fun ProfileScreen(
                         shape = RoundedCornerShape(10.dp)
                     )
 
-                    Spacer(modifier = Modifier.height(10.dp))
-
-                    OutlinedTextField(
-                        value = editAvatarUrl,
-                        onValueChange = { editAvatarUrl = it },
-                        label = { Text("Avatar Photo URL") },
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(10.dp)
-                    )
-
                     Spacer(modifier = Modifier.height(20.dp))
 
                     Row(
@@ -1088,7 +1121,7 @@ fun ProfileScreen(
                         Spacer(modifier = Modifier.width(8.dp))
                         Button(
                             onClick = {
-                                onUpdateProfile(editName, editEmail, editPhone, editCity, editAvatarUrl)
+                                onUpdateProfile(editName, editEmail, editPhone, editCity, user?.avatarUrl ?: "")
                                 showEditProfileDialog = false
                             },
                             shape = RoundedCornerShape(10.dp),
@@ -1105,71 +1138,125 @@ fun ProfileScreen(
         }
     }
 
-    // 2. HOW POINTS WORK DIALOG
+    // 2. HOW POINTS WORK MODAL (WCAG AAA COMPLIANT)
     if (showPointsExplanationDialog) {
-        Dialog(onDismissRequest = { showPointsExplanationDialog = false }) {
+        HowPointsWorkModal(
+            language = language,
+            onDismiss = { showPointsExplanationDialog = false }
+        )
+    }
+
+    // 2B. AVATAR PICKER MODAL (NO UNSPLASH URL FIELD)
+    if (showAvatarPickerSheet) {
+        androidx.compose.ui.window.Dialog(onDismissRequest = { showAvatarPickerSheet = false }) {
             Card(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(vertical = 16.dp),
+                    .padding(16.dp),
                 shape = RoundedCornerShape(20.dp),
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+                colors = CardDefaults.cardColors(containerColor = Color(0xFF111827)),
+                border = androidx.compose.foundation.BorderStroke(1.dp, FixoGold500.copy(alpha = 0.3f))
             ) {
-                Column(modifier = Modifier.padding(20.dp)) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Box(
-                            modifier = Modifier
-                                .size(36.dp)
-                                .clip(CircleShape)
-                                .background(FixoGold500),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Icon(Icons.Default.Star, contentDescription = null, tint = FixoNavy900)
-                        }
-                        Spacer(modifier = Modifier.width(12.dp))
-                        Text(
-                            text = "How FIXO Points Work",
-                            fontSize = 18.sp,
-                            fontWeight = FontWeight.Bold
-                        )
-                    }
-
-                    Spacer(modifier = Modifier.height(14.dp))
-
+                Column(
+                    modifier = Modifier.padding(20.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
                     Text(
-                        text = "1. Earn 30% Points Back\nEvery completed and confirmed job credits 30% of the service value as reward points to your account.",
-                        fontSize = 13.sp,
-                        color = FixoNeutral700,
-                        lineHeight = 18.sp
+                        text = if (language == AppLanguage.FR) "Changer de Photo de Profil" else "Change Profile Photo",
+                        fontSize = 18.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = Color.White
                     )
-
-                    Spacer(modifier = Modifier.height(8.dp))
-
+                    Spacer(modifier = Modifier.height(6.dp))
                     Text(
-                        text = "2. Review Bonus\nLeave a genuine rating and photos of the completed work to earn +100 bonus points.",
-                        fontSize = 13.sp,
-                        color = FixoNeutral700,
-                        lineHeight = 18.sp
-                    )
-
-                    Spacer(modifier = Modifier.height(8.dp))
-
-                    Text(
-                        text = "3. 1 Point = 1 XAF\nRedeem your points anytime as a discount on your next booking or convert them to balance in your FIXO Wallet.",
-                        fontSize = 13.sp,
-                        color = FixoNeutral700,
-                        lineHeight = 18.sp
+                        text = if (language == AppLanguage.FR) "Sélectionnez depuis votre téléphone ou un avatar prédéfini" else "Pick from phone gallery or choose a preset",
+                        fontSize = 12.sp,
+                        color = Color(0xFF94A3B8),
+                        textAlign = androidx.compose.ui.text.style.TextAlign.Center
                     )
 
                     Spacer(modifier = Modifier.height(18.dp))
 
+                    // Bouton Galerie Native Android
                     Button(
-                        onClick = { showPointsExplanationDialog = false },
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(10.dp),
-                        colors = ButtonDefaults.buttonColors(containerColor = FixoNavy900)
+                        onClick = {
+                            photoPickerLauncher.launch(
+                                PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
+                            )
+                            showAvatarPickerSheet = false
+                        },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(48.dp)
+                            .testTag("pick_photo_gallery_button"),
+                        shape = RoundedCornerShape(12.dp),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = FixoGold500,
+                            contentColor = Color(0xFF0A0E17)
+                        )
                     ) {
-                        Text("Understood", color = FixoWhite, fontWeight = FontWeight.Bold)
+                        Icon(Icons.Default.PhotoCamera, contentDescription = null, modifier = Modifier.size(18.dp), tint = Color(0xFF0A0E17))
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            text = if (language == AppLanguage.FR) "🖼️ Choisir dans ma galerie" else "🖼️ Choose from Gallery",
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 13.sp,
+                            color = Color(0xFF0A0E17)
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.height(18.dp))
+
+                    Text(
+                        text = if (language == AppLanguage.FR) "Avatars Prédéfinis Soignés :" else "Or Choose a Preset Avatar:",
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = Color(0xFFCBD5E1)
+                    )
+                    Spacer(modifier = Modifier.height(10.dp))
+
+                    val presets = listOf(
+                        "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=400",
+                        "https://images.unsplash.com/photo-1540569014015-19a7be504e3a?w=400",
+                        "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=400",
+                        "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400"
+                    )
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceEvenly
+                    ) {
+                        presets.forEach { presetUrl ->
+                            Box(
+                                modifier = Modifier
+                                    .size(56.dp)
+                                    .clip(CircleShape)
+                                    .border(2.dp, FixoGold500, CircleShape)
+                                    .clickable {
+                                        onUpdateProfile(
+                                            user?.name ?: "Sarah Jenkins",
+                                            user?.email ?: "sarah.jenkins@gmail.com",
+                                            user?.phone ?: "+237 677 889 900",
+                                            user?.city ?: "Douala",
+                                            presetUrl
+                                        )
+                                        showAvatarPickerSheet = false
+                                    }
+                            ) {
+                                AsyncImage(
+                                    model = presetUrl,
+                                    contentDescription = "Avatar preset",
+                                    modifier = Modifier.fillMaxSize(),
+                                    contentScale = ContentScale.Crop
+                                )
+                            }
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(18.dp))
+
+                    TextButton(onClick = { showAvatarPickerSheet = false }) {
+                        Text(if (language == AppLanguage.FR) "Fermer" else "Close", color = Color(0xFF94A3B8))
                     }
                 }
             }

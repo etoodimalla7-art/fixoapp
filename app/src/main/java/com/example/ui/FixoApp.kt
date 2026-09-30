@@ -38,11 +38,9 @@ import com.example.data.model.WorkerProfile
 import com.example.data.model.WorkforceRequest
 import com.example.data.repository.ThemeMode
 import com.example.ui.components.BookingDialog
-import com.example.ui.components.CameroonLocationPickerModal
 import com.example.ui.components.DepositDialog
 import com.example.ui.components.DisputeDialog
 import com.example.ui.components.FixoBottomNav
-import com.example.ui.components.FixoTopBar
 import com.example.ui.components.NotificationsDialog
 import com.example.ui.components.ReviewAndReleaseDialog
 import com.example.ui.components.StartTripConfirmationDialog
@@ -56,6 +54,7 @@ import com.example.ui.screens.customer.BookingCheckoutModal
 import com.example.ui.screens.customer.CustomerActivityScreen
 import com.example.ui.screens.customer.CustomerHomeScreen
 import com.example.ui.screens.customer.CustomerServicesScreen
+import com.example.ui.screens.customer.ExactLocationPickerScreen
 import com.example.ui.screens.customer.ExplorerMapScreen
 import com.example.ui.screens.customer.JobTrackingScreen
 import com.example.ui.screens.customer.WorkerProfileScreen
@@ -227,7 +226,8 @@ fun FixoApp(
                 uiState.isBookingDialogVisible ||
                 uiState.selectedWorker != null ||
                 viewingJobId != null ||
-                isViewingPatrolMap
+                isViewingPatrolMap ||
+                isViewingLocationPicker
 
             Scaffold(
                 modifier = modifier.fillMaxSize(),
@@ -973,10 +973,12 @@ fun FixoApp(
     }
 
     if (isViewingLocationPicker) {
-        CameroonLocationPickerModal(
-            selectedQuarter = uiState.selectedQuarter,
-            onQuarterSelected = { quarter ->
-                viewModel.setQuarter(quarter)
+        ExactLocationPickerScreen(
+            initialQuarter = uiState.selectedQuarter,
+            initialLandmark = uiState.selectedAddressLandmark,
+            language = uiState.currentLanguage,
+            onLocationConfirmed = { quarter, landmark, lat, lng ->
+                viewModel.setExactInterventionLocation(quarter, landmark, lat, lng)
                 isViewingLocationPicker = false
             },
             onDismiss = { isViewingLocationPicker = false }

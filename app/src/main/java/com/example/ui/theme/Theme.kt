@@ -7,80 +7,66 @@ import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
 
-// =========================================================================
-// CHANTIER 1 : DOUBLE THÈME ADAPTATIF TOUT-TERRAIN
-// Mode Sombre Haute Visibilité (WCAG AAA) & Mode Clair Plein Soleil
-// =========================================================================
-
 /**
- * Mode Sombre Haute Visibilité (WCAG AAA) :
- * - Fond d'écran : Noir d'encre #080C15 (ou #000000)
- * - Surfaces de cartes : Élévation par gris anthracite #1A2232 et #222E42
- * - Bords et contours : Liseré de délimitation en rgba(255, 255, 255, 0.16) de 1.5 px
- * - Typographie : Blanc pur #FFFFFF pour 100% des titres, blanc bleuté #E2E8F0 pour le secondaire
- * - Or Ambre Électrique : #FFB800 vers #FF9100 pour contraste > 7:1
+ * PALETTE SÉMANTIQUE IMMUABLE « OBSIDIAN & CHAMPAGNE GOLD »
  */
 private val DarkColorScheme = darkColorScheme(
-    primary = FixoGold500, // #FFB800
-    onPrimary = Color(0xFF080C15), // Contraste > 7:1
-    primaryContainer = FixoSurfaceElevated, // #222E42
+    primary = FixoGold500,
+    onPrimary = Color(0xFF080C15),
+    primaryContainer = FixoDarkSurface,
     onPrimaryContainer = FixoGold500,
 
-    secondary = FixoGold600, // #FF9100
+    secondary = FixoGold600,
     onSecondary = Color(0xFF080C15),
-    secondaryContainer = FixoSurfaceCard, // #1A2232
-    onSecondaryContainer = FixoGold500,
+    secondaryContainer = FixoDarkSurfaceCard,
+    onSecondaryContainer = FixoDarkTextPrimary,
 
-    tertiary = FixoSuccessGreen,
+    tertiary = FixoStatusGreen,
     onTertiary = Color(0xFF080C15),
 
-    error = FixoDangerRed,
-    onError = FixoWhite,
+    error = FixoStatusRed,
+    onError = FixoDarkTextPrimary,
 
-    background = FixoBgCanvas, // #080C15
-    onBackground = FixoTextPrimary, // #FFFFFF
+    background = FixoDarkBackground, // #080C15
+    onBackground = FixoDarkTextPrimary, // #FFFFFF
 
-    surface = FixoSurfaceCard, // #1A2232
-    onSurface = FixoTextPrimary, // #FFFFFF
+    surface = FixoDarkSurface, // #111827
+    onSurface = FixoDarkTextPrimary, // #FFFFFF
 
-    surfaceVariant = FixoSurfaceElevated, // #222E42
-    onSurfaceVariant = FixoTextSecondary, // #E2E8F0
+    surfaceVariant = FixoDarkSurfaceCard, // #1E293B
+    onSurfaceVariant = FixoDarkTextSecondary, // #CBD5E1
 
-    outline = FixoBorderSubtle, // rgba(255, 255, 255, 0.16)
-    outlineVariant = FixoBorderSubtle
+    outline = FixoDarkBorder, // rgba(255, 255, 255, 0.08)
+    outlineVariant = FixoDarkBorder
 )
 
-/**
- * Thème Clair Plein Soleil (Chantier Adaptatif) :
- * - Fond blanc cassé #F8FAFC
- * - Conteneurs #FFFFFF
- * - Bordures #E2E8F0
- * - Texte noir d'encre #0F172A
- */
 private val LightColorScheme = lightColorScheme(
-    primary = FixoLightTextPrimary, // #0F172A
+    primary = FixoGold600,
     onPrimary = FixoWhite,
-    primaryContainer = FixoLightSurface, // #FFFFFF
+    primaryContainer = FixoLightSurfaceCard,
     onPrimaryContainer = FixoLightTextPrimary,
 
-    secondary = FixoGold600, // #FF9100
+    secondary = FixoLightTextPrimary,
     onSecondary = FixoWhite,
-    secondaryContainer = Color(0xFFF1F5F9),
+    secondaryContainer = FixoLightSurfaceCard,
     onSecondaryContainer = FixoLightTextPrimary,
 
-    tertiary = FixoEmerald600,
+    tertiary = FixoStatusGreen,
     onTertiary = FixoWhite,
 
-    background = FixoLightBg, // #F8FAFC
+    error = FixoStatusRed,
+    onError = FixoWhite,
+
+    background = FixoLightBackground, // #F8FAFC
     onBackground = FixoLightTextPrimary, // #0F172A
 
     surface = FixoLightSurface, // #FFFFFF
     onSurface = FixoLightTextPrimary, // #0F172A
 
-    surfaceVariant = Color(0xFFF1F5F9),
-    onSurfaceVariant = FixoLightTextSecondary, // #334155
+    surfaceVariant = FixoLightSurfaceCard, // #F1F5F9
+    onSurfaceVariant = FixoLightTextSecondary, // #64748B
 
-    outline = FixoLightBorder, // #E2E8F0
+    outline = FixoLightBorder, // rgba(15, 23, 42, 0.08)
     outlineVariant = FixoLightBorder
 )
 

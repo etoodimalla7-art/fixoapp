@@ -41,6 +41,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.testTag
@@ -180,26 +181,26 @@ fun ExplorerMapScreen(
             }
         }
 
-        // Bottom Worker Selection Sheet Preview
+        // Bottom Worker Selection Sheet Preview (Inspiration Uber)
         hoveredWorker?.let { worker ->
             Card(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(16.dp)
                     .align(Alignment.BottomCenter)
-                    .border(1.5.dp, FixoBorderSubtle, RoundedCornerShape(16.dp))
-                    .clickable { selectedWorkerForPassport = worker },
-                shape = RoundedCornerShape(16.dp),
-                colors = CardDefaults.cardColors(containerColor = FixoSurfaceCard)
+                    .border(1.5.dp, FixoBorderSubtle, RoundedCornerShape(20.dp))
+                    .shadow(elevation = 16.dp, shape = RoundedCornerShape(20.dp)),
+                shape = RoundedCornerShape(20.dp),
+                colors = CardDefaults.cardColors(containerColor = Color(0xFF111827))
             ) {
-                Column(modifier = Modifier.padding(14.dp)) {
+                Column(modifier = Modifier.padding(16.dp)) {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Box(
                             modifier = Modifier
-                                .size(48.dp)
+                                .size(52.dp)
                                 .clip(CircleShape)
                                 .border(2.dp, FixoElectricAmber, CircleShape)
                         ) {
@@ -217,49 +218,96 @@ fun ExplorerMapScreen(
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 Text(
                                     text = worker.name,
-                                    fontSize = 15.sp,
+                                    fontSize = 16.sp,
                                     fontWeight = FontWeight.Bold,
-                                    color = FixoTextPrimary
+                                    color = Color.White
                                 )
                                 Spacer(modifier = Modifier.width(6.dp))
+                                Surface(
+                                    shape = RoundedCornerShape(6.dp),
+                                    color = FixoEmerald500.copy(alpha = 0.15f)
+                                ) {
+                                    Text(
+                                        text = "Certifié ✓",
+                                        fontSize = 10.sp,
+                                        fontWeight = FontWeight.ExtraBold,
+                                        color = FixoEmerald500,
+                                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                    )
+                                }
+                            }
+                            Spacer(modifier = Modifier.height(2.dp))
+                            Row(verticalAlignment = Alignment.CenterVertically) {
                                 Text(
-                                    text = "Certifié Fixo ✓",
-                                    fontSize = 10.sp,
-                                    fontWeight = FontWeight.ExtraBold,
-                                    color = FixoEmerald500
+                                    text = "4.9 ★",
+                                    fontSize = 13.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = FixoElectricAmber
+                                )
+                                Text(
+                                    text = " • 1.2 km • ~15 min d'arrivée",
+                                    fontSize = 12.sp,
+                                    color = Color(0xFFCBD5E1)
                                 )
                             }
+                        }
+
+                        // Fixed Escrow Badge
+                        Column(horizontalAlignment = Alignment.End) {
                             Text(
-                                text = "${worker.category.displayName} • ⭐ 4.9 • 15 000 FCFA",
-                                fontSize = 12.sp,
-                                fontWeight = FontWeight.SemiBold,
+                                text = "15 000 FCFA",
+                                fontSize = 16.sp,
+                                fontWeight = FontWeight.Black,
                                 color = FixoElectricAmber
+                            )
+                            Text(
+                                text = "Forfait Garanti",
+                                fontSize = 10.sp,
+                                color = Color(0xFF94A3B8)
                             )
                         }
                     }
 
-                    Spacer(modifier = Modifier.height(12.dp))
+                    Spacer(modifier = Modifier.height(14.dp))
 
+                    // Single Major Action Button
                     Button(
-                        onClick = { selectedWorkerForPassport = worker },
+                        onClick = { onBookWorker(worker, true, 15000.0) },
                         modifier = Modifier
                             .fillMaxWidth()
-                            .height(48.dp)
+                            .height(50.dp)
                             .testTag("btn_view_passport_book"),
                         shape = RoundedCornerShape(12.dp),
                         colors = ButtonDefaults.buttonColors(
                             containerColor = FixoElectricAmber,
-                            contentColor = FixoBgCanvas
+                            contentColor = Color(0xFF0A0E17)
                         )
                     ) {
                         Text(
                             text = if (language == AppLanguage.FR)
-                                "Voir le Passeport & Réserver (15 000 FCFA)"
+                                "Réserver cette intervention (15 000 FCFA)"
                             else
-                                "View Passport & Book (15,000 FCFA)",
-                            fontSize = 13.sp,
+                                "Book This Intervention (15,000 FCFA)",
+                            fontSize = 14.sp,
                             fontWeight = FontWeight.Bold,
-                            color = FixoBgCanvas
+                            color = Color(0xFF0A0E17)
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.height(4.dp))
+
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { selectedWorkerForPassport = worker }
+                            .padding(vertical = 4.dp),
+                        horizontalArrangement = Arrangement.Center
+                    ) {
+                        Text(
+                            text = if (language == AppLanguage.FR) "Voir le Passeport Technique & Diplômes →" else "View Technical Passport & Credentials →",
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            color = Color(0xFF94A3B8)
                         )
                     }
                 }

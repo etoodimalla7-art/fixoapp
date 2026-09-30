@@ -30,10 +30,13 @@ class FixoCoreLifecycleTest {
     private lateinit var repository: FixoRepository
 
     @Before
-    fun setup() = runBlocking {
-        context = ApplicationProvider.getApplicationContext()
-        repository = FixoRepository(context)
-        repository.loadSandboxTestData()
+    fun setup() {
+        runBlocking {
+            context = ApplicationProvider.getApplicationContext()
+            repository = FixoRepository(context)
+            repository.loadSandboxTestData()
+            repository.getAllBookings().first { it.isNotEmpty() }
+        }
     }
 
     @Test
@@ -64,10 +67,10 @@ class FixoCoreLifecycleTest {
 
     @Test
     fun testFullBookingLifecycleAndEscrowRelease() = runBlocking {
-        val bookings = repository.getAllBookings().first()
-        val targetBooking = bookings.firstOrNull()
+        val bookings = repository.getAllBookings().first { it.isNotEmpty() }
+        val targetBooking = bookings.firstOrNull { it.id == "bk_douala_active" } ?: bookings.first()
         assertNotNull("Sandbox should have pre-seeded bookings", targetBooking)
-        val bookingId = targetBooking!!.id
+        val bookingId = targetBooking.id
 
         // 1. Worker starts trip
         repository.startWorkerTrip(bookingId, 4.0400, 9.6900)
@@ -230,8 +233,8 @@ class FixoCoreLifecycleTest {
 
     @Test
     fun testWorkerLiveTrackingGpsUpdatesAndCleanupOnArrival() = runBlocking {
-        val bookings = repository.getAllBookings().first()
-        val targetBooking = bookings.first()
+        val bookings = repository.getAllBookings().first { it.isNotEmpty() }
+        val targetBooking = bookings.firstOrNull { it.id == "bk_douala_active" } ?: bookings.first()
         val bookingId = targetBooking.id
 
         // Start trip

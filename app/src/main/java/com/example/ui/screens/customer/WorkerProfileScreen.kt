@@ -66,6 +66,7 @@ import com.example.ui.components.StarRatingRow
 import com.example.ui.components.VerificationBadge
 import com.example.ui.theme.FixoAmber500
 import com.example.ui.theme.FixoAmber600
+import com.example.ui.theme.FixoGold500
 import com.example.ui.theme.FixoBlue50
 import com.example.ui.theme.FixoBlue600
 import com.example.ui.theme.FixoBlue700
@@ -234,7 +235,7 @@ fun WorkerProfileScreen(
                         Spacer(modifier = Modifier.height(4.dp))
                         Text(
                             text = worker.bio,
-                            style = MaterialTheme.typography.bodyMedium.copy(color = FixoSlate700, lineHeight = 20.sp)
+                            style = MaterialTheme.typography.bodyMedium.copy(color = Color(0xFFCBD5E1), lineHeight = 20.sp)
                         )
 
                         Spacer(modifier = Modifier.height(14.dp))
@@ -244,8 +245,8 @@ fun WorkerProfileScreen(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .clip(RoundedCornerShape(10.dp))
-                                .background(FixoEmerald50)
-                                .border(1.dp, FixoEmerald600.copy(alpha = 0.2f), RoundedCornerShape(10.dp))
+                                .background(Color(0xFF111827))
+                                .border(1.dp, Color(0x4D10B981), RoundedCornerShape(10.dp))
                                 .padding(12.dp)
                         ) {
                             Column {
@@ -260,7 +261,7 @@ fun WorkerProfileScreen(
                                 Spacer(modifier = Modifier.height(4.dp))
                                 Text(
                                     text = worker.certifications,
-                                    style = MaterialTheme.typography.bodySmall.copy(fontSize = 12.sp, color = FixoSlate700)
+                                    style = MaterialTheme.typography.bodySmall.copy(fontSize = 12.sp, color = Color(0xFFF8FAFC))
                                 )
                             }
                         }
@@ -287,7 +288,7 @@ fun WorkerProfileScreen(
                         Text(
                             text = "Stationed in ${worker.locationCity} • Service coverage across the metropolitan district (up to 20 km radius).",
                             fontSize = 12.sp,
-                            color = FixoSlate700
+                            color = Color(0xFFCBD5E1)
                         )
 
                         Spacer(modifier = Modifier.height(10.dp))
@@ -303,7 +304,7 @@ fun WorkerProfileScreen(
                         Text(
                             text = "Active Days: ${worker.workingDays} • Slots: ${worker.slotIntervals}",
                             fontSize = 12.sp,
-                            color = FixoSlate700
+                            color = Color(0xFFCBD5E1)
                         )
                         if (worker.emergencyCalloutAvailable) {
                             Spacer(modifier = Modifier.height(6.dp))
@@ -471,13 +472,18 @@ fun WorkerProfileScreen(
                                 )
                             }
 
-                            Button(
-                                onClick = { onBookService(service) },
+                            Surface(
                                 shape = RoundedCornerShape(8.dp),
-                                colors = ButtonDefaults.buttonColors(containerColor = FixoNavy900),
-                                modifier = Modifier.testTag("book_service_${service.id}")
+                                color = FixoEmerald50,
+                                border = androidx.compose.foundation.BorderStroke(1.dp, FixoEmerald600.copy(alpha = 0.3f))
                             ) {
-                                Text("Book Service", fontWeight = FontWeight.Bold, fontSize = 13.sp, color = FixoAmber500)
+                                Text(
+                                    text = "Tarif Forfaitaire Fixé ✓",
+                                    fontSize = 11.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = FixoEmerald600,
+                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                                )
                             }
                         }
                     }
@@ -523,7 +529,7 @@ fun WorkerProfileScreen(
                                         }
                                     }
                                     Spacer(modifier = Modifier.height(4.dp))
-                                    Text(comment, fontSize = 11.sp, color = FixoSlate700, lineHeight = 16.sp)
+                                    Text(comment, fontSize = 11.sp, color = Color(0xFFCBD5E1), lineHeight = 16.sp)
                                 }
                             }
                         }
@@ -597,20 +603,30 @@ fun WorkerProfileScreen(
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 10.dp),
+                    .padding(horizontal = 16.dp, vertical = 12.dp),
                 horizontalArrangement = Arrangement.spacedBy(10.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                OutlinedButton(
+                // [ 💬 Message ] (Gris ardoise texturé, 35% de la largeur)
+                Button(
                     onClick = onMessage,
-                    shape = RoundedCornerShape(10.dp),
-                    modifier = Modifier.weight(0.4f)
+                    shape = RoundedCornerShape(12.dp),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = Color(0xFF1E293B),
+                        contentColor = Color(0xFFF8FAFC)
+                    ),
+                    border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFF334155)),
+                    modifier = Modifier
+                        .weight(0.35f)
+                        .height(48.dp)
+                        .testTag("worker_profile_message_button")
                 ) {
-                    Icon(Icons.Filled.Chat, contentDescription = "Message", modifier = Modifier.size(16.dp))
-                    Spacer(modifier = Modifier.width(4.dp))
-                    Text("Message", fontSize = 12.sp)
+                    Icon(Icons.Filled.Chat, contentDescription = "Message", modifier = Modifier.size(16.dp), tint = Color(0xFFCBD5E1))
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text("Message", fontSize = 13.sp, fontWeight = FontWeight.SemiBold, color = Color(0xFFF8FAFC))
                 }
 
+                // [ Réserver l'artisan (15 000 FCFA) ] (Bouton principal ambre/sombre, 65% de la largeur)
                 Button(
                     onClick = {
                         val firstService = services.firstOrNull() ?: ServiceItem(
@@ -619,18 +635,28 @@ fun WorkerProfileScreen(
                             name = "${worker.category.displayName} Service",
                             category = worker.category,
                             description = "Professional trade service",
-                            price = worker.hourlyRate,
+                            price = 15000.0,
                             durationEstimateMinutes = 60
                         )
                         onBookService(firstService)
                     },
-                    shape = RoundedCornerShape(10.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = FixoNavy900),
+                    shape = RoundedCornerShape(12.dp),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = FixoGold500,
+                        contentColor = Color(0xFF0A0E17)
+                    ),
                     modifier = Modifier
-                        .weight(0.6f)
+                        .weight(0.65f)
+                        .height(48.dp)
                         .testTag("worker_profile_book_button")
                 ) {
-                    Text("Book Artisan", fontWeight = FontWeight.Bold, fontSize = 13.sp, color = FixoAmber500)
+                    Text(
+                        text = "Réserver l'artisan (15 000 FCFA)",
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 13.sp,
+                        color = Color(0xFF0A0E17),
+                        maxLines = 1
+                    )
                 }
             }
         }

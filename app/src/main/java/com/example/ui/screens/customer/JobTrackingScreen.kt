@@ -546,49 +546,65 @@ fun JobTrackingScreen(
                             }
                         }
 
-                        // Direct Call Action & Masked VoIP Call Action
-                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+                        // Explicit Actions: Appel Sécurisé + Salon Direct
+                        Row(
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            // Bouton 1 : [ 📞 Appel Masqué FIXO ] (Appel GSM masqué via la passerelle FIXO)
                             Surface(
-                                shape = CircleShape,
+                                shape = RoundedCornerShape(10.dp),
                                 color = FixoEmerald50,
+                                border = androidx.compose.foundation.BorderStroke(1.dp, FixoEmerald600.copy(alpha = 0.3f)),
                                 modifier = Modifier
-                                    .size(44.dp)
-                                    .clip(CircleShape)
                                     .clickable { showMaskedCall = true }
                                     .testTag("masked_call_button")
                             ) {
-                                Box(contentAlignment = Alignment.Center) {
+                                Row(
+                                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 8.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
                                     Icon(
                                         imageVector = Icons.Default.Call,
-                                        contentDescription = "Appel Masqué VoIP",
+                                        contentDescription = "Appel Masqué FIXO",
                                         tint = FixoEmerald600,
-                                        modifier = Modifier.size(20.dp)
+                                        modifier = Modifier.size(16.dp)
+                                    )
+                                    Spacer(modifier = Modifier.width(4.dp))
+                                    Text(
+                                        text = "📞 Appel Masqué FIXO",
+                                        fontSize = 11.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = FixoEmerald600
                                     )
                                 }
                             }
 
+                            // Bouton 2 : [ 💬 WhatsApp / Chat ] (Accès direct à la messagerie de chantier)
                             Surface(
-                                shape = CircleShape,
-                                color = FixoEmerald50,
+                                shape = RoundedCornerShape(10.dp),
+                                color = Color(0xFF1E293B),
+                                border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFF334155)),
                                 modifier = Modifier
-                                    .size(44.dp)
-                                    .clip(CircleShape)
-                                    .clickable {
-                                        val dialIntent = Intent(Intent.ACTION_DIAL).apply {
-                                            data = Uri.parse("tel:${booking.workerPhone}")
-                                        }
-                                        try {
-                                            context.startActivity(dialIntent)
-                                        } catch (_: Exception) {}
-                                    }
+                                    .clickable { onOpenFullChat() }
                                     .testTag("call_worker_button")
                             ) {
-                                Box(contentAlignment = Alignment.Center) {
+                                Row(
+                                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 8.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
                                     Icon(
-                                        imageVector = Icons.Default.Phone,
-                                        contentDescription = "Call Artisan",
-                                        tint = FixoEmerald600,
-                                        modifier = Modifier.size(20.dp)
+                                        imageVector = Icons.Default.Chat,
+                                        contentDescription = "WhatsApp / Chat",
+                                        tint = FixoGold500,
+                                        modifier = Modifier.size(16.dp)
+                                    )
+                                    Spacer(modifier = Modifier.width(4.dp))
+                                    Text(
+                                        text = "💬 WhatsApp / Chat",
+                                        fontSize = 11.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = Color.White
                                     )
                                 }
                             }

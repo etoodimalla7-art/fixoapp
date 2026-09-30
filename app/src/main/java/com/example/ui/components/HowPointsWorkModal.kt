@@ -92,9 +92,9 @@ fun HowPointsWorkModal(
                         Spacer(modifier = Modifier.width(12.dp))
                         Text(
                             text = if (language == AppLanguage.FR) "Programme Fidélité FIXO" else "FIXO Rewards Program",
-                            fontSize = 18.sp,
+                            fontSize = 20.sp,
                             fontWeight = FontWeight.Bold,
-                            color = Color(0xFFF8FAFC)
+                            color = Color(0xFFFFFFFF)
                         )
                     }
 
@@ -149,23 +149,24 @@ fun HowPointsWorkModal(
 
                 Spacer(modifier = Modifier.height(24.dp))
 
-                // Bouton de fermeture plein Or Ambre avec texte sombre #080C15
+                // Bouton de confirmation plein Or Ambre avec texte noir #0A0E17 gras pour contraste maximal (WCAG AAA)
                 Button(
                     onClick = onDismiss,
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(50.dp)
+                        .height(52.dp)
                         .testTag("close_how_points_btn"),
                     shape = RoundedCornerShape(12.dp),
                     colors = ButtonDefaults.buttonColors(
                         containerColor = FixoGold500,
-                        contentColor = Color(0xFF080C15)
+                        contentColor = Color(0xFF0A0E17)
                     )
                 ) {
                     Text(
                         text = if (language == AppLanguage.FR) "Compris, retour à mon portefeuille" else "Got it, back to wallet",
                         fontWeight = FontWeight.Bold,
-                        fontSize = 15.sp
+                        fontSize = 15.sp,
+                        color = Color(0xFF0A0E17)
                     )
                 }
             }
@@ -184,7 +185,7 @@ private fun PointsStepCard(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(14.dp),
         colors = CardDefaults.cardColors(containerColor = Color(0xFF1E293B)),
-        border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFF334155))
+        border = androidx.compose.foundation.BorderStroke(1.dp, Color(0x33F59E0B))
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -197,7 +198,7 @@ private fun PointsStepCard(
                 ) {
                     Text(
                         text = stepNumber,
-                        color = Color(0xFF080C15),
+                        color = Color(0xFF0A0E17),
                         fontSize = 14.sp,
                         fontWeight = FontWeight.Black
                     )
@@ -205,18 +206,18 @@ private fun PointsStepCard(
                 Spacer(modifier = Modifier.width(10.dp))
                 Text(
                     text = title,
-                    fontSize = 15.sp,
+                    fontSize = 16.sp,
                     fontWeight = FontWeight.Bold,
-                    color = Color(0xFFF8FAFC)
+                    color = Color(0xFFFFFFFF)
                 )
             }
             Spacer(modifier = Modifier.height(10.dp))
             Text(
                 text = description,
-                fontSize = 13.sp,
+                fontSize = 15.sp,
                 lineHeight = 22.sp,
                 fontWeight = FontWeight.Normal,
-                color = Color(0xFFF8FAFC)
+                color = Color(0xFFF1F5F9)
             )
         }
     }

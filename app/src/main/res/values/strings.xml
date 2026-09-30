@@ -1,3 +1,13 @@
 <resources>
     <string name="app_name">FIXO</string>
+    <string name="nav_home">Accueil</string>
+    <string name="nav_explore">Explorer</string>
+    <string name="nav_reels">Reels</string>
+    <string name="nav_jobs">Chantiers</string>
+    <string name="nav_account">Compte</string>
+    <string name="pro_nav_cockpit">Cockpit</string>
+    <string name="pro_nav_schedule">Planning</string>
+    <string name="pro_nav_reels">Reels</string>
+    <string name="pro_nav_jobs">Missions</string>
+    <string name="pro_nav_profile">Profil Pro</string>
 </resources>

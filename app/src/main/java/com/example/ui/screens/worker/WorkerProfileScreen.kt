@@ -6,6 +6,8 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -24,13 +26,20 @@ import androidx.compose.material.icons.automirrored.filled.ExitToApp
 import androidx.compose.material.icons.filled.AccountBalance
 import androidx.compose.material.icons.filled.AccountBalanceWallet
 import androidx.compose.material.icons.filled.Badge
+import androidx.compose.material.icons.filled.Build
 import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.FlashOn
 import androidx.compose.material.icons.filled.Handyman
 import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.NearMe
 import androidx.compose.material.icons.filled.Percent
 import androidx.compose.material.icons.filled.Phone
+import androidx.compose.material.icons.filled.PhotoCamera
 import androidx.compose.material.icons.filled.Security
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.activity.result.PickVisualMediaRequest
+import androidx.compose.material3.TextButton
 import androidx.compose.material.icons.filled.Shield
 import androidx.compose.material.icons.filled.Speed
 import androidx.compose.material.icons.filled.Star
@@ -47,10 +56,14 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Slider
 import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Surface
+import androidx.compose.material3.Switch
+import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableStateListOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -74,7 +87,10 @@ import com.example.ui.theme.FixoSuccessGreen
 /**
  * Véritable Espace Profil Pro Artisan Homologué FIXO (Marc Dubois)
  * Exclut rigoureusement tout élément client (points rewards, favoris plombiers).
+ * Contient le dossier d'homologation complet, le périmètre d'action avec sélection de quartiers,
+ * la liste d'équipements certifiés et l'attestation d'assurance Fixo Shield.
  */
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun WorkerProfileScreen(
     user: User?,
@@ -82,9 +98,24 @@ fun WorkerProfileScreen(
     language: AppLanguage = AppLanguage.FR,
     onNavigateToWallet: () -> Unit,
     onLogout: () -> Unit,
+    onUpdateAvatar: (String) -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     var interventionRadiusKm by remember { mutableFloatStateOf(8.0f) }
+    var emergencyCalloutActive by remember { mutableStateOf(true) }
+    var showAvatarPickerSheet by remember { mutableStateOf(false) }
+
+    val photoPickerLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.PickVisualMedia()
+    ) { uri ->
+        uri?.let { onUpdateAvatar(it.toString()) }
+    }
+
+    val coveredQuarters = remember {
+        mutableStateListOf(
+            "Akwa", "Bonanjo", "Deïdo", "Bali", "Bonapriso", "Makepe", "Kotto"
+        )
+    }
 
     val isDark = MaterialTheme.colorScheme.surface.let {
         (0.299 * it.red + 0.587 * it.green + 0.114 * it.blue) < 0.5
@@ -103,7 +134,7 @@ fun WorkerProfileScreen(
             .testTag("worker_pro_profile_screen"),
         contentPadding = PaddingValues(bottom = 96.dp)
     ) {
-        // En-tête Pro Artisan
+        // En-tête Pro Artisan Certifié
         item {
             Card(
                 modifier = Modifier
@@ -119,7 +150,10 @@ fun WorkerProfileScreen(
                         .padding(20.dp),
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
-                    Box(contentAlignment = Alignment.BottomEnd) {
+                    Box(
+                        contentAlignment = Alignment.BottomEnd,
+                        modifier = Modifier.clickable { showAvatarPickerSheet = true }
+                    ) {
                         AsyncImage(
                             model = user?.avatarUrl?.ifBlank { "https://images.unsplash.com/photo-1540569014015-19a7be504e3a?w=400" }
                                 ?: "https://images.unsplash.com/photo-1540569014015-19a7be504e3a?w=400",
@@ -134,14 +168,15 @@ fun WorkerProfileScreen(
                             modifier = Modifier
                                 .size(28.dp)
                                 .clip(CircleShape)
-                                .background(FixoSuccessGreen),
+                                .background(FixoGold500)
+                                .border(1.5.dp, MaterialTheme.colorScheme.surface, CircleShape),
                             contentAlignment = Alignment.Center
                         ) {
                             Icon(
-                                imageVector = Icons.Default.Verified,
-                                contentDescription = "Certifié",
+                                imageVector = Icons.Default.PhotoCamera,
+                                contentDescription = "Changer la photo",
                                 tint = Color(0xFF080C15),
-                                modifier = Modifier.size(18.dp)
+                                modifier = Modifier.size(16.dp)
                             )
                         }
                     }
@@ -176,7 +211,7 @@ fun WorkerProfileScreen(
                     Spacer(modifier = Modifier.height(6.dp))
 
                     Text(
-                        text = "Plomberie sanitaire & Soudure cuivre",
+                        text = "Plomberie sanitaire & Soudure cuivre haute pression",
                         fontSize = 13.sp,
                         fontWeight = FontWeight.SemiBold,
                         color = FixoGold500
@@ -238,7 +273,7 @@ fun WorkerProfileScreen(
             Spacer(modifier = Modifier.height(16.dp))
         }
 
-        // Dossier d'Homologation & Sceaux Légaux
+        // Dossier d'Homologation & Sceaux Légaux Détaillés
         item {
             Card(
                 modifier = Modifier
@@ -270,29 +305,35 @@ fun WorkerProfileScreen(
 
                     Spacer(modifier = Modifier.height(14.dp))
 
-                    LegalSealRow(
-                        title = if (language == AppLanguage.FR) "Pièce d'Identité (CNI Cameroun)" else "National ID Card (CNI)",
-                        status = if (language == AppLanguage.FR) "Vérifiée" else "Verified",
-                        textPrimary = textPrimary
+                    LegalSealDetailRow(
+                        title = "Pièce d'Identité (CNI Cameroun)",
+                        detail = "CNI n° 1182*****2028 • Délivrée à Douala 1er",
+                        status = "Vérifiée ✓",
+                        textPrimary = textPrimary,
+                        textSecondary = textSecondary
                     )
                     Spacer(modifier = Modifier.height(10.dp))
-                    LegalSealRow(
-                        title = if (language == AppLanguage.FR) "Extrait de Casier Judiciaire" else "Criminal Record Certificate",
-                        status = if (language == AppLanguage.FR) "Vierge (Bulletin N°3)" else "Clean Record",
-                        textPrimary = textPrimary
+                    LegalSealDetailRow(
+                        title = "Extrait de Casier Judiciaire",
+                        detail = "Bulletin N°3 Vierge • Contrôlé le 10/01/2026",
+                        status = "Conforme ✓",
+                        textPrimary = textPrimary,
+                        textSecondary = textSecondary
                     )
                     Spacer(modifier = Modifier.height(10.dp))
-                    LegalSealRow(
-                        title = if (language == AppLanguage.FR) "CQP / Diplôme Technique Métier" else "Vocational Diploma (CQP)",
-                        status = if (language == AppLanguage.FR) "Validé par Commission FIXO" else "Validated",
-                        textPrimary = textPrimary
+                    LegalSealDetailRow(
+                        title = "CQP / Diplôme Technique Métier",
+                        detail = "Plomberie & Soudure • Maître Artisan Référent",
+                        status = "Homologué ✓",
+                        textPrimary = textPrimary,
+                        textSecondary = textSecondary
                     )
                 }
             }
             Spacer(modifier = Modifier.height(16.dp))
         }
 
-        // Paramètres Opérationnels
+        // Zone Opérationnelle & Disponibilités d'Urgence
         item {
             Card(
                 modifier = Modifier
@@ -304,7 +345,7 @@ fun WorkerProfileScreen(
             ) {
                 Column(modifier = Modifier.padding(18.dp)) {
                     Text(
-                        text = if (language == AppLanguage.FR) "Paramètres d'Intervention" else "Operational Parameters",
+                        text = if (language == AppLanguage.FR) "Zone d'Intervention & Garde d'Urgence" else "Operational Area & Emergency On-Call",
                         fontSize = 14.sp,
                         fontWeight = FontWeight.Bold,
                         color = textPrimary
@@ -342,7 +383,64 @@ fun WorkerProfileScreen(
                         modifier = Modifier.testTag("worker_radius_slider")
                     )
 
-                    Spacer(modifier = Modifier.height(12.dp))
+                    Spacer(modifier = Modifier.height(10.dp))
+
+                    Text(
+                        text = "Quartiers Desservis :",
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = FixoGold500
+                    )
+                    Spacer(modifier = Modifier.height(6.dp))
+
+                    FlowRow(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(6.dp),
+                        verticalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        coveredQuarters.forEach { quarter ->
+                            Box(
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(8.dp))
+                                    .background(if (isDark) Color(0xFF1E293B) else Color(0xFFF1F5F9))
+                                    .padding(horizontal = 10.dp, vertical = 5.dp)
+                            ) {
+                                Text(
+                                    text = "📍 $quarter",
+                                    fontSize = 11.sp,
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = textPrimary
+                                )
+                            }
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(14.dp))
+                    HorizontalDivider(color = cardBorder)
+                    Spacer(modifier = Modifier.height(14.dp))
+
+                    // Commutateur Garde d'Urgence Fixo Flash
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(imageVector = Icons.Default.FlashOn, contentDescription = null, tint = FixoGold500, modifier = Modifier.size(20.dp))
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Column {
+                                Text("Astreinte Fixo Flash (< 30 min)", fontWeight = FontWeight.Bold, fontSize = 13.sp, color = textPrimary)
+                                Text("Réception des missions prioritaires majorées (+25%)", fontSize = 11.sp, color = textSecondary)
+                            }
+                        }
+                        Switch(
+                            checked = emergencyCalloutActive,
+                            onCheckedChange = { emergencyCalloutActive = it },
+                            colors = SwitchDefaults.colors(checkedThumbColor = FixoGold500, checkedTrackColor = FixoGold500.copy(alpha = 0.5f))
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.height(14.dp))
 
                     // Coordonnées de versement bancaire/mobile
                     Box(
@@ -370,17 +468,80 @@ fun WorkerProfileScreen(
                             Spacer(modifier = Modifier.width(12.dp))
                             Column {
                                 Text(
-                                    text = if (language == AppLanguage.FR) "Versement Mobile Money" else "Mobile Money Payout",
+                                    text = if (language == AppLanguage.FR) "Versement Mobile Money Homologué" else "Approved Mobile Money Payout",
                                     fontSize = 11.sp,
                                     color = textSecondary
                                 )
                                 Text(
-                                    text = "MTN MoMo (+237 699 *** 543) Vérifié",
+                                    text = "MTN MoMo (+237 699 *** 543) [✓ Titulaire Vérifié]",
                                     fontSize = 13.sp,
                                     fontWeight = FontWeight.Bold,
                                     color = textPrimary
                                 )
                             }
+                        }
+                    }
+                }
+            }
+            Spacer(modifier = Modifier.height(16.dp))
+        }
+
+        // Équipements Certifiés & Assurance Fixo Shield
+        item {
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 20.dp),
+                shape = RoundedCornerShape(18.dp),
+                colors = CardDefaults.cardColors(containerColor = cardBg),
+                border = androidx.compose.foundation.BorderStroke(1.dp, cardBorder)
+            ) {
+                Column(modifier = Modifier.padding(18.dp)) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = if (language == AppLanguage.FR) "Matériel Audité & Assurance" else "Audited Tools & Insurance",
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = textPrimary
+                        )
+                        Icon(imageVector = Icons.Default.Handyman, contentDescription = null, tint = FixoGold500)
+                    }
+
+                    Spacer(modifier = Modifier.height(12.dp))
+
+                    val tools = listOf(
+                        "Détecteur de fuite acoustique ultrasonique",
+                        "Furet électrique déboucheur haute pression (25m)",
+                        "Poste à souder polyfusion PEX & chalumeau bi-gaz cuivre",
+                        "Multimètre numérique professionnel CAT III 1000V"
+                    )
+
+                    tools.forEach { tool ->
+                        Row(
+                            modifier = Modifier.padding(vertical = 3.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Icon(imageVector = Icons.Default.CheckCircle, contentDescription = null, tint = FixoSuccessGreen, modifier = Modifier.size(15.dp))
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(tool, fontSize = 12.sp, color = textPrimary)
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(14.dp))
+                    HorizontalDivider(color = cardBorder)
+                    Spacer(modifier = Modifier.height(14.dp))
+
+                    // Assurance RC Pro Fixo Shield
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(imageVector = Icons.Default.Shield, contentDescription = null, tint = FixoSuccessGreen, modifier = Modifier.size(20.dp))
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Column {
+                            Text("Assurance Responsabilité Civile Professionnelle", fontWeight = FontWeight.Bold, fontSize = 12.sp, color = textPrimary)
+                            Text("Police FX-RC-2026-CM0982 (AXA Cameroun / FIXO) • Plafond 50M FCFA", fontSize = 11.sp, color = textSecondary)
                         }
                     }
                 }
@@ -451,12 +612,14 @@ fun WorkerProfileScreen(
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.ExitToApp,
                             contentDescription = null,
+                            tint = Color(0xFFEF4444),
                             modifier = Modifier.size(18.dp)
                         )
                         Spacer(modifier = Modifier.width(8.dp))
                         Text(
-                            text = if (language == AppLanguage.FR) "Déconnexion Espace Pro" else "Log Out Pro Account",
-                            fontWeight = FontWeight.Bold
+                            text = if (language == AppLanguage.FR) "Se Déconnecter de l'Espace Artisan" else "Sign Out of Pro Workspace",
+                            fontWeight = FontWeight.Bold,
+                            color = Color(0xFFEF4444)
                         )
                     }
                 }
@@ -475,68 +638,41 @@ private fun MetricItem(
     textSecondary: Color
 ) {
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Icon(
-                imageVector = icon,
-                contentDescription = null,
-                tint = iconTint,
-                modifier = Modifier.size(18.dp)
-            )
-            Spacer(modifier = Modifier.width(4.dp))
-            Text(
-                text = value,
-                fontSize = 16.sp,
-                fontWeight = FontWeight.Black,
-                color = textPrimary
-            )
-        }
-        Spacer(modifier = Modifier.height(2.dp))
-        Text(
-            text = label,
-            fontSize = 11.sp,
-            color = textSecondary
-        )
+        Icon(imageVector = icon, contentDescription = null, tint = iconTint, modifier = Modifier.size(20.dp))
+        Spacer(modifier = Modifier.height(4.dp))
+        Text(text = value, fontSize = 16.sp, fontWeight = FontWeight.Black, color = textPrimary)
+        Text(text = label, fontSize = 10.sp, color = textSecondary)
     }
 }
 
 @Composable
-private fun LegalSealRow(
+private fun LegalSealDetailRow(
     title: String,
+    detail: String,
     status: String,
-    textPrimary: Color
+    textPrimary: Color,
+    textSecondary: Color
 ) {
     Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Icon(
-                imageVector = Icons.Default.CheckCircle,
-                contentDescription = null,
-                tint = FixoSuccessGreen,
-                modifier = Modifier.size(18.dp)
-            )
-            Spacer(modifier = Modifier.width(10.dp))
-            Text(
-                text = title,
-                fontSize = 13.sp,
-                fontWeight = FontWeight.Medium,
-                color = textPrimary
-            )
+        Column(modifier = Modifier.weight(1f)) {
+            Text(text = title, fontSize = 13.sp, fontWeight = FontWeight.SemiBold, color = textPrimary)
+            Text(text = detail, fontSize = 11.sp, color = textSecondary)
         }
-
-        Box(
-            modifier = Modifier
-                .clip(RoundedCornerShape(6.dp))
-                .background(FixoSuccessGreen.copy(alpha = 0.12f))
-                .padding(horizontal = 8.dp, vertical = 3.dp)
+        Surface(
+            shape = RoundedCornerShape(6.dp),
+            color = FixoSuccessGreen.copy(alpha = 0.15f),
+            border = androidx.compose.foundation.BorderStroke(1.dp, FixoSuccessGreen)
         ) {
             Text(
                 text = status,
                 fontSize = 11.sp,
+                color = FixoSuccessGreen,
                 fontWeight = FontWeight.Bold,
-                color = FixoSuccessGreen
+                modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
             )
         }
     }

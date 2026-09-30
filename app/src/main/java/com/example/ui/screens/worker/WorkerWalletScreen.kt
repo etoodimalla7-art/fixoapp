@@ -307,7 +307,7 @@ fun WorkerWalletScreen(
                             ),
                             colors = OutlinedTextFieldDefaults.colors(
                                 focusedBorderColor = FixoGold500,
-                                unfocusedBorderColor = FixoBorderSubtle,
+                                unfocusedBorderColor = if (isDark) Color(0x1AFFFFFF) else FixoBorderSubtle,
                                 focusedContainerColor = inputContainerBg,
                                 unfocusedContainerColor = inputContainerBg,
                                 focusedTextColor = inputTextColor,
@@ -341,7 +341,7 @@ fun WorkerWalletScreen(
                             ),
                             colors = OutlinedTextFieldDefaults.colors(
                                 focusedBorderColor = FixoGold500,
-                                unfocusedBorderColor = FixoBorderSubtle,
+                                unfocusedBorderColor = if (isDark) Color(0x1AFFFFFF) else FixoBorderSubtle,
                                 focusedContainerColor = inputContainerBg,
                                 unfocusedContainerColor = inputContainerBg,
                                 focusedTextColor = inputTextColor,
@@ -446,7 +446,16 @@ fun WorkerWalletScreen(
                         val withdrawAmount = withdrawAmountText.toDoubleOrNull() ?: 0.0
                         val canWithdraw = withdrawAmount > 0 && withdrawAmount <= availableBalance
 
-                        // Bouton vert émeraude 52 dp : RETIRER MES FONDS VERS MOMO
+                        val cashoutButtonText = when (selectedOperator) {
+                            CameroonMobileOperator.ORANGE_MONEY -> {
+                                if (language == AppLanguage.FR) "RETIRER MES FONDS VERS ORANGE MONEY" else "WITHDRAW FUNDS TO ORANGE MONEY"
+                            }
+                            else -> {
+                                if (language == AppLanguage.FR) "RETIRER MES FONDS VERS MTN MOMO" else "WITHDRAW FUNDS TO MTN MOMO"
+                            }
+                        }
+
+                        // Bouton vert émeraude 52 dp avec libellé synchronisé sur l'opérateur
                         Button(
                             onClick = {
                                 if (canWithdraw) {
@@ -467,7 +476,7 @@ fun WorkerWalletScreen(
                                 .testTag("cashout_submit_btn")
                         ) {
                             Text(
-                                text = FixoStrings.get("wallet.cashout_cta", language),
+                                text = cashoutButtonText,
                                 style = MaterialTheme.typography.titleSmall.copy(
                                     fontWeight = FontWeight.Bold,
                                     color = FixoWhite

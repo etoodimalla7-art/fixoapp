@@ -47,6 +47,11 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.foundation.clickable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
@@ -105,6 +110,9 @@ fun KycPendingScreen(
         label = "scale"
     )
 
+    var secretDevModeUnlocked by remember { mutableStateOf(false) }
+    var secretTaps by remember { mutableIntStateOf(0) }
+
     Surface(
         modifier = modifier
             .fillMaxSize()
@@ -153,10 +161,16 @@ fun KycPendingScreen(
                 Surface(
                     color = FixoNavy800,
                     shape = RoundedCornerShape(20.dp),
-                    border = androidx.compose.foundation.BorderStroke(1.dp, FixoBorderSubtle)
+                    border = androidx.compose.foundation.BorderStroke(1.dp, FixoBorderSubtle),
+                    modifier = Modifier.clickable {
+                        secretTaps++
+                        if (secretTaps >= 5) {
+                            secretDevModeUnlocked = !secretDevModeUnlocked
+                        }
+                    }
                 ) {
                     Text(
-                        text = if (language == AppLanguage.FR) "Statut de votre dossier" else "Dossier Status",
+                        text = if (language == AppLanguage.FR) "Statut du dossier" else "Dossier Status",
                         fontSize = 11.sp,
                         color = FixoGold500,
                         fontWeight = FontWeight.SemiBold,
@@ -242,7 +256,7 @@ fun KycPendingScreen(
                     modifier = Modifier.padding(18.dp)
                 ) {
                     Text(
-                        text = if (language == AppLanguage.FR) "Contrôles en cours :" else "Pending verifications:",
+                        text = if (language == AppLanguage.FR) "Vérifications en attente :" else "Pending verifications:",
                         fontSize = 13.sp,
                         fontWeight = FontWeight.Bold,
                         color = FixoGold500
@@ -253,7 +267,7 @@ fun KycPendingScreen(
                     // 1. Phone validated [✓]
                     KycChecklistItem(
                         isCompleted = true,
-                        label = if (language == AppLanguage.FR) "Numéro de téléphone validé" else "Phone number verified (+237)"
+                        label = if (language == AppLanguage.FR) "Numéro de téléphone vérifié" else "Phone number verified (+237)"
                     )
 
                     Spacer(modifier = Modifier.height(10.dp))
@@ -361,72 +375,76 @@ fun KycPendingScreen(
                 )
             }
 
-            Spacer(modifier = Modifier.height(28.dp))
+            if (secretDevModeUnlocked) {
+                Spacer(modifier = Modifier.height(28.dp))
 
-            // Sandbox Real-Time Unlock Test Button
-            Card(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .testTag("kyc_sandbox_unlock_card"),
-                shape = RoundedCornerShape(16.dp),
-                colors = CardDefaults.cardColors(containerColor = FixoNavy900),
-                border = androidx.compose.foundation.BorderStroke(1.dp, FixoSuccessGreen.copy(alpha = 0.5f))
-            ) {
-                Column(
-                    modifier = Modifier.padding(14.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally
+                // Sandbox Real-Time Unlock Test Button (Secret Developer Tool)
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .testTag("kyc_sandbox_unlock_card"),
+                    shape = RoundedCornerShape(16.dp),
+                    colors = CardDefaults.cardColors(containerColor = FixoNavy900),
+                    border = androidx.compose.foundation.BorderStroke(1.dp, FixoSuccessGreen.copy(alpha = 0.5f))
                 ) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text(
-                            text = "🧪 DÉBOGAGE & VÉRIFICATION SANDBOX",
-                            fontSize = 10.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = FixoSuccessGreen,
-                            letterSpacing = 0.5.sp
-                        )
-                    }
-
-                    Spacer(modifier = Modifier.height(8.dp))
-
-                    Text(
-                        text = if (language == AppLanguage.FR)
-                            "Simule l'audit validé par le backend FIXO et la réception du push silencieux pour déverrouiller instantanément le Cockpit Pro."
-                        else
-                            "Simulates backend approval & silent push to immediately unlock Pro Cockpit with green ONLINE switch.",
-                        fontSize = 11.sp,
-                        color = FixoTextSecondary,
-                        textAlign = TextAlign.Center
-                    )
-
-                    Spacer(modifier = Modifier.height(10.dp))
-
-                    Button(
-                        onClick = onSimulateInstantApproval,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(46.dp)
-                            .testTag("btn_simulate_kyc_approval"),
-                        shape = RoundedCornerShape(12.dp),
-                        colors = ButtonDefaults.buttonColors(containerColor = FixoSuccessGreen)
+                    Column(
+                        modifier = Modifier.padding(14.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally
                     ) {
-                        Icon(
-                            imageVector = Icons.Default.CheckCircle,
-                            contentDescription = null,
-                            tint = Color.White,
-                            modifier = Modifier.size(18.dp)
-                        )
-                        Spacer(modifier = Modifier.width(8.dp))
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text(
+                                text = "🧪 DÉBOGAGE & VÉRIFICATION SANDBOX",
+                                fontSize = 10.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = FixoSuccessGreen,
+                                letterSpacing = 0.5.sp
+                            )
+                        }
+
+                        Spacer(modifier = Modifier.height(8.dp))
+
                         Text(
                             text = if (language == AppLanguage.FR)
-                                "⚡ Simuler Approbation Immédiate (APPROUVÉ)"
+                                "Simule l'audit validé par le backend FIXO et la réception du push silencieux pour déverrouiller instantanément le Cockpit Pro."
                             else
-                                "⚡ Simulate Instant Approval (APPROVED)",
-                            fontSize = 12.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = Color.White
+                                "Simulates backend approval & silent push to immediately unlock Pro Cockpit with green ONLINE switch.",
+                            fontSize = 11.sp,
+                            color = FixoTextSecondary,
+                            textAlign = TextAlign.Center
                         )
+
+                        Spacer(modifier = Modifier.height(10.dp))
+
+                        Button(
+                            onClick = onSimulateInstantApproval,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(46.dp)
+                                .testTag("btn_simulate_kyc_approval"),
+                            shape = RoundedCornerShape(12.dp),
+                            colors = ButtonDefaults.buttonColors(containerColor = FixoSuccessGreen)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.CheckCircle,
+                                contentDescription = null,
+                                tint = Color.White,
+                                modifier = Modifier.size(18.dp)
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(
+                                text = if (language == AppLanguage.FR)
+                                    "⚡ Simuler Approbation Immédiate (APPROUVÉ)"
+                                else
+                                    "⚡ Simulate Instant Approval (APPROVED)",
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = Color.White
+                            )
+                        }
                     }
                 }
+            } else {
+                Spacer(modifier = Modifier.height(28.dp))
             }
 
             Spacer(modifier = Modifier.height(16.dp))

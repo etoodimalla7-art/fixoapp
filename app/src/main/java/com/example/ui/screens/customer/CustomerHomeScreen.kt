@@ -126,7 +126,8 @@ fun CustomerHomeScreen(
 
     // Dynamic filtering based on semantic query, selected pill, and emergency flash mode
     val displayWorkers = remember(workers, searchQuery, selectedCategory, filterEmergencyOnly, filterVerifiedOnly) {
-        workers.filter { worker ->
+        val baseList = if (workers.isEmpty()) com.example.data.local.FixoSeedData.defaultWorkers else workers
+        val filtered = baseList.filter { worker ->
             val matchesSearch = if (searchQuery.isBlank()) {
                 true
             } else {
@@ -145,6 +146,12 @@ fun CustomerHomeScreen(
             val matchesVerified = !filterVerifiedOnly || worker.backgroundVerified
 
             matchesSearch && matchesCategory && matchesEmergency && matchesVerified
+        }
+
+        if (filtered.isEmpty() && searchQuery.isBlank() && selectedCategory == null) {
+            com.example.data.local.FixoSeedData.defaultWorkers.take(2)
+        } else {
+            filtered
         }
     }
 

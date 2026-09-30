@@ -91,17 +91,17 @@ class ChantierDesignSystemTest {
     fun testChantierColorTokensAndSurfaces() {
         // High visibility dark mode tokens
         assertEquals(Color(0xFF080C15), FixoBgCanvas)
-        assertEquals(Color(0xFF1A2232), FixoSurfaceCard)
+        assertEquals(Color(0xFF1E293B), FixoSurfaceCard)
         assertEquals(Color(0xFF222E42), FixoSurfaceElevated)
         assertEquals(Color(0xFFFFFFFF), FixoTextPrimary)
-        assertEquals(Color(0xFFE2E8F0), FixoTextSecondary)
-        assertEquals(Color(0xFFFFB800), FixoElectricAmber)
-        assertEquals(Color(0xFFFF9100), FixoElectricAmberDark)
+        assertEquals(Color(0xFFCBD5E1), FixoTextSecondary)
+        assertEquals(Color(0xFFF59E0B), FixoElectricAmber)
+        assertEquals(Color(0xFFD97706), FixoElectricAmberDark)
 
         // Adaptive light mode tokens (plein soleil)
         assertEquals(Color(0xFFF8FAFC), FixoLightBg)
         assertEquals(Color(0xFFFFFFFF), FixoLightSurface)
-        assertEquals(Color(0xFFE2E8F0), FixoLightBorder)
+        assertEquals(Color(0x140F172A), FixoLightBorder)
         assertEquals(Color(0xFF0F172A), FixoLightTextPrimary)
     }
 }

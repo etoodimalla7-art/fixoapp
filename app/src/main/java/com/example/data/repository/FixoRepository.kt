@@ -355,7 +355,8 @@ class FixoRepository(context: Context) {
         val booking = dao.getBookingByIdDirect(bookingId) ?: return
         // State Machine validation
         if (booking.status != JobStatus.ACCEPTED && booking.status != JobStatus.SCHEDULED && 
-            booking.status != JobStatus.REQUESTED && booking.status != JobStatus.DISPATCHED) {
+            booking.status != JobStatus.REQUESTED && booking.status != JobStatus.DISPATCHED &&
+            booking.status != JobStatus.ON_THE_WAY) {
             return
         }
 

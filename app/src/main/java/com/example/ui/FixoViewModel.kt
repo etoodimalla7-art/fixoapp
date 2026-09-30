@@ -42,8 +42,8 @@ data class FixoUiState(
     val notifPayments: Boolean = true,
     val shareLocation: Boolean = true,
     val currentUser: User? = null,
-    val allWorkers: List<WorkerProfile> = emptyList(),
-    val filteredWorkers: List<WorkerProfile> = emptyList(),
+    val allWorkers: List<WorkerProfile> = com.example.data.local.FixoSeedData.defaultWorkers,
+    val filteredWorkers: List<WorkerProfile> = com.example.data.local.FixoSeedData.defaultWorkers,
     val searchQuery: String = "",
     val selectedCategory: ServiceCategory? = null,
     val filterVerifiedOnly: Boolean = false,
@@ -51,7 +51,7 @@ data class FixoUiState(
     val filterMinRating: Double = 0.0,
     val selectedWorker: WorkerProfile? = null,
     val workerServices: List<ServiceItem> = emptyList(),
-    val reels: List<Reel> = emptyList(),
+    val reels: List<Reel> = com.example.data.local.FixoSeedData.defaultReels,
     val customerBookings: List<Booking> = emptyList(),
     val workerBookings: List<Booking> = emptyList(),
     val allBookings: List<Booking> = emptyList(),
@@ -87,6 +87,10 @@ data class FixoUiState(
     val selectedOrganization: com.example.data.model.Organization? = null,
     val workforceRequests: List<com.example.data.model.WorkforceRequest> = emptyList(),
     val selectedQuarter: com.example.data.model.CameroonQuarter = com.example.data.model.CameroonLocationRegistry.getDefaultQuarter(),
+    val selectedAddressLandmark: String = "Portail noir face Boulangerie Zepol, Rue Drouot",
+    val selectedInterventionAddress: String = "Akwa, Rue Drouot (Portail noir face Boulangerie Zepol)",
+    val selectedLocationLat: Double = 4.0511,
+    val selectedLocationLng: Double = 9.7085,
     val isLocationPickerVisible: Boolean = false,
     val isVerificationCenterVisible: Boolean = false,
     val isHelpCenterVisible: Boolean = false,
@@ -1397,6 +1401,23 @@ class FixoViewModel(application: Application) : AndroidViewModel(application) {
     fun setQuarter(quarter: com.example.data.model.CameroonQuarter) {
         _uiState.value = _uiState.value.copy(selectedQuarter = quarter)
         showToast("Location set to ${quarter.name}")
+    }
+
+    fun setExactInterventionLocation(
+        quarter: com.example.data.model.CameroonQuarter,
+        landmark: String,
+        lat: Double,
+        lng: Double
+    ) {
+        val fullAddress = "${quarter.name}, Douala ($landmark)"
+        _uiState.value = _uiState.value.copy(
+            selectedQuarter = quarter,
+            selectedAddressLandmark = landmark,
+            selectedInterventionAddress = fullAddress,
+            selectedLocationLat = lat,
+            selectedLocationLng = lng
+        )
+        showToast("📍 Adresse validée : ${quarter.name} ($landmark)")
     }
 
     fun showToast(message: String) {
