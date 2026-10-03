@@ -17,12 +17,15 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -67,6 +70,8 @@ fun VerifiedWorkerCard(
     worker: WorkerProfile,
     isFlashMode: Boolean = false,
     language: AppLanguage = AppLanguage.FR,
+    isFavorite: Boolean = false,
+    onToggleFavorite: (() -> Unit)? = null,
     onCardClick: () -> Unit,
     onBookClick: () -> Unit,
     modifier: Modifier = Modifier
@@ -133,29 +138,48 @@ fun VerifiedWorkerCard(
                             overflow = TextOverflow.Ellipsis
                         )
 
-                        // Official Fixo Badge in Emerald Green (#10B981)
-                        Surface(
-                            shape = RoundedCornerShape(20.dp),
-                            color = Color(0x3310B981),
-                            border = androidx.compose.foundation.BorderStroke(1.dp, FixoEmerald500)
-                        ) {
-                            Row(
-                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
-                                verticalAlignment = Alignment.CenterVertically
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            // Official Fixo Badge in Emerald Green (#10B981)
+                            Surface(
+                                shape = RoundedCornerShape(20.dp),
+                                color = Color(0x3310B981),
+                                border = androidx.compose.foundation.BorderStroke(1.dp, FixoEmerald500)
                             ) {
-                                Icon(
-                                    imageVector = Icons.Default.CheckCircle,
-                                    contentDescription = "Verified",
-                                    tint = FixoEmerald500,
-                                    modifier = Modifier.size(12.dp)
-                                )
-                                Spacer(modifier = Modifier.width(4.dp))
-                                Text(
-                                    text = "Certifié Fixo ✓",
-                                    fontSize = 10.sp,
-                                    fontWeight = FontWeight.ExtraBold,
-                                    color = FixoEmerald500
-                                )
+                                Row(
+                                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.CheckCircle,
+                                        contentDescription = "Verified",
+                                        tint = FixoEmerald500,
+                                        modifier = Modifier.size(12.dp)
+                                    )
+                                    Spacer(modifier = Modifier.width(4.dp))
+                                    Text(
+                                        text = "Certifié Fixo ✓",
+                                        fontSize = 10.sp,
+                                        fontWeight = FontWeight.ExtraBold,
+                                        color = FixoEmerald500
+                                    )
+                                }
+                            }
+
+                            if (onToggleFavorite != null) {
+                                Spacer(modifier = Modifier.width(6.dp))
+                                IconButton(
+                                    onClick = onToggleFavorite,
+                                    modifier = Modifier
+                                        .size(32.dp)
+                                        .testTag("card_favorite_toggle_${worker.id}")
+                                ) {
+                                    Icon(
+                                        imageVector = if (isFavorite) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
+                                        contentDescription = if (isFavorite) "Favori" else "Ajouter aux favoris",
+                                        tint = if (isFavorite) Color(0xFFE53935) else FixoTextMuted,
+                                        modifier = Modifier.size(18.dp)
+                                    )
+                                }
                             }
                         }
                     }

@@ -1,5 +1,10 @@
 package com.example.ui.screens.customer
 
+import android.util.Log
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import com.example.data.repository.WorkerProfileRepository
+import com.example.data.repository.JobOrderRepository
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -12,6 +17,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -27,14 +33,21 @@ import androidx.compose.material.icons.filled.Badge
 import androidx.compose.material.icons.filled.Bookmark
 import androidx.compose.material.icons.filled.CalendarToday
 import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.filled.FlashOn
 import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Security
 import androidx.compose.material.icons.filled.Star
+import androidx.compose.material.icons.filled.Timer
 import androidx.compose.material.icons.filled.Verified
 import androidx.compose.material.icons.outlined.BookmarkBorder
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.ui.res.painterResource
+import com.example.R
+import com.example.data.model.ServiceCategory
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -72,6 +85,7 @@ import com.example.ui.theme.FixoBlue600
 import com.example.ui.theme.FixoBlue700
 import com.example.ui.theme.FixoEmerald100
 import com.example.ui.theme.FixoEmerald50
+import com.example.ui.theme.FixoEmerald500
 import com.example.ui.theme.FixoEmerald600
 import com.example.ui.theme.FixoNavy900
 import com.example.ui.theme.FixoSlate100
@@ -80,6 +94,7 @@ import com.example.ui.theme.FixoSlate500
 import com.example.ui.theme.FixoSlate700
 
 import androidx.compose.material.icons.filled.Chat
+import androidx.compose.material.icons.filled.ChatBubbleOutline
 import androidx.compose.material.icons.filled.PhotoLibrary
 import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material.icons.filled.ThumbUp
@@ -95,6 +110,7 @@ fun WorkerProfileScreen(
     isSaved: Boolean = false,
     onToggleSave: (() -> Unit)? = null,
     onMessage: () -> Unit = {},
+    onNavigateToChat: (String) -> Unit = {},
     onViewAllReels: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
@@ -130,14 +146,17 @@ fun WorkerProfileScreen(
                             )
                         }
                         Row(verticalAlignment = Alignment.CenterVertically) {
-                            if (onToggleSave != null) {
-                                IconButton(onClick = onToggleSave, modifier = Modifier.testTag("worker_profile_save")) {
-                                    Icon(
-                                        imageVector = if (isSaved) Icons.Filled.Bookmark else Icons.Outlined.BookmarkBorder,
-                                        contentDescription = if (isSaved) "Saved" else "Save Artisan",
-                                        tint = if (isSaved) FixoAmber600 else MaterialTheme.colorScheme.onSurfaceVariant
-                                    )
-                                }
+                            IconButton(
+                                onClick = { onToggleSave?.invoke() },
+                                modifier = Modifier
+                                    .testTag("artisan_favorite_toggle")
+                                    .testTag("worker_profile_save")
+                            ) {
+                                Icon(
+                                    imageVector = if (isSaved) Icons.Filled.Favorite else Icons.Filled.FavoriteBorder,
+                                    contentDescription = if (isSaved) "Retirer des favoris" else "Ajouter aux favoris",
+                                    tint = if (isSaved) Color(0xFFE53935) else MaterialTheme.colorScheme.onSurfaceVariant
+                                )
                             }
                         }
                     }
@@ -159,27 +178,97 @@ fun WorkerProfileScreen(
                             modifier = Modifier.fillMaxWidth(),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            AsyncImage(
-                                model = worker.avatarUrl,
-                                contentDescription = worker.name,
-                                modifier = Modifier
-                                    .size(76.dp)
-                                    .clip(RoundedCornerShape(16.dp)),
-                                contentScale = ContentScale.Crop
-                            )
+                            Box {
+                                AsyncImage(
+                                    model = worker.avatarUrl,
+                                    contentDescription = worker.name,
+                                    modifier = Modifier
+                                        .size(76.dp)
+                                        .clip(RoundedCornerShape(16.dp)),
+                                    contentScale = ContentScale.Crop
+                                )
+                                if (isSaved) {
+                                    Box(
+                                        modifier = Modifier
+                                            .align(Alignment.BottomEnd)
+                                            .offset(x = 4.dp, y = 4.dp)
+                                            .size(22.dp)
+                                            .clip(CircleShape)
+                                            .background(Color(0xFFE53935))
+                                            .border(2.dp, MaterialTheme.colorScheme.surface, CircleShape),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Filled.Favorite,
+                                            contentDescription = "Favori",
+                                            tint = Color.White,
+                                            modifier = Modifier.size(12.dp)
+                                        )
+                                    }
+                                }
+                            }
 
                             Spacer(modifier = Modifier.width(16.dp))
 
                             Column(modifier = Modifier.weight(1f)) {
-                                Text(
-                                    text = worker.name,
-                                    style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold)
-                                )
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    modifier = Modifier.fillMaxWidth()
+                                ) {
+                                    Text(
+                                        text = worker.name,
+                                        style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
+                                        modifier = Modifier.weight(1f, fill = false)
+                                    )
+                                    Spacer(modifier = Modifier.width(6.dp))
+                                    Surface(
+                                        onClick = { onToggleSave?.invoke() },
+                                        color = if (isSaved) Color(0xFFFFEBEE) else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f),
+                                        shape = RoundedCornerShape(8.dp),
+                                        border = BorderStroke(1.dp, if (isSaved) Color(0xFFFFCDD2) else MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)),
+                                        modifier = Modifier.testTag("artisan_favorite_badge")
+                                    ) {
+                                        Row(
+                                            modifier = Modifier.padding(horizontal = 7.dp, vertical = 3.dp),
+                                            verticalAlignment = Alignment.CenterVertically
+                                        ) {
+                                            Icon(
+                                                imageVector = if (isSaved) Icons.Filled.Favorite else Icons.Filled.FavoriteBorder,
+                                                contentDescription = if (isSaved) "Retirer des favoris" else "Ajouter aux favoris",
+                                                tint = if (isSaved) Color(0xFFE53935) else MaterialTheme.colorScheme.onSurfaceVariant,
+                                                modifier = Modifier.size(12.dp)
+                                            )
+                                            Spacer(modifier = Modifier.width(4.dp))
+                                            Text(
+                                                text = if (isSaved) "Favori" else "Favoris",
+                                                color = if (isSaved) Color(0xFFC62828) else MaterialTheme.colorScheme.onSurfaceVariant,
+                                                fontSize = 11.sp,
+                                                fontWeight = FontWeight.Bold
+                                            )
+                                        }
+                                    }
+                                }
                                 Spacer(modifier = Modifier.height(3.dp))
-                                Text(
-                                    text = worker.category.displayName,
-                                    style = MaterialTheme.typography.bodyMedium.copy(color = FixoBlue600, fontWeight = FontWeight.SemiBold)
-                                )
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    val tradeIcon = when (worker.category) {
+                                        ServiceCategory.PLUMBING -> R.drawable.ic_trade_plumbing
+                                        ServiceCategory.ELECTRICAL -> R.drawable.ic_trade_electricity
+                                        ServiceCategory.AC_COOLING -> R.drawable.ic_trade_hvac
+                                        else -> R.drawable.ic_trade_plumbing
+                                    }
+                                    Icon(
+                                        painter = painterResource(id = tradeIcon),
+                                        contentDescription = null,
+                                        tint = FixoBlue600,
+                                        modifier = Modifier.size(16.dp)
+                                    )
+                                    Spacer(modifier = Modifier.width(6.dp))
+                                    Text(
+                                        text = worker.category.displayName,
+                                        style = MaterialTheme.typography.bodyMedium.copy(color = FixoBlue600, fontWeight = FontWeight.SemiBold)
+                                    )
+                                }
                                 Spacer(modifier = Modifier.height(4.dp))
                                 Row(verticalAlignment = Alignment.CenterVertically) {
                                     VerificationBadge(status = if (worker.rating >= 4.95) VerificationStatus.MASTER_CRAFTSMAN else VerificationStatus.VERIFIED_PRO)
@@ -227,31 +316,202 @@ fun WorkerProfileScreen(
 
                         Spacer(modifier = Modifier.height(16.dp))
 
-                        // Bio
-                        Text(
-                            text = "About the Artisan",
-                            style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold)
-                        )
-                        Spacer(modifier = Modifier.height(4.dp))
-                        Text(
-                            text = worker.bio,
-                            style = MaterialTheme.typography.bodyMedium.copy(color = Color(0xFFCBD5E1), lineHeight = 20.sp)
-                        )
+                        // Bio & Présentation synchronisée via WorkerProfileRepository Singleton
+                        val singletonProfile by WorkerProfileRepository.artisanProfile.collectAsState()
+                        val displayedBio = if (worker.id.contains("marc", ignoreCase = true) || worker.id == "wrk_1" || worker.id == "artisan_marc_dubois" || worker.name.contains("marc", ignoreCase = true)) {
+                            singletonProfile.bio
+                        } else {
+                            worker.bio.ifEmpty { singletonProfile.bio }
+                        }
 
-                        Spacer(modifier = Modifier.height(14.dp))
+                        // --- 3 SOUS-BLOCS STRUCTURÉS OFFICIELS FIXO ---
+
+                        // 1. Expertise & Méthodologie
+                        Surface(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 4.dp),
+                            shape = RoundedCornerShape(12.dp),
+                            color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.6f))
+                        ) {
+                            Column(modifier = Modifier.padding(14.dp)) {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Icon(
+                                        painter = painterResource(id = R.drawable.ic_shield_security),
+                                        contentDescription = null,
+                                        tint = FixoGold500,
+                                        modifier = Modifier.size(20.dp)
+                                    )
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    Text(
+                                        text = "Expertise & Méthodologie",
+                                        style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold),
+                                        color = MaterialTheme.colorScheme.onSurface
+                                    )
+                                }
+                                Spacer(modifier = Modifier.height(8.dp))
+                                Text(
+                                    text = displayedBio,
+                                    style = MaterialTheme.typography.bodyMedium.copy(
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        lineHeight = 21.sp
+                                    ),
+                                    modifier = Modifier.testTag("worker_bio_text")
+                                )
+                            }
+                        }
+
+                        Spacer(modifier = Modifier.height(6.dp))
+
+                        // 2. Outillage Certifié FIXO
+                        Surface(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 4.dp),
+                            shape = RoundedCornerShape(12.dp),
+                            color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.6f))
+                        ) {
+                            Column(modifier = Modifier.padding(14.dp)) {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    val tradeIconRes = when (worker.category) {
+                                        ServiceCategory.PLUMBING -> R.drawable.ic_trade_plumbing
+                                        ServiceCategory.ELECTRICAL -> R.drawable.ic_trade_electricity
+                                        ServiceCategory.AC_COOLING -> R.drawable.ic_trade_hvac
+                                        else -> R.drawable.ic_trade_plumbing
+                                    }
+                                    Icon(
+                                        painter = painterResource(id = tradeIconRes),
+                                        contentDescription = null,
+                                        tint = FixoGold500,
+                                        modifier = Modifier.size(20.dp)
+                                    )
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    Text(
+                                        text = "Outillage Certifié FIXO",
+                                        style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold),
+                                        color = MaterialTheme.colorScheme.onSurface
+                                    )
+                                }
+                                Spacer(modifier = Modifier.height(8.dp))
+                                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                                    val tools = listOf(
+                                        "Détecteur acoustique de fuites non destructif haute précision",
+                                        "Furet électrique haute puissance & caméra endoscopique d'inspection",
+                                        "Poste à souder PEX/cuivre certifié & sertisseuse hydraulique"
+                                    )
+                                    tools.forEach { tool ->
+                                        Row(verticalAlignment = Alignment.CenterVertically) {
+                                            Icon(
+                                                imageVector = Icons.Default.CheckCircle,
+                                                contentDescription = null,
+                                                tint = FixoEmerald600,
+                                                modifier = Modifier.size(16.dp)
+                                            )
+                                            Spacer(modifier = Modifier.width(8.dp))
+                                            Text(
+                                                text = tool,
+                                                style = MaterialTheme.typography.bodySmall.copy(
+                                                    color = MaterialTheme.colorScheme.onSurface,
+                                                    fontSize = 12.sp
+                                                )
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+                        }
+
+                        Spacer(modifier = Modifier.height(6.dp))
+
+                        // 3. Zone d'Intervention Rapide
+                        Surface(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 4.dp),
+                            shape = RoundedCornerShape(12.dp),
+                            color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.6f))
+                        ) {
+                            Column(modifier = Modifier.padding(14.dp)) {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Icon(
+                                        imageVector = Icons.Default.LocationOn,
+                                        contentDescription = null,
+                                        tint = FixoGold500,
+                                        modifier = Modifier.size(20.dp)
+                                    )
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    Text(
+                                        text = "Zone d'Intervention Rapide",
+                                        style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold),
+                                        color = MaterialTheme.colorScheme.onSurface
+                                    )
+                                }
+                                Spacer(modifier = Modifier.height(8.dp))
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Column {
+                                        Text(
+                                            text = "Akwa et périmètre de 8 km",
+                                            style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.SemiBold),
+                                            color = MaterialTheme.colorScheme.onSurface
+                                        )
+                                        Text(
+                                            text = "Akwa, Bonanjo, Deïdo, Bonapriso, Bali",
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
+                                    }
+                                    Surface(
+                                        color = FixoEmerald500.copy(alpha = 0.15f),
+                                        shape = RoundedCornerShape(8.dp)
+                                    ) {
+                                        Row(
+                                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                                            verticalAlignment = Alignment.CenterVertically
+                                        ) {
+                                            Icon(
+                                                imageVector = Icons.Default.Timer,
+                                                contentDescription = null,
+                                                tint = FixoEmerald600,
+                                                modifier = Modifier.size(14.dp)
+                                            )
+                                            Spacer(modifier = Modifier.width(4.dp))
+                                            Text(
+                                                text = "18 min moyen",
+                                                style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
+                                                color = FixoEmerald600
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+                        }
+
+                        Spacer(modifier = Modifier.height(10.dp))
 
                         // Verified Credentials / Certifications
                         Box(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .clip(RoundedCornerShape(10.dp))
-                                .background(Color(0xFF111827))
-                                .border(1.dp, Color(0x4D10B981), RoundedCornerShape(10.dp))
+                                .background(MaterialTheme.colorScheme.surfaceVariant)
+                                .border(1.dp, FixoEmerald500.copy(alpha = 0.35f), RoundedCornerShape(10.dp))
                                 .padding(12.dp)
                         ) {
                             Column {
                                 Row(verticalAlignment = Alignment.CenterVertically) {
-                                    Icon(Icons.Default.Security, contentDescription = null, tint = FixoEmerald600, modifier = Modifier.size(16.dp))
+                                    Icon(
+                                        painter = painterResource(id = R.drawable.ic_shield_security),
+                                        contentDescription = null,
+                                        tint = FixoEmerald600,
+                                        modifier = Modifier.size(16.dp)
+                                    )
                                     Spacer(modifier = Modifier.width(6.dp))
                                     Text(
                                         text = "Trade Credentials & Background Verified",
@@ -261,7 +521,10 @@ fun WorkerProfileScreen(
                                 Spacer(modifier = Modifier.height(4.dp))
                                 Text(
                                     text = worker.certifications,
-                                    style = MaterialTheme.typography.bodySmall.copy(fontSize = 12.sp, color = Color(0xFFF8FAFC))
+                                    style = MaterialTheme.typography.bodySmall.copy(
+                                        fontSize = 12.sp,
+                                        color = MaterialTheme.colorScheme.onSurface
+                                    )
                                 )
                             }
                         }
@@ -280,31 +543,41 @@ fun WorkerProfileScreen(
                 ) {
                     Column(modifier = Modifier.padding(14.dp)) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(Icons.Default.LocationOn, contentDescription = null, tint = FixoBlue600, modifier = Modifier.size(18.dp))
+                            Icon(Icons.Default.LocationOn, contentDescription = null, tint = FixoGold500, modifier = Modifier.size(18.dp))
                             Spacer(modifier = Modifier.width(8.dp))
-                            Text("Location & Service Area", fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                            Text(
+                                "Location & Service Area",
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 14.sp,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
                         }
                         Spacer(modifier = Modifier.height(4.dp))
                         Text(
                             text = "Stationed in ${worker.locationCity} • Service coverage across the metropolitan district (up to 20 km radius).",
                             fontSize = 12.sp,
-                            color = Color(0xFFCBD5E1)
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
 
                         Spacer(modifier = Modifier.height(10.dp))
-                        Divider(color = MaterialTheme.colorScheme.surfaceVariant)
+                        Divider(color = MaterialTheme.colorScheme.outlineVariant)
                         Spacer(modifier = Modifier.height(10.dp))
 
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Icon(Icons.Default.Schedule, contentDescription = null, tint = FixoAmber600, modifier = Modifier.size(18.dp))
                             Spacer(modifier = Modifier.width(8.dp))
-                            Text("Working Hours & Availability", fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                            Text(
+                                "Working Hours & Availability",
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 14.sp,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
                         }
                         Spacer(modifier = Modifier.height(4.dp))
                         Text(
                             text = "Active Days: ${worker.workingDays} • Slots: ${worker.slotIntervals}",
                             fontSize = 12.sp,
-                            color = Color(0xFFCBD5E1)
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                         if (worker.emergencyCalloutAvailable) {
                             Spacer(modifier = Modifier.height(6.dp))
@@ -529,7 +802,12 @@ fun WorkerProfileScreen(
                                         }
                                     }
                                     Spacer(modifier = Modifier.height(4.dp))
-                                    Text(comment, fontSize = 11.sp, color = Color(0xFFCBD5E1), lineHeight = 16.sp)
+                                    Text(
+                                        text = comment,
+                                        fontSize = 12.sp,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        lineHeight = 17.sp
+                                    )
                                 }
                             }
                         }
@@ -607,28 +885,37 @@ fun WorkerProfileScreen(
                 horizontalArrangement = Arrangement.spacedBy(10.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                // [ 💬 Message ] (Gris ardoise texturé, 35% de la largeur)
+                // [ Message ] (Gris ardoise texturé réactif, 35% de la largeur)
                 Button(
-                    onClick = onMessage,
-                    shape = RoundedCornerShape(12.dp),
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = Color(0xFF1E293B),
-                        contentColor = Color(0xFFF8FAFC)
-                    ),
-                    border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFF334155)),
+                    onClick = {
+                        Log.d("FIXO_CLICK", "Clic bouton Message sur profil ${worker.name}")
+                        Log.d("FIXO_NAV", "Clic Message -> Navigation Chat Marc Dubois")
+                        val artisanId = if (worker.id.isNotBlank()) worker.id else "artisan_marc_dubois"
+                        onNavigateToChat(artisanId)
+                        onMessage()
+                    },
                     modifier = Modifier
                         .weight(0.35f)
-                        .height(48.dp)
-                        .testTag("worker_profile_message_button")
+                        .height(52.dp)
+                        .testTag("worker_profile_message_button"),
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
+                    shape = RoundedCornerShape(12.dp)
                 ) {
-                    Icon(Icons.Filled.Chat, contentDescription = "Message", modifier = Modifier.size(16.dp), tint = Color(0xFFCBD5E1))
-                    Spacer(modifier = Modifier.width(6.dp))
-                    Text("Message", fontSize = 13.sp, fontWeight = FontWeight.SemiBold, color = Color(0xFFF8FAFC))
+                    Icon(
+                        painter = painterResource(id = R.drawable.ic_fixo_chat),
+                        contentDescription = "Message",
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.size(20.dp)
+                    )
+                    Spacer(Modifier.width(8.dp))
+                    Text("Message", color = MaterialTheme.colorScheme.onSurface)
                 }
 
                 // [ Réserver l'artisan (15 000 FCFA) ] (Bouton principal ambre/sombre, 65% de la largeur)
                 Button(
                     onClick = {
+                        Log.d("FIXO_CLICK", "Clic Réserver l'artisan 15000 FCFA (${worker.name})")
+                        JobOrderRepository.createOrder(worker.id, worker.name, 15000.0)
                         val firstService = services.firstOrNull() ?: ServiceItem(
                             id = "srv_std_${worker.id}",
                             workerId = worker.id,

@@ -252,7 +252,7 @@ fun ChatDetailScreen(
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(
                         text = "Protection Guarantee: Keep communications & quotes inside FIXO.",
-                        color = Color(0xFFE2E8F0),
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                         fontSize = 11.sp,
                         fontWeight = FontWeight.Normal
                     )

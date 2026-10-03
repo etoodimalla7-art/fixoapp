@@ -1,5 +1,6 @@
 package com.example.ui
 
+import android.util.Log
 import android.widget.Toast
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
@@ -83,6 +84,7 @@ import com.example.ui.theme.FixoNavy900
 @Composable
 fun FixoApp(
     viewModel: FixoViewModel = viewModel(),
+    navController: androidx.navigation.NavController? = null,
     modifier: Modifier = Modifier
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -517,38 +519,65 @@ fun FixoApp(
                                 )
                             }
 
-                            // Sub-screen: Worker profile
+                            // Sub-screen: Worker profile / Artisan storefront
                             selectedWorker != null && viewingJobId == null -> {
-                                WorkerProfileScreen(
-                                    worker = selectedWorker,
+                                val currentWorker = uiState.allWorkers.find { it.id == selectedWorker.id } ?: selectedWorker
+                                val workerId = currentWorker.id.ifEmpty { "artisan_marc_dubois" }
+                                com.example.ui.screens.customer.ArtisanStorefrontScreen(
+                                    worker = currentWorker,
                                     services = uiState.workerServices.ifEmpty {
                                         // Default fallback services if worker just clicked
                                         listOf(
                                             com.example.data.model.ServiceItem(
-                                                id = "srv_std_${selectedWorker.id}",
-                                                workerId = selectedWorker.id,
+                                                id = "srv_std_${currentWorker.id}",
+                                                workerId = currentWorker.id,
                                                 name = "Standard Diagnostic & On-Site Repair",
-                                                category = selectedWorker.category,
+                                                category = currentWorker.category,
                                                 description = "On-site assessment, diagnostic equipment inspection, and standard repair with warranty.",
-                                                price = selectedWorker.hourlyRate * 1.5,
+                                                price = 15000.0,
                                                 durationEstimateMinutes = 60
                                             )
                                         )
                                     },
                                     reels = uiState.reels,
-                                    isSaved = uiState.savedWorkerIds.contains(selectedWorker.id),
+                                    isSaved = uiState.savedWorkerIds.contains(currentWorker.id) || uiState.savedWorkerIds.contains(workerId),
                                     onToggleSave = {
-                                        viewModel.toggleSaveWorker(selectedWorker.id)
+                                        viewModel.toggleSaveWorker(currentWorker.id.ifBlank { workerId })
                                     },
                                     onBack = {
                                         viewModel.clearSelectedWorker()
                                     },
                                     onBookService = { service ->
-                                        viewModel.openBookingDialog(service, selectedWorker)
+                                        Log.d("FIXO_CLICK", "Clic Réserver l'artisan 15000 FCFA -> Réservation directe et ouverture JobTrackingScreen")
+                                        com.example.data.repository.JobOrderRepository.createOrder(currentWorker.id, currentWorker.name, 15000.0)
+                                        viewModel.bookWorkerDirect(currentWorker) { bookingId ->
+                                            viewingJobId = bookingId
+                                        }
                                     },
                                     onWatchReel = {
                                         selectedTab = 2
-                                    }
+                                    },
+                                    onNavigateToChat = { targetWorkerId ->
+                                        Log.d("FIXO_NAV", "Clic Message -> Navigation Chat Marc Dubois ($targetWorkerId)")
+                                        if (navController != null) {
+                                            navController.navigate("chat_room/$targetWorkerId")
+                                        } else {
+                                            viewModel.startChatWithWorker(currentWorker) { bookingId ->
+                                                activeChatBookingId = bookingId
+                                            }
+                                        }
+                                    },
+                                    onMessage = {
+                                        Log.d("FIXO_NAV", "Clic Message -> Navigation Chat Marc Dubois ($workerId)")
+                                        if (navController != null) {
+                                            navController.navigate("chat_room/$workerId")
+                                        } else {
+                                            viewModel.startChatWithWorker(currentWorker) { bookingId ->
+                                                activeChatBookingId = bookingId
+                                            }
+                                        }
+                                    },
+                                    navController = navController
                                 )
                             }
 
@@ -657,7 +686,12 @@ fun FixoApp(
                                         viewModel.openBookingDialog(service, worker)
                                     },
                                     currentQuarterName = uiState.selectedQuarter.name,
-                                    unreadNotificationCount = uiState.unreadNotificationCount
+                                    unreadNotificationCount = uiState.unreadNotificationCount,
+                                    savedWorkerIds = uiState.savedWorkerIds,
+                                    favoriteArtisans = uiState.favoriteArtisans,
+                                    onToggleSaveWorker = { workerId ->
+                                        viewModel.toggleSaveWorker(workerId)
+                                    }
                                 )
 
                                 1 -> CustomerServicesScreen(
@@ -688,7 +722,7 @@ fun FixoApp(
                                             name = reel.title,
                                             category = reel.category,
                                             description = reel.description,
-                                            price = worker.hourlyRate * 1.5,
+                                            price = 15000.0,
                                             durationEstimateMinutes = 60
                                         )
                                         viewModel.openBookingDialog(service, worker)
@@ -719,7 +753,29 @@ fun FixoApp(
                                 4 -> ProfileScreen(
                                     user = uiState.currentUser,
                                     customerBookings = uiState.customerBookings,
-                                    savedWorkers = uiState.allWorkers.filter { uiState.savedWorkerIds.contains(it.id) },
+                                    savedWorkers = if (uiState.favoriteArtisans.isNotEmpty()) {
+                                        uiState.favoriteArtisans.map { fav ->
+                                            uiState.allWorkers.find { it.id == fav.workerId || (fav.workerId == "wrk_1" && it.id == "artisan_marc_dubois") || (fav.workerId == "artisan_marc_dubois" && it.id == "wrk_1") }
+                                                ?: com.example.data.model.WorkerProfile(
+                                                    id = fav.workerId,
+                                                    userId = "usr_${fav.workerId}",
+                                                    name = fav.workerName,
+                                                    category = runCatching { com.example.data.model.ServiceCategory.entries.first { it.displayName.equals(fav.category, ignoreCase = true) } }.getOrDefault(com.example.data.model.ServiceCategory.PLUMBING),
+                                                    hourlyRate = fav.hourlyRate,
+                                                    bio = "Artisan professionnel certifié FIXO avec interventions garanties.",
+                                                    skills = "${fav.category}, Dépannage, Réparation",
+                                                    certifications = "Artisan Homologué FIXO, Fixo Shield",
+                                                    avatarUrl = fav.avatarUrl,
+                                                    rating = fav.rating,
+                                                    reviewCount = fav.reviewCount,
+                                                    completedJobs = fav.completedJobs,
+                                                    locationCity = fav.locationCity,
+                                                    locationDistanceKm = fav.distanceKm
+                                                )
+                                        }
+                                    } else {
+                                        uiState.allWorkers.filter { uiState.savedWorkerIds.contains(it.id) || (uiState.savedWorkerIds.contains("wrk_1") && it.id == "artisan_marc_dubois") }
+                                    },
                                     language = uiState.currentLanguage,
                                     onUpdateProfile = { name, email, phone, city, avatarUrl ->
                                         viewModel.updateUserProfile(name, email, phone, city, avatarUrl)
@@ -829,7 +885,11 @@ fun FixoApp(
                             workerProfile = uiState.allWorkers.firstOrNull(),
                             language = uiState.currentLanguage,
                             onNavigateToWallet = { isViewingWallet = true },
-                            onLogout = { viewModel.logout() }
+                            onLogout = { viewModel.logout() },
+                            onSaveBio = { newBio ->
+                                val workerId = uiState.allWorkers.firstOrNull()?.id ?: "wrk_1"
+                                viewModel.updateWorkerBio(workerId, newBio)
+                            }
                         )
                     }
                 }
@@ -927,7 +987,8 @@ fun FixoApp(
             onDismiss = { viewModel.closeDisputeDialog() },
             onSubmit = { reason ->
                 viewModel.submitDispute(reason)
-            }
+            },
+            language = uiState.currentLanguage
         )
     }
 

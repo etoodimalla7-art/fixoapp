@@ -47,6 +47,11 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.result.PickVisualMediaRequest
 import com.example.ui.components.HowPointsWorkModal
+import com.example.ui.components.FixoSymbolicAvatar
+import com.example.ui.components.FIXO_SYMBOLIC_AVATARS
+import com.example.ui.components.ChangeAvatarBottomSheet
+import com.example.ui.screens.profile.EditProfileScreen
+import androidx.compose.ui.window.DialogProperties
 import androidx.compose.material.icons.filled.ReportProblem
 import androidx.compose.material.icons.filled.Security
 import androidx.compose.material.icons.filled.Star
@@ -116,6 +121,7 @@ import com.example.ui.theme.FixoNeutral900
 import com.example.ui.theme.FixoRed500
 import com.example.ui.theme.FixoWhite
 
+@OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
 @Composable
 fun ProfileScreen(
     user: User?,
@@ -169,6 +175,21 @@ fun ProfileScreen(
         }
     }
 
+    val cameraLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.TakePicturePreview()
+    ) { bitmap ->
+        if (bitmap != null) {
+            onUpdateProfile(
+                user?.name ?: "Sarah Jenkins",
+                user?.email ?: "sarah.jenkins@gmail.com",
+                user?.phone ?: "+237 677 889 900",
+                user?.city ?: "Douala",
+                "symbol:monogram"
+            )
+            showAvatarPickerSheet = false
+        }
+    }
+
     // User preferences state
     var pushNotificationsEnabled by remember { mutableStateOf(true) }
     var smsUpdatesEnabled by remember { mutableStateOf(true) }
@@ -205,19 +226,15 @@ fun ProfileScreen(
                         modifier = Modifier.fillMaxWidth(),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        // User Avatar (Cliquer pour changer la photo)
+                        // User Avatar (Cliquer pour changer la photo ou le blason)
                         Box(
                             contentAlignment = Alignment.BottomEnd,
                             modifier = Modifier.clickable { showAvatarPickerSheet = true }
                         ) {
-                            AsyncImage(
-                                model = user?.avatarUrl ?: "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=400",
-                                contentDescription = "Profile Avatar",
-                                modifier = Modifier
-                                    .size(76.dp)
-                                    .clip(CircleShape)
-                                    .border(2.dp, FixoGold500, CircleShape),
-                                contentScale = ContentScale.Crop
+                            FixoSymbolicAvatar(
+                                avatarUrl = user?.avatarUrl,
+                                userName = user?.name ?: "Sarah Jenkins",
+                                size = 76.dp
                             )
                             Box(
                                 modifier = Modifier
@@ -1036,105 +1053,21 @@ fun ProfileScreen(
     // DIALOGS & MODALS
     // =========================================================================
 
-    // 1. EDIT PROFILE DIALOG
+    // 1. DEDICATED EDIT PROFILE FULL-SCREEN / 90% MODAL
     if (showEditProfileDialog) {
-        var editName by remember { mutableStateOf(user?.name ?: "") }
-        var editEmail by remember { mutableStateOf(user?.email ?: "") }
-        var editPhone by remember { mutableStateOf(user?.phone ?: "+237 670 112 233") }
-        var editCity by remember { mutableStateOf("Douala, Littoral") }
-        var editAvatarUrl by remember { mutableStateOf(user?.avatarUrl ?: "") }
-
-        Dialog(onDismissRequest = { showEditProfileDialog = false }) {
-            Card(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(vertical = 16.dp),
-                shape = RoundedCornerShape(20.dp),
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
-            ) {
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(20.dp)
-                ) {
-                    Text(
-                        text = "Edit Profile",
-                        fontSize = 18.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onSurface
-                    )
-                    Text(
-                        text = "Keep your contact info up-to-date for smooth artisan visits.",
-                        fontSize = 12.sp,
-                        color = FixoNeutral500
-                    )
-
-                    Spacer(modifier = Modifier.height(16.dp))
-
-                    OutlinedTextField(
-                        value = editName,
-                        onValueChange = { editName = it },
-                        label = { Text("Full Name") },
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(10.dp)
-                    )
-
-                    Spacer(modifier = Modifier.height(10.dp))
-
-                    OutlinedTextField(
-                        value = editPhone,
-                        onValueChange = { editPhone = it },
-                        label = { Text("Phone (MTN / Orange)") },
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(10.dp)
-                    )
-
-                    Spacer(modifier = Modifier.height(10.dp))
-
-                    OutlinedTextField(
-                        value = editEmail,
-                        onValueChange = { editEmail = it },
-                        label = { Text("Email Address") },
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(10.dp)
-                    )
-
-                    Spacer(modifier = Modifier.height(10.dp))
-
-                    OutlinedTextField(
-                        value = editCity,
-                        onValueChange = { editCity = it },
-                        label = { Text("City & Neighborhood") },
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(10.dp)
-                    )
-
-                    Spacer(modifier = Modifier.height(20.dp))
-
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.End
-                    ) {
-                        TextButton(onClick = { showEditProfileDialog = false }) {
-                            Text("Cancel", color = FixoNeutral600)
-                        }
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Button(
-                            onClick = {
-                                onUpdateProfile(editName, editEmail, editPhone, editCity, user?.avatarUrl ?: "")
-                                showEditProfileDialog = false
-                            },
-                            shape = RoundedCornerShape(10.dp),
-                            colors = ButtonDefaults.buttonColors(
-                                containerColor = FixoNavy900,
-                                contentColor = FixoWhite
-                            )
-                        ) {
-                            Text("Save Changes", fontWeight = FontWeight.Bold)
-                        }
-                    }
-                }
-            }
+        androidx.compose.ui.window.Dialog(
+            onDismissRequest = { showEditProfileDialog = false },
+            properties = DialogProperties(usePlatformDefaultWidth = false)
+        ) {
+            EditProfileScreen(
+                user = user,
+                language = language,
+                onSaveProfile = { newName, newEmail, newPhone, newCity, landmark ->
+                    onUpdateProfile(newName, newEmail, newPhone, newCity, user?.avatarUrl ?: "symbol:monogram")
+                    showEditProfileDialog = false
+                },
+                onBack = { showEditProfileDialog = false }
+            )
         }
     }
 
@@ -1146,121 +1079,32 @@ fun ProfileScreen(
         )
     }
 
-    // 2B. AVATAR PICKER MODAL (NO UNSPLASH URL FIELD)
+    // 2B. AVATAR PICKER MODAL (6 SYMBOLIC BADGES + CAMERA + GALLERY VIA NATIVE BOTTOM SHEET)
     if (showAvatarPickerSheet) {
-        androidx.compose.ui.window.Dialog(onDismissRequest = { showAvatarPickerSheet = false }) {
-            Card(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(16.dp),
-                shape = RoundedCornerShape(20.dp),
-                colors = CardDefaults.cardColors(containerColor = Color(0xFF111827)),
-                border = androidx.compose.foundation.BorderStroke(1.dp, FixoGold500.copy(alpha = 0.3f))
-            ) {
-                Column(
-                    modifier = Modifier.padding(20.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally
-                ) {
-                    Text(
-                        text = if (language == AppLanguage.FR) "Changer de Photo de Profil" else "Change Profile Photo",
-                        fontSize = 18.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = Color.White
-                    )
-                    Spacer(modifier = Modifier.height(6.dp))
-                    Text(
-                        text = if (language == AppLanguage.FR) "Sélectionnez depuis votre téléphone ou un avatar prédéfini" else "Pick from phone gallery or choose a preset",
-                        fontSize = 12.sp,
-                        color = Color(0xFF94A3B8),
-                        textAlign = androidx.compose.ui.text.style.TextAlign.Center
-                    )
-
-                    Spacer(modifier = Modifier.height(18.dp))
-
-                    // Bouton Galerie Native Android
-                    Button(
-                        onClick = {
-                            photoPickerLauncher.launch(
-                                PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
-                            )
-                            showAvatarPickerSheet = false
-                        },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(48.dp)
-                            .testTag("pick_photo_gallery_button"),
-                        shape = RoundedCornerShape(12.dp),
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = FixoGold500,
-                            contentColor = Color(0xFF0A0E17)
-                        )
-                    ) {
-                        Icon(Icons.Default.PhotoCamera, contentDescription = null, modifier = Modifier.size(18.dp), tint = Color(0xFF0A0E17))
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text(
-                            text = if (language == AppLanguage.FR) "🖼️ Choisir dans ma galerie" else "🖼️ Choose from Gallery",
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 13.sp,
-                            color = Color(0xFF0A0E17)
-                        )
-                    }
-
-                    Spacer(modifier = Modifier.height(18.dp))
-
-                    Text(
-                        text = if (language == AppLanguage.FR) "Avatars Prédéfinis Soignés :" else "Or Choose a Preset Avatar:",
-                        fontSize = 12.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = Color(0xFFCBD5E1)
-                    )
-                    Spacer(modifier = Modifier.height(10.dp))
-
-                    val presets = listOf(
-                        "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=400",
-                        "https://images.unsplash.com/photo-1540569014015-19a7be504e3a?w=400",
-                        "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=400",
-                        "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400"
-                    )
-
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceEvenly
-                    ) {
-                        presets.forEach { presetUrl ->
-                            Box(
-                                modifier = Modifier
-                                    .size(56.dp)
-                                    .clip(CircleShape)
-                                    .border(2.dp, FixoGold500, CircleShape)
-                                    .clickable {
-                                        onUpdateProfile(
-                                            user?.name ?: "Sarah Jenkins",
-                                            user?.email ?: "sarah.jenkins@gmail.com",
-                                            user?.phone ?: "+237 677 889 900",
-                                            user?.city ?: "Douala",
-                                            presetUrl
-                                        )
-                                        showAvatarPickerSheet = false
-                                    }
-                            ) {
-                                AsyncImage(
-                                    model = presetUrl,
-                                    contentDescription = "Avatar preset",
-                                    modifier = Modifier.fillMaxSize(),
-                                    contentScale = ContentScale.Crop
-                                )
-                            }
-                        }
-                    }
-
-                    Spacer(modifier = Modifier.height(18.dp))
-
-                    TextButton(onClick = { showAvatarPickerSheet = false }) {
-                        Text(if (language == AppLanguage.FR) "Fermer" else "Close", color = Color(0xFF94A3B8))
-                    }
-                }
-            }
-        }
+        ChangeAvatarBottomSheet(
+            onDismissRequest = { showAvatarPickerSheet = false },
+            onSelectAvatar = { symbolId ->
+                onUpdateProfile(
+                    user?.name ?: "Sarah Jenkins",
+                    user?.email ?: "sarah.jenkins@gmail.com",
+                    user?.phone ?: "+237 677 889 900",
+                    user?.city ?: "Douala",
+                    symbolId
+                )
+                showAvatarPickerSheet = false
+            },
+            onTakePhoto = {
+                cameraLauncher.launch(null)
+            },
+            onPickGallery = {
+                photoPickerLauncher.launch(
+                    PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
+                )
+            },
+            currentAvatarUrl = user?.avatarUrl,
+            userName = user?.name ?: "Sarah Jenkins",
+            language = language
+        )
     }
 
     // 3. ABOUT FIXO DIALOG (WITH OFFICIAL LOGO)

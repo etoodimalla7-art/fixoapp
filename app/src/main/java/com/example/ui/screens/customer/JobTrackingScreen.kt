@@ -19,6 +19,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -38,6 +39,7 @@ import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Navigation
 import androidx.compose.material.icons.filled.NearMe
+import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Phone
 import androidx.compose.material.icons.filled.Security
 import androidx.compose.material.icons.filled.Shield
@@ -46,7 +48,11 @@ import androidx.compose.material.icons.filled.ThumbUp
 import androidx.compose.material.icons.filled.Verified
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material.icons.filled.QrCodeScanner
+import androidx.compose.ui.res.painterResource
+import com.example.R
 import com.example.data.model.isClosed
+import com.example.ui.components.DoualaGeographicMap
+import com.example.ui.components.LatLng
 import com.example.ui.theme.FixoSuccessGreen
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
@@ -177,7 +183,9 @@ fun JobTrackingScreen(
             Surface(
                 color = MaterialTheme.colorScheme.surface,
                 tonalElevation = 2.dp,
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .statusBarsPadding()
             ) {
                 Row(
                     modifier = Modifier
@@ -209,7 +217,7 @@ fun JobTrackingScreen(
                             }
                             Text(
                                 text = booking.serviceTitle,
-                                style = MaterialTheme.typography.bodySmall.copy(color = FixoSlate500)
+                                style = MaterialTheme.typography.bodySmall.copy(color = MaterialTheme.colorScheme.onSurfaceVariant)
                             )
                         }
                     }
@@ -220,42 +228,27 @@ fun JobTrackingScreen(
                             modifier = Modifier.testTag("job_dispute_button")
                         ) {
                             Icon(
-                                imageVector = Icons.Default.Shield,
+                                painter = painterResource(id = R.drawable.ic_shield_security),
                                 contentDescription = null,
                                 tint = FixoRed500,
                                 modifier = Modifier.size(16.dp)
                             )
                             Spacer(modifier = Modifier.width(4.dp))
-                            Text("🛡️ Centre de litige & assistance", color = FixoRed500, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                            Text("Centre de litige & assistance", color = FixoRed500, fontSize = 11.sp, fontWeight = FontWeight.Bold)
                         }
                     }
                 }
             }
         }
 
-        // Zero-Cash Contract Mandatory Banner
+        // Zero-Cash Contract Mandatory Banner (Avec padding protecteur WCAG pour ne jamais être rogné)
         item {
-            ZeroCashOmnipresentBanner(language = language)
-        }
-
-        // Sandbox Simulation Button
-        item {
-            OutlinedButton(
-                onClick = onSimulateArrivalAndPhotos,
+            Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 4.dp)
-                    .height(42.dp)
-                    .testTag("simulate_arrival_photos_button"),
-                shape = RoundedCornerShape(10.dp),
-                colors = ButtonDefaults.outlinedButtonColors(contentColor = FixoGold600)
+                    .padding(top = 16.dp, bottom = 6.dp)
             ) {
-                Icon(imageVector = Icons.Default.Bolt, contentDescription = null, tint = FixoGold600, modifier = Modifier.size(18.dp))
-                Spacer(modifier = Modifier.width(8.dp))
-                Text(
-                    text = "⚡ Simuler Arrivée & Photos (Test Sandbox)",
-                    style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold)
-                )
+                ZeroCashOmnipresentBanner(language = language)
             }
         }
 
@@ -281,7 +274,12 @@ fun JobTrackingScreen(
                             .background(FixoGold500.copy(alpha = 0.2f)),
                         contentAlignment = Alignment.Center
                     ) {
-                        Icon(imageVector = Icons.Default.Chat, contentDescription = null, tint = FixoNavy900)
+                        Icon(
+                            painter = painterResource(id = R.drawable.ic_fixo_chat),
+                            contentDescription = null,
+                            tint = FixoGold600,
+                            modifier = Modifier.size(20.dp)
+                        )
                     }
                     Spacer(modifier = Modifier.width(12.dp))
                     Column(modifier = Modifier.weight(1f)) {
@@ -299,12 +297,23 @@ fun JobTrackingScreen(
                         color = FixoEmerald500.copy(alpha = 0.15f),
                         shape = RoundedCornerShape(12.dp)
                     ) {
-                        Text(
-                            text = "Accéder 🟢",
-                            style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
-                            color = FixoEmerald600,
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
                             modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
-                        )
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(6.dp)
+                                    .clip(CircleShape)
+                                    .background(FixoEmerald600)
+                            )
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text(
+                                text = "Accéder",
+                                style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
+                                color = FixoEmerald600
+                            )
+                        }
                     }
                 }
             }
@@ -414,20 +423,31 @@ fun JobTrackingScreen(
 
                 Spacer(modifier = Modifier.height(10.dp))
 
-                // High-performance Live Vector Tracking Canvas with Floating Telemetry Banner
-                Box(modifier = Modifier.fillMaxWidth()) {
-                    LiveTrackingMap(
-                        workerLat = workerLat,
-                        workerLng = workerLng,
-                        customerLat = customerLat,
-                        customerLng = customerLng,
-                        workerName = booking.workerName,
-                        destinationAddress = booking.address,
-                        isTrackingActive = isTrackingLive,
-                        workerSpeedKmh = booking.workerSpeedKmh,
-                        workerHeading = booking.workerHeading,
-                        etaMinutes = etaMinutes,
-                        distanceKm = distanceKm
+                // Real OpenStreetMap Unified Engine with Live Itinerary Polyline and Telemetry
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(260.dp)
+                        .clip(RoundedCornerShape(16.dp))
+                        .border(1.dp, MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(16.dp))
+                ) {
+                    DoualaGeographicMap(
+                        centerLat = (workerLat + customerLat) / 2.0,
+                        centerLng = (workerLng + customerLng) / 2.0,
+                        initialZoom = 15.2f,
+                        modifier = Modifier.fillMaxSize(),
+                        routePoints = listOf(
+                            LatLng(4.0610, 9.7160), // Deïdo (Rond-Point)
+                            LatLng(4.0570, 9.7125), // Bd de la République
+                            LatLng(4.0535, 9.7095), // Akwa Centre
+                            LatLng(4.0520, 9.7088), // Bd de la Liberté
+                            LatLng(customerLat, customerLng) // Destination (Rue Drouot, Akwa)
+                        ),
+                        trackerLat = workerLat,
+                        trackerLng = workerLng,
+                        trackerName = booking.workerName,
+                        destinationPoint = LatLng(customerLat, customerLng),
+                        destinationLabel = booking.address.ifEmpty { "Client (Rue Drouot, Akwa)" }
                     )
 
                     // Floating Telemetric Banner
@@ -437,7 +457,9 @@ fun JobTrackingScreen(
                             .align(Alignment.TopStart)
                             .testTag("floating_telemetry_banner"),
                         shape = RoundedCornerShape(20.dp),
-                        color = FixoNavy900.copy(alpha = 0.88f)
+                        color = MaterialTheme.colorScheme.surface.copy(alpha = 0.94f),
+                        border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+                        shadowElevation = 4.dp
                     ) {
                         Row(
                             modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
@@ -451,9 +473,9 @@ fun JobTrackingScreen(
                             )
                             Spacer(modifier = Modifier.width(6.dp))
                             Text(
-                                text = "Arrivée dans ~8 min (2.1 km) • En moto • 26 km/h",
+                                text = "Arrivée dans ~${etaMinutes.coerceAtLeast(8)} min (${if (distanceKm > 0.0) distanceKm else 2.1} km) • En moto • 26 km/h",
                                 style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
-                                color = Color.White
+                                color = MaterialTheme.colorScheme.onSurface
                             )
                         }
                     }
@@ -551,11 +573,11 @@ fun JobTrackingScreen(
                             horizontalArrangement = Arrangement.spacedBy(8.dp),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            // Bouton 1 : [ 📞 Appel Masqué FIXO ] (Appel GSM masqué via la passerelle FIXO)
+                            // Bouton 1 : [ Appel Masqué FIXO ] (Bouton ardoise #1E293B, bordure or, texte blanc #FFFFFF)
                             Surface(
                                 shape = RoundedCornerShape(10.dp),
-                                color = FixoEmerald50,
-                                border = androidx.compose.foundation.BorderStroke(1.dp, FixoEmerald600.copy(alpha = 0.3f)),
+                                color = Color(0xFF1E293B),
+                                border = androidx.compose.foundation.BorderStroke(1.dp, FixoGold500.copy(alpha = 0.5f)),
                                 modifier = Modifier
                                     .clickable { showMaskedCall = true }
                                     .testTag("masked_call_button")
@@ -565,26 +587,26 @@ fun JobTrackingScreen(
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
                                     Icon(
-                                        imageVector = Icons.Default.Call,
+                                        painter = painterResource(id = R.drawable.ic_fixo_phone),
                                         contentDescription = "Appel Masqué FIXO",
-                                        tint = FixoEmerald600,
-                                        modifier = Modifier.size(16.dp)
+                                        tint = FixoGold500,
+                                        modifier = Modifier.size(20.dp)
                                     )
-                                    Spacer(modifier = Modifier.width(4.dp))
+                                    Spacer(modifier = Modifier.width(6.dp))
                                     Text(
-                                        text = "📞 Appel Masqué FIXO",
+                                        text = "Appel Masqué FIXO",
                                         fontSize = 11.sp,
                                         fontWeight = FontWeight.Bold,
-                                        color = FixoEmerald600
+                                        color = Color.White
                                     )
                                 }
                             }
 
-                            // Bouton 2 : [ 💬 WhatsApp / Chat ] (Accès direct à la messagerie de chantier)
+                            // Bouton 2 : [ WhatsApp Direct ] (Bouton sombre avec logo officiel WhatsApp)
                             Surface(
                                 shape = RoundedCornerShape(10.dp),
                                 color = Color(0xFF1E293B),
-                                border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFF334155)),
+                                border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFF25D366).copy(alpha = 0.4f)),
                                 modifier = Modifier
                                     .clickable { onOpenFullChat() }
                                     .testTag("call_worker_button")
@@ -594,14 +616,14 @@ fun JobTrackingScreen(
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
                                     Icon(
-                                        imageVector = Icons.Default.Chat,
-                                        contentDescription = "WhatsApp / Chat",
-                                        tint = FixoGold500,
-                                        modifier = Modifier.size(16.dp)
+                                        painter = painterResource(id = R.drawable.ic_fixo_whatsapp),
+                                        contentDescription = "WhatsApp Direct",
+                                        tint = Color(0xFF25D366),
+                                        modifier = Modifier.size(20.dp)
                                     )
-                                    Spacer(modifier = Modifier.width(4.dp))
+                                    Spacer(modifier = Modifier.width(6.dp))
                                     Text(
-                                        text = "💬 WhatsApp / Chat",
+                                        text = "WhatsApp Direct",
                                         fontSize = 11.sp,
                                         fontWeight = FontWeight.Bold,
                                         color = Color.White
@@ -954,10 +976,15 @@ fun JobTrackingScreen(
                             shape = RoundedCornerShape(12.dp),
                             colors = ButtonDefaults.buttonColors(containerColor = FixoGold500)
                         ) {
-                            Icon(imageVector = Icons.Default.QrCodeScanner, contentDescription = null, tint = Color.Black)
+                            Icon(
+                                imageVector = Icons.Default.QrCodeScanner,
+                                contentDescription = null,
+                                tint = Color.Black,
+                                modifier = Modifier.size(20.dp)
+                            )
                             Spacer(modifier = Modifier.width(8.dp))
                             Text(
-                                text = "📷 SCANNER LE QR CODE DE CLÔTURE",
+                                text = "SCANNER LE QR CODE DE CLÔTURE",
                                 fontWeight = FontWeight.Bold,
                                 color = Color.Black
                             )
@@ -990,10 +1017,15 @@ fun JobTrackingScreen(
                             colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF14241B)),
                             border = androidx.compose.foundation.BorderStroke(1.dp, FixoSuccessGreen)
                         ) {
-                            Icon(imageVector = Icons.Default.Shield, contentDescription = null, tint = FixoSuccessGreen)
+                            Icon(
+                                painter = painterResource(id = R.drawable.ic_shield_security),
+                                contentDescription = null,
+                                tint = FixoSuccessGreen,
+                                modifier = Modifier.size(20.dp)
+                            )
                             Spacer(modifier = Modifier.width(8.dp))
                             Text(
-                                text = "🛡️ Garantie Active 14 Jours (Signaler Récidive)",
+                                text = "Garantie Active 14 Jours (Signaler Récidive)",
                                 fontWeight = FontWeight.Bold,
                                 color = FixoSuccessGreen
                             )
@@ -1102,14 +1134,25 @@ fun JobTrackingScreen(
                         shape = RoundedCornerShape(12.dp),
                         color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f)
                     ) {
-                        Text(
-                            text = "🔔 ${msg.message}",
-                            style = MaterialTheme.typography.labelSmall.copy(
-                                color = FixoSlate700,
-                                textAlign = TextAlign.Center
-                            ),
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
                             modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
-                        )
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Notifications,
+                                contentDescription = null,
+                                tint = FixoSlate700,
+                                modifier = Modifier.size(12.dp)
+                            )
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text(
+                                text = msg.message,
+                                style = MaterialTheme.typography.labelSmall.copy(
+                                    color = FixoSlate700,
+                                    textAlign = TextAlign.Center
+                                )
+                            )
+                        }
                     }
                 }
             } else {

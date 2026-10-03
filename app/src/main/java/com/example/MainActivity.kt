@@ -12,6 +12,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.data.repository.ThemeMode
 import com.example.ui.FixoApp
 import com.example.ui.FixoViewModel
+import com.example.ui.navigation.FixoNavGraph
 import com.example.ui.theme.AmbientLightManager
 import com.example.ui.theme.MyApplicationTheme
 import com.example.ui.theme.rememberAmbientLightSensorLux
@@ -34,7 +35,7 @@ class MainActivity : ComponentActivity() {
       )
 
       MyApplicationTheme(darkTheme = isDarkTheme) {
-        FixoApp(viewModel = fixoViewModel)
+        FixoNavGraph(viewModel = fixoViewModel)
       }
     }
   }

@@ -22,6 +22,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -46,6 +47,8 @@ import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Shield
 import androidx.compose.material.icons.filled.Timer
 import androidx.compose.material.icons.filled.VolumeUp
+import androidx.compose.ui.res.painterResource
+import com.example.R
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -150,10 +153,10 @@ fun LiveWorkroomChat(
         }
     }
 
-    // Auto-scroll on new messages
+    // Auto-scroll on new messages (pinned to bottom with reverseLayout = true)
     LaunchedEffect(messages.size) {
         if (messages.isNotEmpty()) {
-            listState.animateScrollToItem(messages.size - 1)
+            listState.animateScrollToItem(0)
         }
     }
 
@@ -167,7 +170,7 @@ fun LiveWorkroomChat(
             }
             if (pttSeconds >= 60) {
                 isRecordingPtt = false
-                onSendMessage("🎤 Note vocale ($pttSeconds s)", "local_audio_stream.m4a", "VOICE", pttSeconds)
+                onSendMessage("Note vocale ($pttSeconds s)", "local_audio_stream.m4a", "VOICE", pttSeconds)
             }
         }
     }
@@ -232,7 +235,9 @@ fun LiveWorkroomChat(
             Surface(
                 tonalElevation = 6.dp,
                 color = MaterialTheme.colorScheme.surface,
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .imePadding()
             ) {
                 Column(modifier = Modifier.padding(10.dp)) {
                     // PTT recording state banner
@@ -335,7 +340,7 @@ fun LiveWorkroomChat(
                                     .clickable {
                                         if (isRecordingPtt) {
                                             isRecordingPtt = false
-                                            onSendMessage("🎤 Note vocale (${pttSeconds}s)", "voice_note_ptt.m4a", "VOICE", pttSeconds)
+                                            onSendMessage("Note vocale (${pttSeconds}s)", "voice_note_ptt.m4a", "VOICE", pttSeconds)
                                         } else {
                                             isRecordingPtt = true
                                         }
@@ -372,15 +377,20 @@ fun LiveWorkroomChat(
             ZeroCashOmnipresentBanner(language = language)
 
             // 3. Messages List
+            val reversedMessages = remember(messages) { messages.asReversed() }
             LazyColumn(
                 state = listState,
+                reverseLayout = true,
                 modifier = Modifier
                     .weight(1f)
                     .fillMaxWidth()
                     .padding(horizontal = 12.dp),
                 contentPadding = PaddingValues(vertical = 12.dp)
             ) {
-                items(messages) { message ->
+                items(
+                    items = reversedMessages,
+                    key = { it.id }
+                ) { message ->
                     WorkroomMessageBubble(
                         message = message,
                         isFromMe = message.senderId == currentUserId || (currentUserRole == message.senderRole),
@@ -412,7 +422,7 @@ fun LiveWorkroomChat(
             onSaveAnnotation = { drawnPointsCount ->
                 showAnnotationDialog = false
                 onSendMessage(
-                    "📍 Annotation sur photo : Panne pointée avec précision ($drawnPointsCount tracés)",
+                    "Annotation sur photo : Panne pointée avec précision ($drawnPointsCount tracés)",
                     selectedPhotoForAnnotation,
                     "ANNOTATED_IMAGE",
                     null
@@ -460,19 +470,37 @@ fun MissionStopwatchBanner(
             }
 
             if (isActive) {
-                Text(
-                    text = "⏱️ $timeFormatted",
-                    style = MaterialTheme.typography.titleSmall.copy(
-                        fontWeight = FontWeight.ExtraBold,
-                        color = FixoEmerald600
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(
+                        imageVector = Icons.Default.Timer,
+                        contentDescription = null,
+                        tint = FixoEmerald600,
+                        modifier = Modifier.size(16.dp)
                     )
-                )
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text(
+                        text = timeFormatted,
+                        style = MaterialTheme.typography.titleSmall.copy(
+                            fontWeight = FontWeight.ExtraBold,
+                            color = FixoEmerald600
+                        )
+                    )
+                }
             } else if (!hasBeforePhoto) {
-                Text(
-                    text = "🔒 Bloqué (Photo Avant Requise)",
-                    style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
-                    color = FixoAmber500
-                )
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(
+                        imageVector = Icons.Default.Lock,
+                        contentDescription = null,
+                        tint = FixoAmber500,
+                        modifier = Modifier.size(14.dp)
+                    )
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text(
+                        text = "Bloqué (Photo Avant Requise)",
+                        style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
+                        color = FixoAmber500
+                    )
+                }
             } else {
                 Text(
                     text = "En attente démarrage",
@@ -486,14 +514,22 @@ fun MissionStopwatchBanner(
 
 @Composable
 fun ZeroCashOmnipresentBanner(language: AppLanguage) {
+    val isDark = MaterialTheme.colorScheme.background.let {
+        (0.299 * it.red + 0.587 * it.green + 0.114 * it.blue) < 0.5
+    }
+    val containerColor = if (isDark) Color(0xFF381212) else Color(0xFFFEF2F2)
+    val borderColor = if (isDark) Color(0xFF7F1D1D) else Color(0xFFFCA5A5)
+    val textColor = if (isDark) Color(0xFFFECACA) else Color(0xFF991B1B)
+    val iconColor = if (isDark) Color(0xFFF87171) else Color(0xFFDC2626)
+
     Card(
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 12.dp, vertical = 6.dp)
             .testTag("omnipresent_zero_cash_banner"),
         shape = RoundedCornerShape(8.dp),
-        colors = CardDefaults.cardColors(containerColor = Color(0xFFFEF2F2)),
-        border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFFCA5A5))
+        colors = CardDefaults.cardColors(containerColor = containerColor),
+        border = androidx.compose.foundation.BorderStroke(1.dp, borderColor)
     ) {
         Row(
             modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
@@ -502,14 +538,14 @@ fun ZeroCashOmnipresentBanner(language: AppLanguage) {
             Icon(
                 imageVector = Icons.Default.Shield,
                 contentDescription = "Fixo Shield",
-                tint = Color(0xFFDC2626),
+                tint = iconColor,
                 modifier = Modifier.size(16.dp)
             )
             Spacer(modifier = Modifier.width(8.dp))
             Text(
                 text = FixoStrings.get("workroom.anti_cash_warning", language),
                 style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
-                color = Color(0xFF991B1B)
+                color = textColor
             )
         }
     }
@@ -537,13 +573,13 @@ fun WorkroomMessageBubble(
     val timeFormatted = SimpleDateFormat("HH:mm", Locale.FRANCE).format(Date(message.timestamp))
 
     if (isSystemAction) {
-        // Bannière Pleine Largeur au Design Carte Bancaire Sombre Haut de Gamme
+        // Bannière Pleine Largeur au Design Réactif
         Card(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(vertical = 4.dp),
             shape = RoundedCornerShape(14.dp),
-            colors = CardDefaults.cardColors(containerColor = Color(0xFF131B2A)),
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
             border = androidx.compose.foundation.BorderStroke(1.dp, FixoGold500.copy(alpha = 0.35f))
         ) {
             Row(
@@ -583,15 +619,15 @@ fun WorkroomMessageBubble(
                         text = message.message,
                         style = MaterialTheme.typography.bodySmall.copy(
                             fontWeight = FontWeight.SemiBold,
-                            color = Color.White
+                            color = MaterialTheme.colorScheme.onSurface
                         )
                     )
                 }
 
                 Surface(
                     shape = RoundedCornerShape(8.dp),
-                    color = Color(0xFF090E17),
-                    border = androidx.compose.foundation.BorderStroke(1.dp, Color(0x33FFFFFF))
+                    color = MaterialTheme.colorScheme.surface,
+                    border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
                 ) {
                     Text(
                         text = timeFormatted,
@@ -618,7 +654,7 @@ fun WorkroomMessageBubble(
                 Text(
                     text = "${message.senderName} • $timeFormatted",
                     style = MaterialTheme.typography.labelSmall,
-                    color = Color(0xFF94A3B8)
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
                 if (isArtisan) {
                     Spacer(modifier = Modifier.width(6.dp))
@@ -626,19 +662,30 @@ fun WorkroomMessageBubble(
                         shape = RoundedCornerShape(6.dp),
                         color = FixoGold500.copy(alpha = 0.18f)
                     ) {
-                        Text(
-                            text = "Artisan Pro 🛠️",
-                            fontSize = 9.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = FixoGold500,
-                            modifier = Modifier.padding(horizontal = 5.dp, vertical = 1.dp)
-                        )
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                        ) {
+                            Icon(
+                                painter = painterResource(id = R.drawable.ic_shield_security),
+                                contentDescription = null,
+                                tint = FixoGold500,
+                                modifier = Modifier.size(11.dp)
+                            )
+                            Spacer(modifier = Modifier.width(3.dp))
+                            Text(
+                                text = "Artisan Pro Agréé",
+                                fontSize = 9.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = FixoGold500
+                            )
+                        }
                     }
                 }
             }
 
             if (isArtisan) {
-                // Artisan : Carte sombre avec liseré or
+                // Artisan : Carte réactive avec liseré or
                 Card(
                     shape = RoundedCornerShape(
                         topStart = 4.dp,
@@ -646,7 +693,7 @@ fun WorkroomMessageBubble(
                         bottomStart = 16.dp,
                         bottomEnd = 16.dp
                     ),
-                    colors = CardDefaults.cardColors(containerColor = Color(0xFF1A2232)),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
                     border = androidx.compose.foundation.BorderStroke(1.5.dp, FixoGold500.copy(alpha = 0.65f)),
                     modifier = Modifier.widthIn(max = 300.dp)
                 ) {
@@ -990,7 +1037,11 @@ fun PhotoAnnotationDialog(
                         shape = RoundedCornerShape(8.dp),
                         modifier = Modifier.height(36.dp)
                     ) {
-                        Text("🔴 Cercle Rouge", style = MaterialTheme.typography.labelSmall)
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Box(modifier = Modifier.size(8.dp).clip(CircleShape).background(Color.White))
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text("Cercle Rouge", style = MaterialTheme.typography.labelSmall)
+                        }
                     }
 
                     Button(
@@ -1001,7 +1052,11 @@ fun PhotoAnnotationDialog(
                         shape = RoundedCornerShape(8.dp),
                         modifier = Modifier.height(36.dp)
                     ) {
-                        Text("🟡 Flèche Jaune", style = MaterialTheme.typography.labelSmall, color = Color.Black)
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Box(modifier = Modifier.size(8.dp).clip(CircleShape).background(Color.Black))
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text("Flèche Jaune", style = MaterialTheme.typography.labelSmall, color = Color.Black)
+                        }
                     }
 
                     TextButton(onClick = { drawnAnnotations.clear() }) {

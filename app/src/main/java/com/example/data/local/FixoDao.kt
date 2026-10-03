@@ -17,6 +17,7 @@ import com.example.data.model.User
 import com.example.data.model.UserRole
 import com.example.data.model.WalletTransaction
 import com.example.data.model.WorkerProfile
+import com.example.data.model.FavoriteArtisan
 import kotlinx.coroutines.flow.Flow
 
 @Dao
@@ -284,4 +285,26 @@ interface FixoDao {
 
     @Query("DELETE FROM workforce_requests")
     suspend fun clearWorkforceRequests()
+
+    // FAVORITE ARTISANS (LOCAL PERSISTENCE)
+    @Query("SELECT * FROM favorite_artisans ORDER BY savedAt DESC")
+    fun getAllFavoriteArtisans(): Flow<List<FavoriteArtisan>>
+
+    @Query("SELECT workerId FROM favorite_artisans")
+    fun getFavoriteArtisanIds(): Flow<List<String>>
+
+    @Query("SELECT EXISTS(SELECT 1 FROM favorite_artisans WHERE workerId = :workerId)")
+    fun isArtisanFavorite(workerId: String): Flow<Boolean>
+
+    @Query("SELECT EXISTS(SELECT 1 FROM favorite_artisans WHERE workerId = :workerId)")
+    suspend fun isArtisanFavoriteDirect(workerId: String): Boolean
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertFavoriteArtisan(favorite: FavoriteArtisan)
+
+    @Query("DELETE FROM favorite_artisans WHERE workerId = :workerId")
+    suspend fun deleteFavoriteArtisan(workerId: String)
+
+    @Query("DELETE FROM favorite_artisans")
+    suspend fun clearFavoriteArtisans()
 }

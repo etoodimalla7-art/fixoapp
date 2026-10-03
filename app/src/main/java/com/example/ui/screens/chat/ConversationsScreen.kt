@@ -176,7 +176,7 @@ fun ConversationsScreen(
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(
                         text = "All chats are encrypted & tied to your Escrow job guarantee.",
-                        color = Color(0xFFE2E8F0),
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                         fontSize = 11.sp,
                         fontWeight = FontWeight.Medium
                     )

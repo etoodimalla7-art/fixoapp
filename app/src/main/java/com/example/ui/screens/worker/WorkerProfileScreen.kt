@@ -1,5 +1,7 @@
 package com.example.ui.screens.worker
 
+import android.util.Log
+import com.example.data.repository.WorkerProfileRepository
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -28,6 +30,7 @@ import androidx.compose.material.icons.filled.AccountBalanceWallet
 import androidx.compose.material.icons.filled.Badge
 import androidx.compose.material.icons.filled.Build
 import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.FlashOn
 import androidx.compose.material.icons.filled.Handyman
 import androidx.compose.material.icons.filled.LocationOn
@@ -40,6 +43,8 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material.icons.filled.Shield
 import androidx.compose.material.icons.filled.Speed
 import androidx.compose.material.icons.filled.Star
@@ -99,11 +104,17 @@ fun WorkerProfileScreen(
     onNavigateToWallet: () -> Unit,
     onLogout: () -> Unit,
     onUpdateAvatar: (String) -> Unit = {},
+    onSaveBio: (String) -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     var interventionRadiusKm by remember { mutableFloatStateOf(8.0f) }
     var emergencyCalloutActive by remember { mutableStateOf(true) }
     var showAvatarPickerSheet by remember { mutableStateOf(false) }
+    var bioText by remember(workerProfile?.bio) {
+        mutableStateOf(
+            workerProfile?.bio ?: "Maître Artisan certifié FIXO. 14 ans d'expérience en plomberie sanitaire, soudures de précision cuivre et dépannage garanti sous 30 minutes à Douala."
+        )
+    }
 
     val photoPickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.PickVisualMedia()
@@ -273,6 +284,81 @@ fun WorkerProfileScreen(
             Spacer(modifier = Modifier.height(16.dp))
         }
 
+        // Présentation professionnelle & Biographie (visible par les clients)
+        item {
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 20.dp),
+                shape = RoundedCornerShape(18.dp),
+                colors = CardDefaults.cardColors(containerColor = cardBg),
+                border = androidx.compose.foundation.BorderStroke(1.dp, cardBorder)
+            ) {
+                Column(modifier = Modifier.padding(18.dp)) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(imageVector = Icons.Default.Edit, contentDescription = null, tint = FixoGold500, modifier = Modifier.size(18.dp))
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            text = "Présentation professionnelle & Biographie",
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = textPrimary
+                        )
+                    }
+                    Text(
+                        text = "Ce texte est affiché directement aux clients sur votre vitrine officielle.",
+                        fontSize = 11.sp,
+                        color = textSecondary,
+                        modifier = Modifier.padding(top = 4.dp, bottom = 12.dp)
+                    )
+
+                    OutlinedTextField(
+                        value = bioText,
+                        onValueChange = { bioText = it },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .testTag("worker_bio_input"),
+                        minLines = 4,
+                        maxLines = 8,
+                        shape = RoundedCornerShape(12.dp),
+                        placeholder = { Text("Ex: 14 ans d'expérience en plomberie sanitaire, soudures de précision...", color = textSecondary) },
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = FixoGold500,
+                            unfocusedBorderColor = cardBorder,
+                            focusedTextColor = textPrimary,
+                            unfocusedTextColor = textPrimary,
+                            focusedContainerColor = if (isDark) Color(0xFF1E293B) else Color(0xFFF8FAFC),
+                            unfocusedContainerColor = if (isDark) Color(0xFF1E293B) else Color(0xFFF8FAFC)
+                        )
+                    )
+
+                    Spacer(modifier = Modifier.height(12.dp))
+
+                    Button(
+                        onClick = {
+                            Log.d("FIXO_CLICK", "Clic Enregistrer ma biographie pro: $bioText")
+                            WorkerProfileRepository.updateBio(bioText)
+                            onSaveBio(bioText)
+                        },
+                        colors = ButtonDefaults.buttonColors(containerColor = FixoGold500, contentColor = Color(0xFF080C15)),
+                        shape = RoundedCornerShape(10.dp),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(44.dp)
+                            .testTag("btn_save_worker_bio")
+                    ) {
+                        Icon(Icons.Default.CheckCircle, contentDescription = null, tint = Color(0xFF080C15), modifier = Modifier.size(16.dp))
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text("Enregistrer ma biographie pro", fontWeight = FontWeight.Bold, color = Color(0xFF080C15))
+                    }
+                }
+            }
+            Spacer(modifier = Modifier.height(16.dp))
+        }
+
         // Dossier d'Homologation & Sceaux Légaux Détaillés
         item {
             Card(
@@ -405,12 +491,21 @@ fun WorkerProfileScreen(
                                     .background(if (isDark) Color(0xFF1E293B) else Color(0xFFF1F5F9))
                                     .padding(horizontal = 10.dp, vertical = 5.dp)
                             ) {
-                                Text(
-                                    text = "📍 $quarter",
-                                    fontSize = 11.sp,
-                                    fontWeight = FontWeight.SemiBold,
-                                    color = textPrimary
-                                )
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Icon(
+                                        imageVector = Icons.Default.LocationOn,
+                                        contentDescription = null,
+                                        tint = FixoGold500,
+                                        modifier = Modifier.size(13.dp)
+                                    )
+                                    Spacer(modifier = Modifier.width(4.dp))
+                                    Text(
+                                        text = quarter,
+                                        fontSize = 11.sp,
+                                        fontWeight = FontWeight.SemiBold,
+                                        color = textPrimary
+                                    )
+                                }
                             }
                         }
                     }

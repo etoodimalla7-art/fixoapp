@@ -22,7 +22,7 @@ val FixoLightSurface = Color(0xFFFFFFFF)      // Blanc pur
 val FixoLightSurfaceCard = Color(0xFFF1F5F9)  // Blanc grisé
 val FixoLightBorder = Color(0x140F172A)       // rgba(15, 23, 42, 0.08)
 val FixoLightTextPrimary = Color(0xFF0F172A)  // Noir d'encre
-val FixoLightTextSecondary = Color(0xFF64748B)// Ardoise moyenne contrastée
+val FixoLightTextSecondary = Color(0xFF475569)// Ardoise foncée contrastée (WCAG AAA)
 
 // --- Accents Globaux ---
 val FixoGold500 = Color(0xFFF59E0B)           // Or ambre signature

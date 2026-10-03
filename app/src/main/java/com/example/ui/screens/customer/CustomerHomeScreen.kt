@@ -1,6 +1,7 @@
 package com.example.ui.screens.customer
 
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -14,10 +15,12 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
@@ -26,6 +29,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.filled.Build
 import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Security
 import androidx.compose.material3.Button
@@ -36,6 +40,8 @@ import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -114,6 +120,9 @@ fun CustomerHomeScreen(
     onConfirmPassportBooking: (WorkerProfile, Boolean, Double) -> Unit = { _, _, _ -> },
     currentQuarterName: String = "Akwa",
     unreadNotificationCount: Int = 1,
+    savedWorkerIds: Set<String> = emptySet(),
+    favoriteArtisans: List<com.example.data.model.FavoriteArtisan> = emptyList(),
+    onToggleSaveWorker: ((String) -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
     var passportWorker by remember { mutableStateOf<WorkerProfile?>(null) }
@@ -152,6 +161,33 @@ fun CustomerHomeScreen(
             com.example.data.local.FixoSeedData.defaultWorkers.take(2)
         } else {
             filtered
+        }
+    }
+
+    // Quick Access to Preferred / Favorite Artisans (Room Database)
+    val favoriteWorkers = remember(workers, savedWorkerIds, favoriteArtisans) {
+        if (favoriteArtisans.isNotEmpty()) {
+            favoriteArtisans.map { fav ->
+                workers.find { it.id == fav.workerId || (fav.workerId == "wrk_1" && it.id == "artisan_marc_dubois") || (fav.workerId == "artisan_marc_dubois" && it.id == "wrk_1") }
+                    ?: WorkerProfile(
+                        id = fav.workerId,
+                        userId = "usr_${fav.workerId}",
+                        name = fav.workerName,
+                        category = runCatching { ServiceCategory.entries.first { it.displayName.equals(fav.category, ignoreCase = true) } }.getOrDefault(ServiceCategory.PLUMBING),
+                        hourlyRate = fav.hourlyRate,
+                        bio = "Artisan professionnel certifié FIXO avec interventions garanties.",
+                        skills = "${fav.category}, Dépannage, Réparation",
+                        certifications = "Artisan Homologué FIXO, Fixo Shield",
+                        completedJobs = fav.completedJobs,
+                        rating = fav.rating,
+                        reviewCount = fav.reviewCount,
+                        avatarUrl = fav.avatarUrl,
+                        locationCity = fav.locationCity,
+                        locationDistanceKm = fav.distanceKm
+                    )
+            }
+        } else {
+            workers.filter { savedWorkerIds.contains(it.id) || (savedWorkerIds.contains("wrk_1") && it.id == "artisan_marc_dubois") }
         }
     }
 
@@ -370,6 +406,128 @@ fun CustomerHomeScreen(
                     }
                 }
 
+                // Quick Access to Preferred / Favorite Artisans (Room Database)
+                if (favoriteWorkers.isNotEmpty()) {
+                    item {
+                        Surface(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 16.dp, vertical = 6.dp)
+                                .testTag("favorite_artisans_quick_access"),
+                            shape = RoundedCornerShape(16.dp),
+                            color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                            border = BorderStroke(1.dp, Color(0xFFFFCDD2).copy(alpha = 0.5f))
+                        ) {
+                            Column(modifier = Modifier.padding(14.dp)) {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        Icon(
+                                            imageVector = Icons.Default.Favorite,
+                                            contentDescription = null,
+                                            tint = Color(0xFFE53935),
+                                            modifier = Modifier.size(18.dp)
+                                        )
+                                        Spacer(modifier = Modifier.width(8.dp))
+                                        Text(
+                                            text = if (language == AppLanguage.FR) "Vos Artisans Favoris" else "Your Preferred Artisans",
+                                            fontSize = 15.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            color = MaterialTheme.colorScheme.onSurface
+                                        )
+                                    }
+                                    Text(
+                                        text = "${favoriteWorkers.size} favori${if (favoriteWorkers.size > 1) "s" else ""}",
+                                        fontSize = 11.sp,
+                                        color = Color(0xFFE53935),
+                                        fontWeight = FontWeight.SemiBold
+                                    )
+                                }
+                                Spacer(modifier = Modifier.height(10.dp))
+                                LazyRow(
+                                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                                ) {
+                                    items(favoriteWorkers) { favWorker ->
+                                        Card(
+                                            modifier = Modifier
+                                                .width(140.dp)
+                                                .clickable { onWorkerClicked(favWorker) }
+                                                .testTag("quick_fav_worker_${favWorker.id}"),
+                                            shape = RoundedCornerShape(12.dp),
+                                            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+                                        ) {
+                                            Column(
+                                                modifier = Modifier.padding(10.dp),
+                                                horizontalAlignment = Alignment.CenterHorizontally
+                                            ) {
+                                                Box {
+                                                    AsyncImage(
+                                                        model = favWorker.avatarUrl,
+                                                        contentDescription = favWorker.name,
+                                                        modifier = Modifier
+                                                            .size(46.dp)
+                                                            .clip(CircleShape),
+                                                        contentScale = ContentScale.Crop
+                                                    )
+                                                    IconButton(
+                                                        onClick = { onToggleSaveWorker?.invoke(favWorker.id) },
+                                                        modifier = Modifier
+                                                            .size(20.dp)
+                                                            .align(Alignment.BottomEnd)
+                                                            .offset(x = 2.dp, y = 2.dp)
+                                                            .clip(CircleShape)
+                                                            .background(Color(0xFFE53935))
+                                                            .testTag("quick_fav_toggle_${favWorker.id}")
+                                                    ) {
+                                                        Icon(
+                                                            imageVector = Icons.Default.Favorite,
+                                                            contentDescription = "Favori",
+                                                            tint = Color.White,
+                                                            modifier = Modifier.size(11.dp)
+                                                        )
+                                                    }
+                                                }
+                                                Spacer(modifier = Modifier.height(6.dp))
+                                                Text(
+                                                    text = favWorker.name,
+                                                    style = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.Bold),
+                                                    maxLines = 1,
+                                                    overflow = TextOverflow.Ellipsis
+                                                )
+                                                Text(
+                                                    text = favWorker.category.displayName,
+                                                    style = MaterialTheme.typography.labelSmall.copy(
+                                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                                        fontSize = 10.sp
+                                                    ),
+                                                    maxLines = 1,
+                                                    overflow = TextOverflow.Ellipsis
+                                                )
+                                                Spacer(modifier = Modifier.height(4.dp))
+                                                Surface(
+                                                    color = FixoEmerald500.copy(alpha = 0.12f),
+                                                    shape = RoundedCornerShape(6.dp)
+                                                ) {
+                                                    Text(
+                                                        text = "Vitrine →",
+                                                        fontSize = 9.sp,
+                                                        fontWeight = FontWeight.Bold,
+                                                        color = FixoEmerald500,
+                                                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                                    )
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+
                 // E. Section Titre : Cartes Artisans Recommandés
                 item {
                     Row(
@@ -459,6 +617,8 @@ fun CustomerHomeScreen(
                             worker = worker,
                             isFlashMode = filterEmergencyOnly,
                             language = language,
+                            isFavorite = savedWorkerIds.contains(worker.id),
+                            onToggleFavorite = { onToggleSaveWorker?.invoke(worker.id) },
                             onCardClick = {
                                 passportWorker = worker
                                 passportInitialIsFlash = filterEmergencyOnly

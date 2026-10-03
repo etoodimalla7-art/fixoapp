@@ -1,10 +1,16 @@
 package com.example.ui.screens.customer
 
+import android.util.Log
 import android.widget.Toast
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.ui.res.painterResource
+import com.example.R
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -40,6 +46,7 @@ import androidx.compose.material.icons.filled.Receipt
 import androidx.compose.material.icons.filled.Save
 import androidx.compose.material.icons.filled.Security
 import androidx.compose.material.icons.filled.Shield
+import androidx.compose.material3.BottomSheetDefaults
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -110,6 +117,8 @@ data class FaqItem(
     val answer: String
 )
 
+enum class LegalSheetType { ABOUT_PLATFORM, TERMS_ESCROW, DATA_PRIVACY, SHIELD }
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CustomerSettingsScreen(
@@ -146,8 +155,8 @@ fun CustomerSettingsScreen(
     var twoFactorSmsEnabled by remember { mutableStateOf(true) }
 
     // Legal & Regulatory sheet state
-    var activeLegalSheet by remember { mutableStateOf<String?>(null) }
-    val legalSheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    var activeLegalSheet by remember { mutableStateOf<LegalSheetType?>(null) }
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
 
     // Invoices list
     val invoices = listOf(
@@ -627,20 +636,22 @@ fun CustomerSettingsScreen(
                 }
             }
 
-            // 5. Cadre Juridique & Textes Réglementaires Exhaustifs (CEMAC / MINPOSTEL)
+            // 5. Section "About FIXO" & Réglementations
             item {
                 Card(
                     colors = CardDefaults.cardColors(containerColor = FixoSurfaceCard),
                     shape = RoundedCornerShape(20.dp),
                     border = CardDefaults.outlinedCardBorder().copy(brush = Brush.horizontalGradient(listOf(FixoBorderSubtle, FixoBorderSubtle))),
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .testTag("about_fixo_section_card")
                 ) {
                     Column(modifier = Modifier.padding(20.dp)) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(imageVector = Icons.Default.Gavel, contentDescription = null, tint = FixoGold500)
+                            Icon(imageVector = Icons.Default.Shield, contentDescription = null, tint = FixoGold500)
                             Spacer(modifier = Modifier.width(8.dp))
                             Text(
-                                text = if (language == AppLanguage.FR) "Cadre Juridique & Réglementations" else "Legal & Regulatory Framework",
+                                text = if (language == AppLanguage.FR) "À Propos de FIXO (About FIXO)" else "About FIXO Platform",
                                 style = MaterialTheme.typography.titleMedium.copy(
                                     fontWeight = FontWeight.Bold,
                                     color = FixoWhite
@@ -650,13 +661,21 @@ fun CustomerSettingsScreen(
 
                         Spacer(modifier = Modifier.height(14.dp))
 
-                        // Bouton CGU
+                        // Ligne 1 : About FIXO Platform
                         Surface(
                             shape = RoundedCornerShape(12.dp),
                             color = Color(0xFF141920),
+                            onClick = {
+                                Log.d("FIXO_CLICK", "Clic About FIXO Platform")
+                                activeLegalSheet = LegalSheetType.ABOUT_PLATFORM
+                            },
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .clickable { activeLegalSheet = "CGU" }
+                                .testTag("about_fixo_platform_row")
+                                .clickable {
+                                    Log.d("FIXO_CLICK", "Clic About FIXO Platform (modifier)")
+                                    activeLegalSheet = LegalSheetType.ABOUT_PLATFORM
+                                }
                         ) {
                             Row(
                                 modifier = Modifier.padding(14.dp),
@@ -664,8 +683,8 @@ fun CustomerSettingsScreen(
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
                                 Column(modifier = Modifier.weight(1f)) {
-                                    Text("Conditions Générales d'Utilisation (CGU)", fontWeight = FontWeight.Bold, color = FixoWhite, fontSize = 13.sp)
-                                    Text("Statut tiers de confiance sous séquestre, zéro espèces", color = FixoTextSecondary, fontSize = 11.sp)
+                                    Text("About FIXO Platform", fontWeight = FontWeight.Bold, color = FixoWhite, fontSize = 13.sp)
+                                    Text("Plateforme Agréée République du Cameroun • Tiers de confiance", color = FixoGold500, fontSize = 11.sp)
                                 }
                                 Icon(imageVector = Icons.Default.ExpandMore, contentDescription = null, tint = FixoGold500)
                             }
@@ -673,13 +692,21 @@ fun CustomerSettingsScreen(
 
                         Spacer(modifier = Modifier.height(8.dp))
 
-                        // Bouton Confidentialité
+                        // Ligne 2 : Terms of Service & Escrow
                         Surface(
                             shape = RoundedCornerShape(12.dp),
                             color = Color(0xFF141920),
+                            onClick = {
+                                Log.d("FIXO_CLICK", "Clic Terms of Service & Escrow")
+                                activeLegalSheet = LegalSheetType.TERMS_ESCROW
+                            },
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .clickable { activeLegalSheet = "PRIVACY" }
+                                .testTag("about_fixo_terms_row")
+                                .clickable {
+                                    Log.d("FIXO_CLICK", "Clic Terms of Service & Escrow (modifier)")
+                                    activeLegalSheet = LegalSheetType.TERMS_ESCROW
+                                }
                         ) {
                             Row(
                                 modifier = Modifier.padding(14.dp),
@@ -687,8 +714,8 @@ fun CustomerSettingsScreen(
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
                                 Column(modifier = Modifier.weight(1f)) {
-                                    Text("Politique de Confidentialité (MINPOSTEL / ANTIC)", fontWeight = FontWeight.Bold, color = FixoWhite, fontSize = 13.sp)
-                                    Text("Protection des flux financiers CEMAC et données biométriques", color = FixoTextSecondary, fontSize = 11.sp)
+                                    Text("Terms of Service & Escrow", fontWeight = FontWeight.Bold, color = FixoWhite, fontSize = 13.sp)
+                                    Text("Articles 1 à 4 : Mandat zéro cash, séquestre & QR de clôture", color = FixoTextSecondary, fontSize = 11.sp)
                                 }
                                 Icon(imageVector = Icons.Default.ExpandMore, contentDescription = null, tint = FixoGold500)
                             }
@@ -696,13 +723,52 @@ fun CustomerSettingsScreen(
 
                         Spacer(modifier = Modifier.height(8.dp))
 
-                        // Bouton Garantie Fixo Shield
+                        // Ligne 3 : Data Privacy (CEMAC)
                         Surface(
                             shape = RoundedCornerShape(12.dp),
                             color = Color(0xFF141920),
+                            onClick = {
+                                Log.d("FIXO_CLICK", "Clic Data Privacy (CEMAC)")
+                                activeLegalSheet = LegalSheetType.DATA_PRIVACY
+                            },
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .clickable { activeLegalSheet = "SHIELD" }
+                                .testTag("about_fixo_privacy_row")
+                                .clickable {
+                                    Log.d("FIXO_CLICK", "Clic Data Privacy (CEMAC) (modifier)")
+                                    activeLegalSheet = LegalSheetType.DATA_PRIVACY
+                                }
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(14.dp),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Text("Data Privacy (CEMAC)", fontWeight = FontWeight.Bold, color = FixoWhite, fontSize = 13.sp)
+                                    Text("Directives CEMAC / MINPOSTEL, chiffrement AES-256 & géoloc", color = FixoTextSecondary, fontSize = 11.sp)
+                                }
+                                Icon(imageVector = Icons.Default.ExpandMore, contentDescription = null, tint = FixoGold500)
+                            }
+                        }
+
+                        Spacer(modifier = Modifier.height(8.dp))
+
+                        // Ligne 4 : Garantie Fixo Shield 14 Jours
+                        Surface(
+                            shape = RoundedCornerShape(12.dp),
+                            color = Color(0xFF141920),
+                            onClick = {
+                                Log.d("FIXO_CLICK", "Clic Garantie Fixo Shield 14 Jours")
+                                activeLegalSheet = LegalSheetType.SHIELD
+                            },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .testTag("about_fixo_shield_row")
+                                .clickable {
+                                    Log.d("FIXO_CLICK", "Clic Garantie Fixo Shield 14 Jours (modifier)")
+                                    activeLegalSheet = LegalSheetType.SHIELD
+                                }
                         ) {
                             Row(
                                 modifier = Modifier.padding(14.dp),
@@ -777,84 +843,219 @@ fun CustomerSettingsScreen(
         }
     }
 
-    // Modal Bottom Sheet pour Textes Juridiques Complets
-    activeLegalSheet?.let { sheetType ->
+    // Modal Bottom Sheet pour Textes Juridiques Complets & Présentation FIXO
+    if (activeLegalSheet != null) {
         ModalBottomSheet(
             onDismissRequest = { activeLegalSheet = null },
-            sheetState = legalSheetState,
-            containerColor = Color(0xFF0F141C)
+            sheetState = sheetState,
+            containerColor = MaterialTheme.colorScheme.surface,
+            dragHandle = {
+                BottomSheetDefaults.DragHandle(
+                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f)
+                )
+            }
         ) {
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 24.dp, vertical = 16.dp)
-            ) {
-                when (sheetType) {
-                    "CGU" -> {
-                        Text("Conditions Générales d'Utilisation", fontSize = 18.sp, fontWeight = FontWeight.Black, color = FixoWhite)
-                        Text("Conformité réglementaire CEMAC & République du Cameroun", fontSize = 12.sp, color = FixoGold500, fontWeight = FontWeight.SemiBold)
-                        Spacer(modifier = Modifier.height(14.dp))
-                        Text(
-                            text = "1. Statut de la Plateforme & Séquestre Numérique :\n" +
-                                    "FIXO opère en qualité d'intermédiaire technique et tiers de confiance sous séquestre. En application des règlements de la Banque des États de l'Afrique Centrale (BEAC) et de la COBAC régissant les services de paiement électronique, les sommes déposées par le donneur d'ordre sont cantonnées dans un compte de séquestre auprès d'établissements financiers agréés (MTN Mobile Money / Orange Money Cameroun) jusqu'à la validation contradictoire des travaux.\n\n" +
-                                    "2. Tolérance Zéro Espèces (Cash-Free Mandate) :\n" +
-                                    "Toute transaction financière directe en espèces sur le lieu de l'intervention est strictement interdite. Tout paiement hors plateforme entraîne la déchéance immédiate de la garantie Fixo Shield, la clôture du compte utilisateur et la radiation sans préavis de l'artisan.\n\n" +
-                                    "3. Grille Tarifaire Forfaitaire Ferme :\n" +
-                                    "Les forfaits FIXO Standard (12 000 FCFA) et FIXO Flash (15 000 FCFA) incluent le déplacement, le diagnostic et la main d'œuvre de premier niveau. Aucune surfacturation arbitraire ne peut être exigée sur place.",
-                            color = Color(0xFFCBD5E1),
-                            fontSize = 13.sp,
-                            lineHeight = 20.sp
-                        )
-                    }
-                    "PRIVACY" -> {
-                        Text("Politique de Protection des Données", fontSize = 18.sp, fontWeight = FontWeight.Black, color = FixoWhite)
-                        Text("Conformité Directives MINPOSTEL & ANTIC Cameroun", fontSize = 12.sp, color = FixoGold500, fontWeight = FontWeight.SemiBold)
-                        Spacer(modifier = Modifier.height(14.dp))
-                        Text(
-                            text = "1. Cadre Légal Camerounais :\n" +
-                                    "Le traitement de vos données personnelles est régi par la loi n°2010/012 du 21 décembre 2010 relative à la cybersécurité et à la cybercriminalité au Cameroun. Les données sont chiffrées selon le standard AES-256.\n\n" +
-                                    "2. Données de Géolocalisation & Télémétrie :\n" +
-                                    "Les coordonnées GPS recueillies lors d'une commande ne sont transmises à l'artisan qu'après acceptation de la mission et sont automatiquement anonymisées 24 heures après la clôture du chantier.\n\n" +
-                                    "3. Données Biométriques & Financières :\n" +
-                                    "Les empreintes digitales et scans biométriques exploités pour autoriser le déblocage du séquestre sont traités exclusivement dans le processeur sécurisé (Secure Enclave) de votre appareil mobile et ne sont jamais stockés sur les serveurs de FIXO.",
-                            color = Color(0xFFCBD5E1),
-                            fontSize = 13.sp,
-                            lineHeight = 20.sp
-                        )
-                    }
-                    "SHIELD" -> {
-                        Text("Garantie Fixo Shield 14 Jours", fontSize = 18.sp, fontWeight = FontWeight.Black, color = FixoSuccessGreen)
-                        Text("Protection Contractuelle Intégrale des Chantiers", fontSize = 12.sp, color = FixoGold500, fontWeight = FontWeight.SemiBold)
-                        Spacer(modifier = Modifier.height(14.dp))
-                        Text(
-                            text = "1. Périmètre de Couverture (Plafond 300 000 FCFA) :\n" +
-                                    "Toute intervention validée via QR code FIXO bénéficie d'une garantie automatique de 14 jours calendaires contre les vices d'exécution, fuites résiduelles, défauts de soudure ou pannes consécutives à la prestation.\n\n" +
-                                    "2. Obligation de Réintervention Gratuite :\n" +
-                                    "En cas de signalement de récidive dans l'application, l'artisan intervenant s'engage contractuellement à réintervenir sous 48 heures sans aucun frais supplémentaire pour le client.\n\n" +
-                                    "3. Médiation & Remboursement Intégral :\n" +
-                                    "Si la malfaçon persiste après seconde intervention, une expertise contradictoire est dépêchée sous l'égide de FIXO HQ et le montant des travaux est remboursé intégralement depuis le fonds de réserve Fixo Shield.",
-                            color = Color(0xFFCBD5E1),
-                            fontSize = 13.sp,
-                            lineHeight = 20.sp
-                        )
-                    }
-                }
-
-                Spacer(modifier = Modifier.height(20.dp))
-
-                Button(
-                    onClick = { activeLegalSheet = null },
-                    colors = ButtonDefaults.buttonColors(containerColor = FixoGold500, contentColor = Color(0xFF080C15)),
-                    shape = RoundedCornerShape(12.dp),
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(48.dp)
-                ) {
-                    Text("J'ai compris et j'accepte", fontWeight = FontWeight.Bold)
-                }
-
-                Spacer(modifier = Modifier.height(16.dp))
+            when (activeLegalSheet) {
+                LegalSheetType.ABOUT_PLATFORM -> AboutPlatformContent(onClose = { activeLegalSheet = null })
+                LegalSheetType.TERMS_ESCROW -> TermsAndEscrowContent(onClose = { activeLegalSheet = null })
+                LegalSheetType.DATA_PRIVACY -> DataPrivacyCemacContent(onClose = { activeLegalSheet = null })
+                LegalSheetType.SHIELD -> ShieldWarrantyContent(onClose = { activeLegalSheet = null })
+                null -> {}
             }
         }
+    }
+}
+
+@Composable
+fun AboutPlatformContent(onClose: () -> Unit) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .verticalScroll(rememberScrollState())
+            .padding(horizontal = 24.dp, vertical = 16.dp)
+    ) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Image(
+                painter = painterResource(id = R.drawable.ic_fixo_logo),
+                contentDescription = "Logo FIXO",
+                modifier = Modifier.size(48.dp)
+            )
+            Spacer(modifier = Modifier.width(12.dp))
+            Column {
+                Text("FIXO Cameroun", fontSize = 20.sp, fontWeight = FontWeight.Black, color = FixoWhite)
+                Surface(
+                    shape = RoundedCornerShape(6.dp),
+                    color = FixoGold500.copy(alpha = 0.15f),
+                    border = androidx.compose.foundation.BorderStroke(1.dp, FixoGold500)
+                ) {
+                    Text(
+                        text = "Plateforme Agréée République du Cameroun",
+                        fontSize = 10.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = FixoGold500,
+                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp)
+                    )
+                }
+            }
+        }
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        Text(
+            text = "Présentation de la Mission :\n" +
+                    "FIXO est le premier tiers de confiance numérique du Cameroun dédié au dépannage et à la maintenance technique à domicile. Notre protocole exclut rigoureusement tout paiement en espèces et garantit la parfaite exécution de chaque chantier grâce à notre coffre de séquestre numérique et notre audit contradictoire systématique.\n\n" +
+                    "Chiffres Clés de la Plateforme :\n" +
+                    "• +150 Maîtres Artisans rigoureusement audités (CNI, Casier Judiciaire, Diplôme CQP).\n" +
+                    "• Temps moyen d'intervention sur site < 25 minutes sur Douala et Yaoundé.\n" +
+                    "• 100% des transactions sous compte séquestre certifié CEMAC / BEAC.\n" +
+                    "• Garantie décennale et couverture malfaçon Fixo Shield jusqu'à 300 000 FCFA.\n\n" +
+                    "Coordonnées Officielles & Siège :\n" +
+                    "Direction des Opérations FIXO Technologies SARL\n" +
+                    "Immeuble Le Quartz, Boulevard de la Liberté, Akwa, Douala, République du Cameroun.\n" +
+                    "Assistance & Ligne d'Urgence : +237 670 000 000 / contact@fixo.cm",
+            color = Color(0xFFCBD5E1),
+            fontSize = 13.sp,
+            lineHeight = 21.sp
+        )
+
+        Spacer(modifier = Modifier.height(20.dp))
+
+        Button(
+            onClick = onClose,
+            colors = ButtonDefaults.buttonColors(containerColor = FixoGold500, contentColor = Color(0xFF080C15)),
+            shape = RoundedCornerShape(12.dp),
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(48.dp)
+        ) {
+            Text("J'ai compris et j'accepte", fontWeight = FontWeight.Bold)
+        }
+
+        Spacer(modifier = Modifier.height(16.dp))
+    }
+}
+
+@Composable
+fun TermsAndEscrowContent(onClose: () -> Unit) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .verticalScroll(rememberScrollState())
+            .padding(horizontal = 24.dp, vertical = 16.dp)
+    ) {
+        Text("Terms of Service & Escrow Vault", fontSize = 18.sp, fontWeight = FontWeight.Black, color = FixoWhite)
+        Text("Contrat-Cadre de Prestation & Séquestre Numérique BEAC / CEMAC", fontSize = 12.sp, color = FixoGold500, fontWeight = FontWeight.SemiBold)
+        Spacer(modifier = Modifier.height(14.dp))
+        Text(
+            text = "Article 1 : Rôle d'intermédiaire technique et neutralité d'arbitrage\n" +
+                    "FIXO opère exclusivement en qualité de tiers de confiance technique et séquestre financier neutre. FIXO n'est pas l'employeur des artisans indépendants homologués mais garantit le cadre contradictoire et impartial de la réalisation des prestations.\n\n" +
+                    "Article 2 : Fonctionnement du compte séquestre (Escrow Vault) et mandat zéro cash\n" +
+                    "Lors de la commande, le montant forfaitaire convenu est consigné et gelé dans le coffre séquestre. Aucun versement en espèces direct n'est autorisé. Tout paiement en liquide sur place entraîne la déchéance immédiate de la garantie et la résiliation des comptes.\n\n" +
+                    "Article 3 : Conditions d'homologation des ouvriers (CNI, Casier Judiciaire, Diplôme)\n" +
+                    "Chaque artisan partenaire doit justifier d'une Carte Nationale d'Identité camerounaise valide, d'un extrait de casier judiciaire (Bulletin n°3) vierge datant de moins de 3 mois et d'un titre de qualification professionnelle (CQP, CAP, BT).\n\n" +
+                    "Article 4 : Protocole de libération par QR Code optique et code PIN de secours\n" +
+                    "Les fonds consignés sous séquestre ne peuvent être transférés sur le portefeuille de l'artisan que suite au scan physique du QR Code de clôture présenté sur le smartphone du client ou la validation du code PIN à 4 chiffres.",
+            color = Color(0xFFCBD5E1),
+            fontSize = 13.sp,
+            lineHeight = 20.sp
+        )
+
+        Spacer(modifier = Modifier.height(20.dp))
+
+        Button(
+            onClick = onClose,
+            colors = ButtonDefaults.buttonColors(containerColor = FixoGold500, contentColor = Color(0xFF080C15)),
+            shape = RoundedCornerShape(12.dp),
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(48.dp)
+        ) {
+            Text("J'ai compris et j'accepte", fontWeight = FontWeight.Bold)
+        }
+
+        Spacer(modifier = Modifier.height(16.dp))
+    }
+}
+
+@Composable
+fun DataPrivacyCemacContent(onClose: () -> Unit) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .verticalScroll(rememberScrollState())
+            .padding(horizontal = 24.dp, vertical = 16.dp)
+    ) {
+        Text("Data Privacy & Souveraineté des Données (CEMAC)", fontSize = 18.sp, fontWeight = FontWeight.Black, color = FixoWhite)
+        Text("Conformité Règlementale MINPOSTEL, ANTIC & Directives CEMAC", fontSize = 12.sp, color = FixoGold500, fontWeight = FontWeight.SemiBold)
+        Spacer(modifier = Modifier.height(14.dp))
+        Text(
+            text = "1. Conformité CEMAC & MINPOSTEL :\n" +
+                    "Le stockage et le traitement des données des utilisateurs respectent strictement les directives CEMAC relatives aux transferts de fonds électroniques et la loi camerounaise sur la cybersécurité. Les données bancaires et numéros de compte Mobile Money sont chiffrés selon le protocole AES-256.\n\n" +
+                    "2. Géolocalisation Restreinte à la Fenêtre de Mission :\n" +
+                    "Le partage de la position GPS en temps réel de l'artisan et du client est activé uniquement entre le déclenchement du trajet et la validation finale des travaux. Aucun historique de trajectoire n'est conservé au-delà de 48 heures.\n\n" +
+                    "3. Chiffrement de Bout en Bout & Anonymisation VoIP :\n" +
+                    "Toutes les communications téléphoniques transitent par le standard masqué FIXO afin de protéger le numéro personnel des deux parties. Les échanges écrits et photos d'inspection sont chiffrés de bout en bout et conservés uniquement pour les besoins d'arbitrage éventuel.",
+            color = Color(0xFFCBD5E1),
+            fontSize = 13.sp,
+            lineHeight = 20.sp
+        )
+
+        Spacer(modifier = Modifier.height(20.dp))
+
+        Button(
+            onClick = onClose,
+            colors = ButtonDefaults.buttonColors(containerColor = FixoGold500, contentColor = Color(0xFF080C15)),
+            shape = RoundedCornerShape(12.dp),
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(48.dp)
+        ) {
+            Text("J'ai compris et j'accepte", fontWeight = FontWeight.Bold)
+        }
+
+        Spacer(modifier = Modifier.height(16.dp))
+    }
+}
+
+@Composable
+fun ShieldWarrantyContent(onClose: () -> Unit) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .verticalScroll(rememberScrollState())
+            .padding(horizontal = 24.dp, vertical = 16.dp)
+    ) {
+        Text("Garantie Fixo Shield 14 Jours", fontSize = 18.sp, fontWeight = FontWeight.Black, color = FixoSuccessGreen)
+        Text("Protection Contractuelle Intégrale des Chantiers", fontSize = 12.sp, color = FixoGold500, fontWeight = FontWeight.SemiBold)
+        Spacer(modifier = Modifier.height(14.dp))
+        Text(
+            text = "1. Périmètre de Couverture (Plafond 300 000 FCFA) :\n" +
+                    "Toute intervention validée via QR code FIXO bénéficie d'une garantie automatique de 14 jours calendaires contre les vices d'exécution, fuites résiduelles, défauts de soudure ou pannes consécutives à la prestation.\n\n" +
+                    "2. Obligation de Réintervention Gratuite :\n" +
+                    "En cas de signalement de récidive dans l'application, l'artisan intervenant s'engage contractuellement à réintervenir sous 48 heures sans aucun frais supplémentaire pour le client.\n\n" +
+                    "3. Médiation & Remboursement Intégral :\n" +
+                    "Si la malfaçon persiste après seconde intervention, une expertise contradictoire est dépêchée sous l'égide de FIXO HQ et le montant des travaux est remboursé intégralement depuis le fonds de réserve Fixo Shield.",
+            color = Color(0xFFCBD5E1),
+            fontSize = 13.sp,
+            lineHeight = 20.sp
+        )
+
+        Spacer(modifier = Modifier.height(20.dp))
+
+        Button(
+            onClick = onClose,
+            colors = ButtonDefaults.buttonColors(containerColor = FixoGold500, contentColor = Color(0xFF080C15)),
+            shape = RoundedCornerShape(12.dp),
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(48.dp)
+        ) {
+            Text("J'ai compris et j'accepte", fontWeight = FontWeight.Bold)
+        }
+
+        Spacer(modifier = Modifier.height(16.dp))
     }
 }

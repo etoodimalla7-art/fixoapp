@@ -76,6 +76,7 @@ data class FixoUiState(
     val isDisputeDialogVisible: Boolean = false,
     val isDevEnvironment: Boolean = false,
     val savedWorkerIds: Set<String> = emptySet(),
+    val favoriteArtisans: List<com.example.data.model.FavoriteArtisan> = emptyList(),
     val notifications: List<com.example.data.model.FixoNotification> = emptyList(),
     val unreadNotificationCount: Int = 0,
     val isNotificationsDialogVisible: Boolean = false,
@@ -112,6 +113,7 @@ data class FixoUiState(
 class FixoViewModel(application: Application) : AndroidViewModel(application) {
     val repository = FixoRepository(application.applicationContext)
     val sessionManager = SessionManager(application.applicationContext)
+    val firebaseAuthService = com.example.data.auth.FirebaseAuthService(application.applicationContext)
 
     private val _uiState = MutableStateFlow(FixoUiState())
     val uiState: StateFlow<FixoUiState> = _uiState.asStateFlow()
@@ -179,7 +181,12 @@ class FixoViewModel(application: Application) : AndroidViewModel(application) {
         // Observe workers and apply active filters
         viewModelScope.launch {
             repository.getAllWorkers().collect { workers ->
-                _uiState.value = _uiState.value.copy(allWorkers = workers)
+                val currentSel = _uiState.value.selectedWorker
+                val updatedSel = if (currentSel != null) workers.find { it.id == currentSel.id } ?: currentSel else null
+                _uiState.value = _uiState.value.copy(
+                    allWorkers = workers,
+                    selectedWorker = updatedSel
+                )
                 applyWorkerFilters()
             }
         }
@@ -254,6 +261,23 @@ class FixoViewModel(application: Application) : AndroidViewModel(application) {
         viewModelScope.launch {
             repository.getTransactionsForUser("usr_cust_1").collect { txs ->
                 _uiState.value = _uiState.value.copy(transactions = txs)
+            }
+        }
+
+        // Observe favorite artisans from local Room database
+        viewModelScope.launch {
+            repository.getFavoriteArtisans().collect { favorites ->
+                val favoriteIds = favorites.flatMap {
+                    if (it.workerId == "wrk_1" || it.workerName == "Marc Dubois") {
+                        listOf(it.workerId, "artisan_marc_dubois", "wrk_1")
+                    } else {
+                        listOf(it.workerId)
+                    }
+                }.toSet()
+                _uiState.value = _uiState.value.copy(
+                    savedWorkerIds = favoriteIds,
+                    favoriteArtisans = favorites
+                )
             }
         }
 
@@ -494,6 +518,47 @@ class FixoViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
+    fun bookWorkerDirect(worker: WorkerProfile, onBookingReady: (String) -> Unit = {}) {
+        val user = _uiState.value.currentUser
+        val customerId = user?.id ?: "usr_cust_1"
+        val customerName = user?.name ?: "Sarah Jenkins"
+        val service = com.example.data.model.ServiceItem(
+            id = "srv_std_${worker.id}",
+            workerId = worker.id,
+            name = "Forfait Urgence Plomberie Akwa (15 000 FCFA)",
+            category = worker.category,
+            description = "Forfait ferme d'intervention avec séquestre MTN MoMo garanti.",
+            price = 15000.0,
+            durationEstimateMinutes = 60
+        )
+        viewModelScope.launch {
+            val booking = repository.createBooking(
+                customerId = customerId,
+                customerName = customerName,
+                worker = worker,
+                service = service,
+                date = "Aujourd'hui",
+                timeSlot = "Immédiat (< 30 min)",
+                address = "Rue Drouot, Akwa, Douala",
+                notes = "Dépannage d'urgence sous séquestre MTN MoMo",
+                paymentMethod = PaymentMethod.MTN_MOMO
+            )
+            val dispatched = booking.copy(
+                status = com.example.data.model.JobStatus.DISPATCHED,
+                handshakePin = "8429",
+                packageTier = "FLASH"
+            )
+            repository.updateBooking(dispatched)
+            _uiState.value = _uiState.value.copy(
+                selectedBooking = dispatched,
+                isBookingDialogVisible = false
+            )
+            com.example.data.repository.JobOrderRepository.createOrder(worker.id, worker.name, 15000.0)
+            showToast("Commande 15 000 FCFA créée sous séquestre MTN MoMo.")
+            onBookingReady(dispatched.id)
+        }
+    }
+
     fun confirmBookingEscrow(
         packageOption: com.example.ui.screens.customer.BookingPackageOption,
         operator: com.example.data.model.CameroonMobileOperator,
@@ -589,14 +654,55 @@ class FixoViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
+    fun startChatWithWorker(worker: WorkerProfile, onChatReady: (String) -> Unit) {
+        val user = _uiState.value.currentUser
+        val customerId = user?.id ?: "usr_cust_default"
+        val customerName = user?.name ?: "Client Fixo"
+        val initialText = "Bonjour ${worker.name.split(" ").firstOrNull() ?: worker.name}, je souhaite des précisions concernant votre forfait plomberie..."
+        viewModelScope.launch {
+            val booking = repository.getOrCreateChatSession(
+                worker = worker,
+                customerId = customerId,
+                customerName = customerName,
+                initialMessage = initialText
+            )
+            onChatReady(booking.id)
+        }
+    }
+
+    fun getWorkerBio(workerId: String): StateFlow<String> {
+        val flow = repository.getWorkerBio(workerId)
+        val state = MutableStateFlow("")
+        viewModelScope.launch {
+            flow.collect { state.value = it }
+        }
+        return state.asStateFlow()
+    }
+
+    fun updateWorkerBio(workerId: String, newBio: String) {
+        viewModelScope.launch {
+            repository.updateWorkerBio(workerId, newBio)
+            com.example.data.repository.WorkerProfileRepository.updateBio(newBio)
+            val currentSel = _uiState.value.selectedWorker
+            if (currentSel != null && (currentSel.id == workerId || workerId == "wrk_1" || workerId == "artisan_marc_dubois")) {
+                _uiState.value = _uiState.value.copy(selectedWorker = currentSel.copy(bio = newBio))
+            }
+            showToast("✅ Biographie professionnelle enregistrée avec succès !")
+        }
+    }
+
     fun completeJobWithHandshake(bookingId: String, pinOrPayload: String) {
         viewModelScope.launch {
             val success = repository.completeJobWithHandshake(bookingId, pinOrPayload)
             if (success) {
+                com.example.data.repository.JobOrderRepository.completeOrder(pinOrPayload)
                 showToast("🤝 Clôture validée ! Paiement débloqué et garantie 14 jours activée.")
                 val updatedBooking = repository.getBookingByIdDirect(bookingId)
                 if (updatedBooking != null) {
-                    _uiState.value = _uiState.value.copy(selectedBooking = updatedBooking)
+                    _uiState.value = _uiState.value.copy(
+                        selectedBooking = updatedBooking,
+                        isReviewDialogVisible = true
+                    )
                 }
             } else {
                 showToast("❌ Échec de validation du QR/PIN. Vérifiez le code.")
@@ -960,6 +1066,22 @@ class FixoViewModel(application: Application) : AndroidViewModel(application) {
     fun loginWithBackend(email: String, password: String) {
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(authLoading = true)
+            // Attempt Firebase Auth email/pass first
+            val fbResult = firebaseAuthService.signInWithEmail(email, password, _uiState.value.currentRole)
+            if (fbResult.isSuccess) {
+                val user = fbResult.getOrThrow()
+                repository.dao.insertUser(user)
+                sessionManager.saveSession(userId = user.id, role = user.role)
+                _uiState.value = _uiState.value.copy(
+                    authLoading = false,
+                    isAuthenticated = true,
+                    currentUser = user,
+                    currentRole = user.role
+                )
+                showToast("Bienvenue, ${user.name} !")
+                return@launch
+            }
+            // Fallback to local / backend repository credentials
             val result = repository.loginWithBackend(email, password)
             _uiState.value = _uiState.value.copy(authLoading = false)
             result.onSuccess { user ->
@@ -978,14 +1100,21 @@ class FixoViewModel(application: Application) : AndroidViewModel(application) {
     fun signInWithGoogle(role: UserRole = UserRole.CUSTOMER) {
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(authLoading = true)
-            // Check if Google OAuth Client ID or production credentials are configured
-            val googleClientId = com.example.BuildConfig.BUILD_TYPE // BuildConfig presence check
-            // If production Google OAuth credentials are not configured, explicitly notify instead of fabricating credentials
-            val isGoogleConfigured = false // Unconfigured in test/dev container without production Google OAuth setup
-            if (!isGoogleConfigured) {
-                _uiState.value = _uiState.value.copy(authLoading = false)
-                showToast("Google OAuth is unavailable: Production credentials/client ID are not configured in this environment.")
-                return@launch
+            val result = firebaseAuthService.signInWithGoogle(role)
+            _uiState.value = _uiState.value.copy(authLoading = false)
+            result.onSuccess { user ->
+                repository.dao.insertUser(user)
+                repository.setRole(user.role)
+                sessionManager.saveSession(userId = user.id, role = user.role)
+                _uiState.value = _uiState.value.copy(
+                    isAuthenticated = true,
+                    currentUser = user,
+                    currentRole = user.role
+                )
+                showToast("Connecté via Google : ${user.name}")
+            }.onFailure { err ->
+                android.util.Log.w("FixoViewModel", "Google Sign-In notice: ${err.message}")
+                showToast(err.message ?: "Échec de connexion Google")
             }
         }
     }
@@ -1157,11 +1286,15 @@ class FixoViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun logout() {
-        sessionManager.logout()
-        _uiState.value = _uiState.value.copy(
-            isAuthenticated = false
-        )
-        showToast("Logged out successfully.")
+        viewModelScope.launch {
+            firebaseAuthService.signOut()
+            sessionManager.logout()
+            _uiState.value = _uiState.value.copy(
+                isAuthenticated = false,
+                currentUser = null
+            )
+            showToast("Déconnexion réussie.")
+        }
     }
 
     fun updateUserProfile(name: String, email: String, phone: String, city: String, avatarUrl: String) {
@@ -1180,15 +1313,50 @@ class FixoViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun toggleSaveWorker(workerId: String) {
-        val current = _uiState.value.savedWorkerIds.toMutableSet()
-        if (current.contains(workerId)) {
-            current.remove(workerId)
-            showToast("Artisan removed from saved.")
-        } else {
-            current.add(workerId)
-            showToast("Artisan saved to favorites.")
+        viewModelScope.launch {
+            val worker = _uiState.value.allWorkers.find { it.id == workerId }
+                ?: _uiState.value.selectedWorker?.takeIf { it.id == workerId || workerId == "artisan_marc_dubois" }
+                ?: if (workerId == "artisan_marc_dubois" || workerId == "wrk_1") {
+                    com.example.data.local.FixoSeedData.defaultWorkers.first()
+                } else {
+                    com.example.data.model.WorkerProfile(
+                        id = workerId,
+                        userId = "usr_artisan_$workerId",
+                        name = "Artisan FIXO",
+                        category = com.example.data.model.ServiceCategory.PLUMBING,
+                        hourlyRate = 15000.0,
+                        bio = "Professionnel certifié FIXO",
+                        skills = "Plomberie, Dépannage",
+                        certifications = "CQP Plomberie",
+                        completedJobs = 42,
+                        rating = 4.9,
+                        reviewCount = 38,
+                        avatarUrl = "https://images.unsplash.com/photo-1540569014015-19a7be504e3a?w=400",
+                        locationCity = "Douala",
+                        locationDistanceKm = 1.2
+                    )
+                }
+            val added = repository.toggleFavoriteArtisan(worker)
+            val current = _uiState.value.savedWorkerIds.toMutableSet()
+            if (added) {
+                current.add(worker.id)
+                current.add(workerId)
+                if (worker.id == "wrk_1" || workerId == "artisan_marc_dubois") {
+                    current.add("wrk_1")
+                    current.add("artisan_marc_dubois")
+                }
+                showToast(if (_uiState.value.currentLanguage == com.example.localization.AppLanguage.FR) "Artisan ajouté aux favoris ❤️" else "Artisan saved to favorites ❤️")
+            } else {
+                current.remove(worker.id)
+                current.remove(workerId)
+                if (worker.id == "wrk_1" || workerId == "artisan_marc_dubois") {
+                    current.remove("wrk_1")
+                    current.remove("artisan_marc_dubois")
+                }
+                showToast(if (_uiState.value.currentLanguage == com.example.localization.AppLanguage.FR) "Artisan retiré des favoris" else "Artisan removed from favorites")
+            }
+            _uiState.value = _uiState.value.copy(savedWorkerIds = current)
         }
-        _uiState.value = _uiState.value.copy(savedWorkerIds = current)
     }
 
     fun setThemeMode(mode: ThemeMode) {

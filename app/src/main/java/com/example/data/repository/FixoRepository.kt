@@ -30,6 +30,7 @@ import com.example.data.model.WorkerLocation
 import com.example.data.model.FixoNotification
 import com.example.data.model.WorkerReview
 import com.example.data.model.WorkerProfile
+import com.example.data.model.FavoriteArtisan
 import com.example.localization.AppLanguage
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -37,8 +38,12 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 import java.util.UUID
 import kotlin.math.roundToInt
 
@@ -167,6 +172,60 @@ class FixoRepository(context: Context) {
     suspend fun getWorkerById(id: String): WorkerProfile? = dao.getWorkerById(id)
 
     suspend fun updateWorkerProfile(worker: WorkerProfile) = dao.updateWorker(worker)
+
+    fun getWorkerBio(workerId: String): Flow<String> = dao.observeWorkerById(workerId).map { it?.bio ?: "" }
+
+    suspend fun updateWorkerBio(workerId: String, newBio: String) {
+        val worker = dao.getWorkerById(workerId) ?: return
+        dao.updateWorker(worker.copy(bio = newBio))
+    }
+
+    suspend fun getOrCreateChatSession(
+        worker: WorkerProfile,
+        customerId: String,
+        customerName: String,
+        initialMessage: String?
+    ): Booking {
+        val allBookings = dao.getAllBookings().first()
+        val existing = allBookings.firstOrNull { it.workerId == worker.id && it.customerId == customerId }
+        val booking = if (existing != null) {
+            existing
+        } else {
+            createBooking(
+                customerId = customerId,
+                customerName = customerName,
+                worker = worker,
+                service = ServiceItem(
+                    id = "srv_info_${worker.id}",
+                    workerId = worker.id,
+                    name = "Demande d'information / Devis forfaitaire Akwa (15 000 FCFA)",
+                    category = worker.category,
+                    description = "Demande d'information et échange préalable pour intervention Akwa.",
+                    price = 15000.0,
+                    durationEstimateMinutes = 60
+                ),
+                date = SimpleDateFormat("dd/MM/yyyy", Locale.FRANCE).format(Date()),
+                timeSlot = "09:00 - 11:00",
+                address = "Akwa, Douala",
+                notes = "Contact direct via vitrine artisan.",
+                paymentMethod = PaymentMethod.FIXO_WALLET
+            )
+        }
+
+        if (!initialMessage.isNullOrBlank()) {
+            val messages = dao.getMessagesForBooking(booking.id).first()
+            if (messages.isEmpty()) {
+                sendWorkroomChatMessage(
+                    bookingId = booking.id,
+                    senderId = customerId,
+                    senderName = customerName,
+                    senderRole = UserRole.CUSTOMER,
+                    text = initialMessage
+                )
+            }
+        }
+        return booking
+    }
 
     // SERVICES
     fun getServicesForWorker(workerId: String): Flow<List<ServiceItem>> =
@@ -1660,5 +1719,62 @@ class FixoRepository(context: Context) {
         )
         _currentRole.value = UserRole.ENTERPRISE
         return Pair(newUser, newOrg)
+    }
+
+    // FAVORITE ARTISANS (ROOM LOCAL PERSISTENCE)
+    fun getFavoriteArtisans(): Flow<List<FavoriteArtisan>> = dao.getAllFavoriteArtisans()
+
+    fun getFavoriteArtisanIds(): Flow<List<String>> = dao.getFavoriteArtisanIds()
+
+    fun isArtisanFavorite(workerId: String): Flow<Boolean> = dao.isArtisanFavorite(workerId)
+
+    suspend fun isArtisanFavoriteDirect(workerId: String): Boolean {
+        val canonicalId = if (workerId == "artisan_marc_dubois") "wrk_1" else workerId
+        return dao.isArtisanFavoriteDirect(canonicalId) || dao.isArtisanFavoriteDirect(workerId)
+    }
+
+    suspend fun toggleFavoriteArtisan(worker: WorkerProfile): Boolean {
+        val canonicalId = if (worker.id == "artisan_marc_dubois" || worker.name == "Marc Dubois") "wrk_1" else worker.id
+        val isFav = dao.isArtisanFavoriteDirect(canonicalId) || dao.isArtisanFavoriteDirect(worker.id)
+        if (isFav) {
+            dao.deleteFavoriteArtisan(canonicalId)
+            dao.deleteFavoriteArtisan(worker.id)
+            return false
+        } else {
+            val fav = FavoriteArtisan(
+                workerId = canonicalId,
+                workerName = worker.name,
+                category = worker.category.displayName,
+                avatarUrl = worker.avatarUrl,
+                hourlyRate = worker.hourlyRate,
+                rating = worker.rating,
+                reviewCount = worker.reviewCount,
+                completedJobs = worker.completedJobs,
+                locationCity = worker.locationCity,
+                distanceKm = worker.locationDistanceKm
+            )
+            dao.insertFavoriteArtisan(fav)
+            return true
+        }
+    }
+
+    suspend fun addFavoriteArtisan(worker: WorkerProfile) {
+        val fav = FavoriteArtisan(
+            workerId = worker.id,
+            workerName = worker.name,
+            category = worker.category.displayName,
+            avatarUrl = worker.avatarUrl,
+            hourlyRate = worker.hourlyRate,
+            rating = worker.rating,
+            reviewCount = worker.reviewCount,
+            completedJobs = worker.completedJobs,
+            locationCity = worker.locationCity,
+            distanceKm = worker.locationDistanceKm
+        )
+        dao.insertFavoriteArtisan(fav)
+    }
+
+    suspend fun removeFavoriteArtisan(workerId: String) {
+        dao.deleteFavoriteArtisan(workerId)
     }
 }

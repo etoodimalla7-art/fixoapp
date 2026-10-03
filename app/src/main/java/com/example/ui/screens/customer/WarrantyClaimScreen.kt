@@ -118,7 +118,7 @@ fun WarrantyClaimScreen(
         ) {
             // Active Warranty Badge Card
             Card(
-                colors = CardDefaults.cardColors(containerColor = Color(0xFF14241B)),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
                 shape = RoundedCornerShape(20.dp),
                 border = CardDefaults.outlinedCardBorder().copy(brush = Brush.horizontalGradient(listOf(FixoSuccessGreen, FixoGold500))),
                 modifier = Modifier
@@ -245,7 +245,7 @@ fun WarrantyClaimScreen(
 
             if (isSubmitted) {
                 Card(
-                    colors = CardDefaults.cardColors(containerColor = Color(0xFF0F3E2E)),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
                     shape = RoundedCornerShape(14.dp),
                     modifier = Modifier.fillMaxWidth()
                 ) {
@@ -254,7 +254,7 @@ fun WarrantyClaimScreen(
                         Spacer(modifier = Modifier.width(12.dp))
                         Text(
                             text = "Réclamation sous garantie transmise. Un technicien vous contacte sous 2 heures.",
-                            style = MaterialTheme.typography.bodyMedium.copy(color = FixoWhite)
+                            style = MaterialTheme.typography.bodyMedium.copy(color = MaterialTheme.colorScheme.onSurface)
                         )
                     }
                 }

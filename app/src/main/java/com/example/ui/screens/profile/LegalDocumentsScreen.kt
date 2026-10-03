@@ -22,11 +22,12 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Gavel
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Policy
-import androidx.compose.material.icons.filled.QrCode
 import androidx.compose.material.icons.filled.Security
 import androidx.compose.material.icons.filled.Shield
+import androidx.compose.material.icons.filled.VerifiedUser
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -58,18 +59,17 @@ import com.example.ui.theme.FixoBgCanvas
 import com.example.ui.theme.FixoBorderSubtle
 import com.example.ui.theme.FixoGold500
 import com.example.ui.theme.FixoStatusGreen
-import com.example.ui.theme.FixoStatusRed
 import com.example.ui.theme.FixoSurfaceCard
 import com.example.ui.theme.FixoTextPrimary
 import com.example.ui.theme.FixoTextSecondary
 
 /**
  * DOCUMENTS LÉGAUX ET RÉGLEMENTAIRES DÉROULANTS (CONFORMITÉ CEMAC & MINPOSTEL)
- * 1. Conditions Générales d'Utilisation (CGU)
- * 2. Politique de Protection des Données (CEMAC & ISO 27001)
- * 3. Protocole de Garantie & Arbitrage Fixo Shield
+ * 1. Conditions Générales d'Utilisation & Mandat de Séquestre (5 Sections)
+ * 2. Confidentialité & Protection des Données CEMAC / MINPOSTEL (4 Sections)
+ * 3. Garantie Fixo Shield & Récidive 14 Jours (4 Sections)
  */
-@OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun LegalDocumentsScreen(
     initialTab: Int = 0,
@@ -93,7 +93,7 @@ fun LegalDocumentsScreen(
             TopAppBar(
                 title = {
                     Text(
-                        text = if (language == AppLanguage.FR) "Textes Réglementaires" else "Regulatory Documents",
+                        text = if (language == AppLanguage.FR) "Textes Juridiques & Séquestre" else "Legal & Escrow Terms",
                         fontSize = 17.sp,
                         fontWeight = FontWeight.Bold,
                         color = FixoTextPrimary
@@ -123,7 +123,7 @@ fun LegalDocumentsScreen(
                 .fillMaxSize()
                 .padding(innerPadding)
         ) {
-            // Onglets de navigation
+            // Navigation tabs
             ScrollableTabRow(
                 selectedTabIndex = selectedTab,
                 containerColor = FixoBgCanvas,
@@ -154,137 +154,223 @@ fun LegalDocumentsScreen(
 
             HorizontalDivider(color = FixoBorderSubtle)
 
-            // Contenu défilant complet
+            // Scrollable full text
             Column(
                 modifier = Modifier
                     .fillMaxSize()
                     .verticalScroll(rememberScrollState())
-                    .padding(20.dp)
+                    .padding(20.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
                 when (selectedTab) {
-                    0 -> TermsOfServiceSection()
-                    1 -> PrivacyPolicySection()
-                    2 -> ShieldArbitrationSection()
+                    0 -> TermsOfServiceSection(language)
+                    1 -> PrivacyPolicySection(language)
+                    2 -> ShieldArbitrationSection(language)
                 }
 
-                Spacer(modifier = Modifier.height(30.dp))
+                Spacer(modifier = Modifier.height(32.dp))
             }
         }
     }
 }
 
 @Composable
-private fun TermsOfServiceSection() {
-    Column {
+private fun TermsOfServiceSection(language: AppLanguage) {
+    Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
         LegalHeaderCard(
-            title = "Conditions Générales d'Utilisation (CGU)",
-            version = "Version 2.4 • En vigueur au Cameroun depuis le 01/01/2026",
+            title = if (language == AppLanguage.FR)
+                "Conditions Générales d'Utilisation & Mandat de Séquestre"
+            else
+                "General Terms of Service & Escrow Mandate",
+            version = "Version 3.1 • En vigueur en République du Cameroun • Réf: FIXO-CM-2026",
             icon = Icons.Default.Gavel,
             accentColor = FixoGold500
         )
 
-        Spacer(modifier = Modifier.height(18.dp))
-
         LegalArticleCard(
-            articleNumber = "Article 1",
-            title = "Statut de Courtier Technologique & Tiers de Séquestre",
-            content = "La société FIXO SARL agit exclusivement en qualité d'opérateur de plateforme technique et de tiers de séquestre financier agréé. FIXO n'est ni employeur ni maître d'œuvre direct des artisans inscrits. La plateforme met en relation des particuliers ou professionnels maîtres d'ouvrage avec des artisans indépendants homologués selon les lois en vigueur en République du Cameroun."
+            articleNumber = "Section 1",
+            title = if (language == AppLanguage.FR)
+                "Statut d'Opérateur Technique & Intermédiation Neutre"
+            else
+                "Technical Operator Status & Neutral Intermediation",
+            content = if (language == AppLanguage.FR)
+                "La plateforme FIXO est exploitée par la société FIXO SARL, enregistrée au Registre du Commerce et du Crédit Mobilier de Douala. FIXO agit strictement et exclusivement en qualité d'opérateur d'infrastructure technologique et de tiers de séquestre financier agréé. FIXO n'est pas un employeur, ni un entrepreneur de travaux publics, ni le maître d'œuvre direct des artisans répertoriés. Chaque artisan inscrit exerce son métier en tant que travailleur indépendant agréé et immatriculé. La mise en relation s'effectue selon des critères objectifs de géolocalisation, de qualification vérifiée et de disponibilité instantanée."
+            else
+                "The FIXO platform is operated by FIXO SARL, registered in Douala. FIXO acts strictly as a neutral technology infrastructure operator and approved escrow agent. Each listed craftsman operates as an independent verified contractor."
         )
 
-        Spacer(modifier = Modifier.height(14.dp))
-
         LegalArticleCard(
-            articleNumber = "Article 2",
-            title = "Protocole de Contractualisation & Acceptation",
-            content = "Toute réservation effectuée sur l'application emporte mandat exprès confié à FIXO pour séquestrer les fonds convenus auprès des établissements de paiement agréés (Orange Money, MTN MoMo, Cartes bancaires). Le contrat de prestation de dépannage est conclu directement entre le client et l'artisan lors de la confirmation d'arrivée sur le lieu d'intervention."
+            articleNumber = "Section 2",
+            title = if (language == AppLanguage.FR)
+                "Mandat de Séquestre Financier (Escrow Vault) & Zéro Cash"
+            else
+                "Financial Escrow Vault Mandate & Zero-Cash Policy",
+            content = if (language == AppLanguage.FR)
+                "En confirmant une demande d'intervention, le client confère à FIXO un mandat irrévocable de séquestre temporaire des fonds convenus. Tout règlement en espèces (Cash) sur le lieu de l'intervention est formellement interdit sur tout le territoire camerounais. Les fonds sont prélevés via Mobile Money (MTN MoMo, Orange Money) ou carte bancaire et cantonnés dans un compte de séquestre étanche. Les fonds ne peuvent en aucun cas être débloqués unilatéralement : la libération s'effectue exclusivement par validation physique sur site par scan du QR Code cryptographique généré sur le terminal de l'artisan ou, à titre subsidiaire, par composition du code PIN sécurisé."
+            else
+                "Cash payments on site are strictly forbidden in Cameroon. All job fees are escrowed via Mobile Money (MTN MoMo, Orange Money) and released only upon cryptographic QR Code scanning or secure PIN entry."
         )
 
-        Spacer(modifier = Modifier.height(14.dp))
-
         LegalArticleCard(
-            articleNumber = "Article 3",
-            title = "Barème Forfaitaire Strict & Interdiction Formelle des Espèces",
-            content = "Afin d'éradiquer la spéculation sur les chantiers d'urgence, chaque intervention d'urgence standard est soumise à un forfait ferme fixé à 15 000 FCFA comprenant le déplacement, le diagnostic et 1 heure de main-d'œuvre qualifiée (hors coût éventuel des pièces de rechange sur devis validé dans l'app). Tout paiement direct en espèces (Cash) de la main-d'œuvre sur le chantier est formellement interdit sous peine de déchéance immédiate de la garantie Fixo Shield et d'exclusion définitive du réseau."
+            articleNumber = "Section 3",
+            title = if (language == AppLanguage.FR)
+                "Charte d'Homologation & Vérification des Artisans"
+            else
+                "Craftsman Homologation & Verification Charter",
+            content = if (language == AppLanguage.FR)
+                "L'admission au réseau d'artisans FIXO impose une vérification rigoureuse de conformité en trois étapes : (a) Présentation d'une Carte Nationale d'Identité (CNI) camerounaise ou d'un titre de séjour en cours de validité ; (b) Extrait de casier judiciaire (Bulletin n°3) vierge datant de moins de 3 mois ; (c) Diplôme technique d'État (CAP, CQP, BTS) ou attestation officielle de fin d'apprentissage validée par la Chambre de Métiers. Tout artisan faisant l'objet d'un signalement de fraude ou de harcèlement est radié sur-le-champ sans préavis."
+            else
+                "Every artisan must submit a valid National ID card (CNI), clean criminal record extract (Bulletin #3), and certified vocational diploma verified by regulatory trade authorities."
         )
 
-        Spacer(modifier = Modifier.height(14.dp))
+        LegalArticleCard(
+            articleNumber = "Section 4",
+            title = if (language == AppLanguage.FR)
+                "Protocole de Litige & Arbitrage Contradictoire sous 48h"
+            else
+                "Dispute Protocol & 48h Adversarial Arbitration",
+            content = if (language == AppLanguage.FR)
+                "En cas de désaccord sur la conformité de l'intervention ou sur l'achèvement des travaux, le client active l'option 'Signaler un Litige' dans l'application avant validation du QR Code. Dès ce signalement, le séquestre financier est instantanément verrouillé. Les deux parties sont tenues de soumettre leurs preuves photographiques horodatées ('Photo Avant' et 'Photo Après'). Une commission d'arbitrage technique FIXO statue sous 48 heures ouvrées pour ordonner soit la reprise sans frais par l'artisan, soit le remboursement intégral au client, soit la réassignation à un Maître Artisan."
+            else
+                "In case of disagreement, funds are instantly frozen. The platform technical arbitration committee examines before/after photo evidence and issues a binding ruling within 48 business hours."
+        )
 
         LegalArticleCard(
-            articleNumber = "Article 4",
-            title = "Procédure de Clôture Obligatoire par Double Clé (QR Code + PIN)",
-            content = "La libération du séquestre au profit de l'artisan est soumise à l'exécution d'une double vérification cryptographique : le client doit scanner le QR code vectoriel généré sur le terminal de l'artisan ou composer le code PIN de secours transmis par SMS. Cette signature électronique certifie la réception conforme des travaux."
+            articleNumber = "Section 5",
+            title = if (language == AppLanguage.FR)
+                "Responsabilité, Forfait Garanti & Assurances Professionnelles"
+            else
+                "Liability, Fixed Pricing & Professional Insurance",
+            content = if (language == AppLanguage.FR)
+                "Les interventions d'urgence de niveau standard font l'objet d'un tarif forfaitaire ferme de 15 000 FCFA garanti sous séquestre couvrant le déplacement, le diagnostic initial et la première heure de main-d'œuvre qualifiée. Tout remplacement de pièces ou intervention lourde excédant le forfait requiert l'émission d'un devis numérique validé dans l'application. Les artisans répondent directement de leurs fautes professionnelles, couvertes en premier ressort par la garantie intégrée Fixo Shield dans la limite des plafonds contractuels."
+            else
+                "Standard emergency jobs are strictly fixed at 15,000 FCFA escrowed. Any additional parts require an in-app digital estimate. Workmanship is covered under the Fixo Shield policy."
         )
     }
 }
 
 @Composable
-private fun PrivacyPolicySection() {
-    Column {
+private fun PrivacyPolicySection(language: AppLanguage) {
+    Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
         LegalHeaderCard(
-            title = "Politique de Protection des Données (CEMAC)",
-            version = "Conformité Règlement CEMAC / ART Cameroun • Norme ISO 27001",
+            title = if (language == AppLanguage.FR)
+                "Protection des Données Personnelles & Conformité CEMAC"
+            else
+                "Personal Data Protection & CEMAC Compliance",
+            version = "Conforme Directives CEMAC • Recommandations MINPOSTEL & ART Cameroun",
             icon = Icons.Default.Lock,
             accentColor = FixoStatusGreen
         )
 
-        Spacer(modifier = Modifier.height(18.dp))
-
         LegalArticleCard(
-            articleNumber = "Section 1",
-            title = "Chiffrement de Bout en Bout des Données Télémétriques & GPS",
-            content = "Les coordonnées géographiques des clients et artisans sont collectées exclusivement pendant la phase de navigation active d'intervention. Elles sont chiffrées en transit (TLS 1.3) et au repos (AES-256). Dès la clôture du chantier certifiée par QR code, la télémétrie en temps réel est immédiatement purgée et anonymisée sous forme de statistiques kilométriques globales."
+            articleNumber = "Article 1",
+            title = if (language == AppLanguage.FR)
+                "Cadre Réglementaire CEMAC & Autorité de Régulation (ART)"
+            else
+                "CEMAC Framework & Telecommunications Regulatory Agency",
+            content = if (language == AppLanguage.FR)
+                "Le traitement des données à caractère personnel collectées sur l'application FIXO est régi par le Règlement CEMAC relatif à la protection des consommateurs de services électroniques et les textes de l'Agence de Régulation des Télécommunications (ART) du Cameroun. FIXO met en œuvre des protocoles techniques garantissant la souveraineté, la confidentialité et l'intégrité absolue des flux de paiement et d'identité."
+            else
+                "Processing complies strictly with CEMAC electronic commerce regulations and Cameroon Ministry of Posts and Telecommunications (MINPOSTEL) data privacy standards."
         )
 
-        Spacer(modifier = Modifier.height(14.dp))
-
         LegalArticleCard(
-            articleNumber = "Section 2",
-            title = "Conservation Sécurisée des Pièces d'Identité (CNI & Casier)",
-            content = "Les documents officiels transmis lors de l'audit d'homologation (Cartes Nationales d'Identité, Bulletins N°3 de Casier Judiciaire, Certificats de Qualification Professionnelle) sont stockés dans un coffre-fort numérique étanche certifié ISO/IEC 27001. Aucun employé tiers ou utilisateur n'a accès direct aux copies intégrales non masquées."
+            articleNumber = "Article 2",
+            title = if (language == AppLanguage.FR)
+                "Traitement Restreint de la Géolocalisation & Purgatoire Télémétrique"
+            else
+                "Restricted Telemetry & Geolocation Lifespan",
+            content = if (language == AppLanguage.FR)
+                "La position GPS précise du client et de l'artisan n'est collectée et partagée que pendant la durée strictement nécessaire à l'acheminement de la mission. Dès que l'artisan valide son arrivée sur site ou que le chantier est clôturé par QR Code, la télémétrie en temps réel est immédiatement suspendue. Les coordonnées exactes ne sont ni revendues, ni archivées à des fins de profilage publicitaire."
+            else
+                "GPS coordinates are only processed during active navigation towards the job. Telemetry stops immediately upon arrival or job completion and is never sold for advertising."
         )
 
-        Spacer(modifier = Modifier.height(14.dp))
+        LegalArticleCard(
+            articleNumber = "Article 3",
+            title = if (language == AppLanguage.FR)
+                "Passerelle Téléphonique d'Anonymisation (Numéros Masqués)"
+            else
+                "VoIP Phone Masking & Communication Shielding",
+            content = if (language == AppLanguage.FR)
+                "Pour prémunir les clients et techniciens contre tout démarchage intrusif, harcèlement ou tentative de contournement hors plateforme, les appels vocaux et échanges de messages transitent par une passerelle sécurisée masquant réciproquement les numéros GSM personnels (Orange, MTN, Camtel). Aucun numéro réel n'est divulgué aux intervenants."
+            else
+                "All phone calls and messages are masked via a secure telecommunications gateway. Personal phone numbers remain completely hidden to prevent unsolicited off-platform contact."
+        )
 
         LegalArticleCard(
-            articleNumber = "Section 3",
-            title = "Passerelle Téléphonique d'Anonymisation (Numéros Masqués)",
-            content = "Les communications vocales et SMS initiées depuis l'application FIXO transitent par une passerelle VoIP dédiée qui masque réciproquement les numéros GSM réels des clients et des artisans, prévenant tout démarchage ultérieur non sollicité hors plateforme."
+            articleNumber = "Article 4",
+            title = if (language == AppLanguage.FR)
+                "Droits d'Accès, de Rectification & Droit à l'Oubli"
+            else
+                "Rights of Access, Rectification & Right to Erasure",
+            content = if (language == AppLanguage.FR)
+                "Conformément à la législation applicable, tout utilisateur dispose d'un droit permanent d'accès, d'exportation et de rectification de ses données. La suppression définitive du compte peut être requise directement depuis l'écran 'Compte', entraînant l'effacement irréversible des historiques de déplacement et pièces justificatives sous réserve des obligations légales d'archivage comptable."
+            else
+                "Users may request full export, correction or permanent account deletion directly from the Account screen, purging stored documents within regulatory accounting limits."
         )
     }
 }
 
 @Composable
-private fun ShieldArbitrationSection() {
-    Column {
+private fun ShieldArbitrationSection(language: AppLanguage) {
+    Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
         LegalHeaderCard(
-            title = "Protocole de Garantie & Arbitrage Fixo Shield",
-            version = "Protection Intégrale Maître d'Ouvrage • Plafond 300 000 FCFA",
+            title = if (language == AppLanguage.FR)
+                "Garantie Fixo Shield & Récidive 14 Jours"
+            else
+                "Fixo Shield Guarantee & 14-Day Recurrence Coverage",
+            version = "Couverture Contre Malfaçons • Plafond 300 000 FCFA • Réf: SHIELD-2026",
             icon = Icons.Default.Shield,
             accentColor = Color(0xFF38BDF8)
         )
 
-        Spacer(modifier = Modifier.height(18.dp))
-
         LegalArticleCard(
-            articleNumber = "Protocole 1",
-            title = "Modalités de Gel Immédiat du Séquestre",
-            content = "En cas de contestation de conformité émise par le client avant la validation du QR code ou dans les 48 heures suivant l'intervention, les fonds séquestrés sont automatiquement gelés. L'artisan ne peut prétendre à aucun versement tant que la procédure contradictoire de médiation n'a pas rendu ses conclusions."
+            articleNumber = "Règle 1",
+            title = if (language == AppLanguage.FR)
+                "Plafond d'Indemnisation jusqu'à 300 000 FCFA par Sinistre"
+            else
+                "Compensation Cap up to 300,000 FCFA per Claim",
+            content = if (language == AppLanguage.FR)
+                "La garantie Fixo Shield intervient pour protéger le client contre les conséquences matérielles directes résultant d'une malfaçon, fuite récidivante ou défaillance technique imputable à l'intervention d'un artisan homologué, à hauteur d'un plafond garanti de 300 000 FCFA par sinistre constaté."
+            else
+                "Fixo Shield covers direct property damages and craftsmanship failures resulting from verified interventions up to 300,000 FCFA per incident."
         )
 
-        Spacer(modifier = Modifier.height(14.dp))
-
         LegalArticleCard(
-            articleNumber = "Protocole 2",
-            title = "Obligation de la Preuve Contradictoire (Photo Avant / Photo Après)",
-            content = "L'arbitrage FIXO s'appuie obligatoirement sur l'inspection visuelle certifiée par l'application : la photo horodatée de l'état initial (« Photo Avant ») et la photo de l'installation terminée (« Photo Après »). Tout écart manifeste entre les engagements et le résultat constaté ouvre droit à l'activation de la garantie sans pénalité pour le client."
+            articleNumber = "Règle 2",
+            title = if (language == AppLanguage.FR)
+                "Période de Garantie Automatique de 14 Jours Calendaires"
+            else
+                "Automatic 14-Day Calendar Recurrence Coverage",
+            content = if (language == AppLanguage.FR)
+                "Chaque chantier validé bénéficie d'une période de garantie automatique de 14 jours calendaires à compter de l'horodatage du scan QR Code de fin de travaux. Si le même problème réapparaît (ex: résurgence de fuite sur le raccordement réparé ou disjonction sur le tableau inspecté), le sinistre est pris en charge d'office sans nouveau forfait de déplacement."
+            else
+                "Every completed job is automatically guaranteed for 14 calendar days. Any recurrence of the exact repair is serviced without additional callout fees."
         )
 
-        Spacer(modifier = Modifier.height(14.dp))
+        LegalArticleCard(
+            articleNumber = "Règle 3",
+            title = if (language == AppLanguage.FR)
+                "Réintervention Prioritaire Sans Frais par Maître Artisan"
+            else
+                "Priority Free Re-Intervention by Master Craftsman",
+            content = if (language == AppLanguage.FR)
+                "Dès déclaration d'un sinistre sous garantie, FIXO mandate sous 24 heures un Maître Artisan Référent (niveau de qualification supérieur et audit d'ancienneté d'au moins 3 ans) pour diagnostiquer et remédier sans frais au problème. Le client ne règle aucun supplément pour cette contre-visite technique."
+            else
+                "Within 24 hours of claim filing, a senior Master Craftsman is dispatched to rectify the problem with zero supplemental costs charged to the client."
+        )
 
         LegalArticleCard(
-            articleNumber = "Protocole 3",
-            title = "Prise en Charge des Malfaçons & Réintervention Sans Frais",
-            content = "La garantie Fixo Shield couvre les malfaçons, fuites récidivantes et défauts d'installation jusqu'à un montant forfaitaire de 300 000 FCFA pendant 14 jours calendaires. FIXO mandate en urgence un second Maître Artisan Référent pour corriger les non-conformités sans aucun coût additionnel pour le maître d'ouvrage."
+            articleNumber = "Règle 4",
+            title = if (language == AppLanguage.FR)
+                "Conditions d'Exclusion & Obligations de Non-Intervention Tiers"
+            else
+                "Exclusions & Third-Party Non-Intervention Clause",
+            content = if (language == AppLanguage.FR)
+                "La garantie Fixo Shield est réputée caduque dans les cas suivants : (a) Intervention de bricolage ou modification des installations par le client ou un tiers non mandaté après la clôture du chantier ; (b) Fourniture par le client de matériaux ou pièces de rechange d'occasion manifestement contrefaits ou non conformes ; (c) Catastrophes naturelles, inondations de quartier ou surtensions majeures du réseau électrique public."
+            else
+                "Warranty is void if installations were modified by third parties, if counterfeit customer-provided parts failed, or in case of force majeure."
         )
     }
 }
@@ -300,7 +386,7 @@ private fun LegalHeaderCard(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(18.dp),
         colors = CardDefaults.cardColors(containerColor = FixoSurfaceCard),
-        border = androidx.compose.foundation.BorderStroke(1.dp, accentColor.copy(alpha = 0.3f))
+        border = androidx.compose.foundation.BorderStroke(1.dp, accentColor.copy(alpha = 0.35f))
     ) {
         Row(
             modifier = Modifier
@@ -330,7 +416,7 @@ private fun LegalHeaderCard(
                     fontWeight = FontWeight.Bold,
                     color = FixoTextPrimary
                 )
-                Spacer(modifier = Modifier.height(2.dp))
+                Spacer(modifier = Modifier.height(3.dp))
                 Text(
                     text = version,
                     fontSize = 11.sp,
@@ -362,7 +448,7 @@ private fun LegalArticleCard(
                     Text(
                         text = articleNumber,
                         fontSize = 11.sp,
-                        fontWeight = FontWeight.Bold,
+                        fontWeight = FontWeight.Black,
                         color = FixoGold500,
                         modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp)
                     )

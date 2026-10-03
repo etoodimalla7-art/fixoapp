@@ -31,6 +31,7 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -57,6 +58,7 @@ import com.example.ui.theme.FixoBgCanvas
 import com.example.ui.theme.FixoBorderSubtle
 import com.example.ui.theme.FixoElectricAmber
 import com.example.ui.theme.FixoEmerald500
+import com.example.ui.theme.FixoGold500
 import com.example.ui.theme.FixoNavy900
 import com.example.ui.theme.FixoNavy950
 import com.example.ui.theme.FixoSurfaceCard
@@ -188,10 +190,10 @@ fun ExplorerMapScreen(
                     .fillMaxWidth()
                     .padding(16.dp)
                     .align(Alignment.BottomCenter)
-                    .border(1.5.dp, FixoBorderSubtle, RoundedCornerShape(20.dp))
+                    .border(1.5.dp, MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(20.dp))
                     .shadow(elevation = 16.dp, shape = RoundedCornerShape(20.dp)),
                 shape = RoundedCornerShape(20.dp),
-                colors = CardDefaults.cardColors(containerColor = Color(0xFF111827))
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
             ) {
                 Column(modifier = Modifier.padding(16.dp)) {
                     Row(
@@ -202,7 +204,7 @@ fun ExplorerMapScreen(
                             modifier = Modifier
                                 .size(52.dp)
                                 .clip(CircleShape)
-                                .border(2.dp, FixoElectricAmber, CircleShape)
+                                .border(2.dp, FixoGold500, CircleShape)
                         ) {
                             AsyncImage(
                                 model = worker.avatarUrl.ifBlank { "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=300" },
@@ -220,7 +222,7 @@ fun ExplorerMapScreen(
                                     text = worker.name,
                                     fontSize = 16.sp,
                                     fontWeight = FontWeight.Bold,
-                                    color = Color.White
+                                    color = MaterialTheme.colorScheme.onSurface
                                 )
                                 Spacer(modifier = Modifier.width(6.dp))
                                 Surface(
@@ -242,12 +244,12 @@ fun ExplorerMapScreen(
                                     text = "4.9 ★",
                                     fontSize = 13.sp,
                                     fontWeight = FontWeight.Bold,
-                                    color = FixoElectricAmber
+                                    color = FixoGold500
                                 )
                                 Text(
                                     text = " • 1.2 km • ~15 min d'arrivée",
                                     fontSize = 12.sp,
-                                    color = Color(0xFFCBD5E1)
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
                             }
                         }
@@ -258,12 +260,12 @@ fun ExplorerMapScreen(
                                 text = "15 000 FCFA",
                                 fontSize = 16.sp,
                                 fontWeight = FontWeight.Black,
-                                color = FixoElectricAmber
+                                color = FixoGold500
                             )
                             Text(
                                 text = "Forfait Garanti",
                                 fontSize = 10.sp,
-                                color = Color(0xFF94A3B8)
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
                     }
@@ -279,7 +281,7 @@ fun ExplorerMapScreen(
                             .testTag("btn_view_passport_book"),
                         shape = RoundedCornerShape(12.dp),
                         colors = ButtonDefaults.buttonColors(
-                            containerColor = FixoElectricAmber,
+                            containerColor = FixoGold500,
                             contentColor = Color(0xFF0A0E17)
                         )
                     ) {
@@ -307,7 +309,7 @@ fun ExplorerMapScreen(
                             text = if (language == AppLanguage.FR) "Voir le Passeport Technique & Diplômes →" else "View Technical Passport & Credentials →",
                             fontSize = 11.sp,
                             fontWeight = FontWeight.SemiBold,
-                            color = Color(0xFF94A3B8)
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
                 }

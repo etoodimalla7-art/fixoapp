@@ -32,6 +32,8 @@ import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.HourglassTop
 import androidx.compose.material.icons.filled.Lock
+import androidx.compose.ui.res.painterResource
+import com.example.R
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Security
 import androidx.compose.material.icons.filled.VerifiedUser
@@ -170,7 +172,7 @@ fun KycPendingScreen(
                     }
                 ) {
                     Text(
-                        text = if (language == AppLanguage.FR) "Statut du dossier" else "Dossier Status",
+                        text = "Statut du Dossier",
                         fontSize = 11.sp,
                         color = FixoGold500,
                         fontWeight = FontWeight.SemiBold,
@@ -206,7 +208,7 @@ fun KycPendingScreen(
                     Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize()) {
                         Icon(
                             imageVector = Icons.Default.HourglassTop,
-                            contentDescription = "En attente",
+                            contentDescription = "En cours d'instruction",
                             tint = FixoAmber500,
                             modifier = Modifier.size(36.dp)
                         )
@@ -217,23 +219,32 @@ fun KycPendingScreen(
             Spacer(modifier = Modifier.height(18.dp))
 
             // Main Status Title
-            Text(
-                text = "⏳ DOSSIER EN REVUE",
-                fontSize = 20.sp,
-                fontWeight = FontWeight.Black,
-                color = FixoWhite,
-                letterSpacing = 1.sp,
-                textAlign = TextAlign.Center
-            )
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.Center
+            ) {
+                Icon(
+                    painter = painterResource(id = R.drawable.ic_shield_security),
+                    contentDescription = null,
+                    tint = FixoGold500,
+                    modifier = Modifier.size(24.dp)
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(
+                    text = "DOSSIER EN COURS D'INSTRUCTION",
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.Black,
+                    color = FixoWhite,
+                    letterSpacing = 1.sp,
+                    textAlign = TextAlign.Center
+                )
+            }
 
             Spacer(modifier = Modifier.height(10.dp))
 
             // Official Description
             Text(
-                text = if (language == AppLanguage.FR)
-                    "Votre demande d'homologation a bien été transmise.\nNos équipes techniques vérifient l'authenticité de vos documents sous 24 à 48 heures ouvrées."
-                else
-                    "Your accreditation application has been submitted.\nOur compliance team is reviewing your documents within 24 to 48 business hours.",
+                text = "Votre demande d'homologation a été transmise. Notre comité de conformité vérifie vos pièces sous 24 à 48 heures ouvrées.",
                 fontSize = 13.sp,
                 lineHeight = 20.sp,
                 color = FixoTextSecondary,
@@ -256,7 +267,7 @@ fun KycPendingScreen(
                     modifier = Modifier.padding(18.dp)
                 ) {
                     Text(
-                        text = if (language == AppLanguage.FR) "Vérifications en attente :" else "Pending verifications:",
+                        text = "Contrôles réglementaires en cours :",
                         fontSize = 13.sp,
                         fontWeight = FontWeight.Bold,
                         color = FixoGold500
@@ -267,7 +278,7 @@ fun KycPendingScreen(
                     // 1. Phone validated [✓]
                     KycChecklistItem(
                         isCompleted = true,
-                        label = if (language == AppLanguage.FR) "Numéro de téléphone vérifié" else "Phone number verified (+237)"
+                        label = "Numéro de téléphone certifié (+237)"
                     )
 
                     Spacer(modifier = Modifier.height(10.dp))
@@ -275,7 +286,7 @@ fun KycPendingScreen(
                     // 2. CNI [⏳]
                     KycChecklistItem(
                         isCompleted = false,
-                        label = if (language == AppLanguage.FR) "Pièce d'identité officielle (CNI Recto/Verso)" else "Official National ID (CNI)"
+                        label = "Carte Nationale d'Identité (CNI Cameroun)"
                     )
 
                     Spacer(modifier = Modifier.height(10.dp))
@@ -283,7 +294,7 @@ fun KycPendingScreen(
                     // 3. Criminal Record [⏳]
                     KycChecklistItem(
                         isCompleted = false,
-                        label = if (language == AppLanguage.FR) "Vérification des antécédents judiciaires (Bulletin n°3)" else "Criminal record background check"
+                        label = "Bulletin n°3 du Casier Judiciaire"
                     )
 
                     Spacer(modifier = Modifier.height(10.dp))
@@ -291,7 +302,7 @@ fun KycPendingScreen(
                     // 4. Skills Certifications [⏳]
                     KycChecklistItem(
                         isCompleted = false,
-                        label = if (language == AppLanguage.FR) "Certifications de compétences techniques" else "Technical skill certification / apprenticeship"
+                        label = "Diplôme technique / CQP vérifié"
                     )
                 }
             }
@@ -300,7 +311,7 @@ fun KycPendingScreen(
 
             // Action: Mettre à jour mes pièces justificatives
             Text(
-                text = if (language == AppLanguage.FR) "Besoin de modifier un document ?" else "Need to update any file?",
+                text = "Une pièce à modifier ?",
                 fontSize = 12.sp,
                 color = FixoTextSecondary
             )
@@ -326,10 +337,7 @@ fun KycPendingScreen(
                 )
                 Spacer(modifier = Modifier.width(8.dp))
                 Text(
-                    text = if (language == AppLanguage.FR)
-                        "Mettre à jour mes pièces justificatives"
-                    else
-                        "Update my submitted documents",
+                    text = "Mettre à jour mon dossier",
                     fontWeight = FontWeight.SemiBold,
                     fontSize = 13.sp
                 )
@@ -339,7 +347,7 @@ fun KycPendingScreen(
 
             // Action: Contacter assistance WhatsApp
             Text(
-                text = if (language == AppLanguage.FR) "Une question ?" else "Any questions?",
+                text = "Une question ?",
                 fontSize = 12.sp,
                 color = FixoTextSecondary
             )
@@ -358,17 +366,14 @@ fun KycPendingScreen(
                 )
             ) {
                 Icon(
-                    imageVector = Icons.AutoMirrored.Filled.Chat,
-                    contentDescription = null,
+                    painter = painterResource(id = R.drawable.ic_fixo_whatsapp),
+                    contentDescription = "WhatsApp",
                     tint = Color.White,
                     modifier = Modifier.size(20.dp)
                 )
                 Spacer(modifier = Modifier.width(8.dp))
                 Text(
-                    text = if (language == AppLanguage.FR)
-                        "💬 Contacter l'assistance FIXO via WhatsApp"
-                    else
-                        "💬 Contact FIXO Support on WhatsApp",
+                    text = "Contacter le Support FIXO sur WhatsApp",
                     fontWeight = FontWeight.Bold,
                     fontSize = 13.sp,
                     color = Color.White
@@ -393,7 +398,7 @@ fun KycPendingScreen(
                     ) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Text(
-                                text = "🧪 DÉBOGAGE & VÉRIFICATION SANDBOX",
+                                text = "DÉBOGAGE & VÉRIFICATION SANDBOX",
                                 fontSize = 10.sp,
                                 fontWeight = FontWeight.Bold,
                                 color = FixoSuccessGreen,
@@ -433,9 +438,9 @@ fun KycPendingScreen(
                             Spacer(modifier = Modifier.width(8.dp))
                             Text(
                                 text = if (language == AppLanguage.FR)
-                                    "⚡ Simuler Approbation Immédiate (APPROUVÉ)"
+                                    "Simuler Approbation Immédiate (APPROUVÉ)"
                                 else
-                                    "⚡ Simulate Instant Approval (APPROVED)",
+                                    "Simulate Instant Approval (APPROVED)",
                                 fontSize = 12.sp,
                                 fontWeight = FontWeight.Bold,
                                 color = Color.White
@@ -455,7 +460,7 @@ fun KycPendingScreen(
                 modifier = Modifier.testTag("btn_kyc_logout")
             ) {
                 Text(
-                    text = if (language == AppLanguage.FR) "Se Déconnecter" else "Sign Out",
+                    text = "Se déconnecter",
                     color = Color.White.copy(alpha = 0.6f),
                     fontSize = 12.sp
                 )
